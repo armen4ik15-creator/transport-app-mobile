@@ -1,0 +1,44 @@
+{
+  "expo": {
+    "name": "РеестрПро",
+    "slug": "reestrpro-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "reestrpro",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "cli": {
+      "appVersionSource": "local"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSCameraUsageDescription": "Доступ к камере нужен для фото ТТН по заказу.",
+        "NSPhotoLibraryUsageDescription": "Доступ к фото нужен для прикрепления ТТН."
+      }
+    },
+    "android": {
+      "package": "com.reestrpro.mobile",
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.RECORD_AUDIO"
+      ]
+    },
+    "plugins": [
+      [
+        "expo-image-picker",
+        {
+          "cameraPermission": "Разрешите доступ к камере для фото ТТН.",
+          "photosPermission": "Разрешите доступ к фотогалерее для прикрепления ТТН."
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "55c1448c-d923-4b4a-9214-ba474b5a951e"
+      }
+    }
+  }
+}
