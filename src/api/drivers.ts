@@ -40,3 +40,15 @@ export async function updateDriver(
 export async function deleteDriver(id: number): Promise<void> {
   await api.delete(`/drivers/${id}`);
 }
+
+export async function updateMyDriverProfile(payload: {
+  full_name?: string;
+  phone?: string;
+  car_number?: string;
+  license_number?: string;
+  license_expiry?: string;
+  medical_check_expiry?: string;
+}): Promise<Driver> {
+  const { data } = await api.put<Driver>('/drivers/profile/me', payload);
+  return data;
+}

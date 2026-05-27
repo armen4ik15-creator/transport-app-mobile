@@ -39,8 +39,13 @@ export interface Order {
   id: number;
   driver_id: number | null;
   contractor_id: number | null;
+  task_name: string | null;
+  sender: string | null;
+  receiver: string | null;
+  total_planned_volume: number | null;
   material: string | null;
   quantity: number | null;
+  unit: string | null;
   status: OrderStatus;
   notes: string | null;
   created_by: number | null;
@@ -48,6 +53,10 @@ export interface Order {
   load_address: string | null;
   unload_address: string | null;
   amount: number | null;
+  driver_rate: number | null;
+  company_rate: number | null;
+  distance_km: number | null;
+  is_active: number;
   created_at: string;
   updated_at: string;
   contractor_name: string | null;
@@ -64,7 +73,162 @@ export interface OrderPhoto {
 
 export interface OrderWithPhotos extends Order {
   photos: OrderPhoto[];
+  trips: TripRecord[];
 }
+
+export type TripStage = 'loading' | 'unloading';
+
+export interface TripRecord {
+  id: number;
+  order_id: number;
+  driver_id: number;
+  driver_name?: string | null;
+  driver_car_number?: string | null;
+  stage: TripStage;
+  ttn_number: string | null;
+  volume: number | null;
+  note: string | null;
+  photo_path: string | null;
+  created_by: number;
+  created_by_email: string;
+  created_at: string;
+}
+
+export interface EarningsSummary {
+  total_trips: number;
+  total_volume: number;
+  estimated_income: number;
+  actual_income: number;
+  actual_expense: number;
+  actual_balance: number;
+}
+
+export type DriverPaymentType = 'salary' | 'advance' | 'bonus' | 'deduction';
+
+export interface DriverPaymentRecord {
+  id: number;
+  driver_id: number;
+  type: DriverPaymentType;
+  amount: number;
+  note: string | null;
+  created_by: number | null;
+  created_at: string;
+  driver_name: string;
+  driver_car_number: string | null;
+}
+
+export interface DriverSalarySummary {
+  driver_id: number;
+  gross: number;
+  paid: number;
+  deducted: number;
+  debt: number;
+}
+
+export interface DriverDebtSummary extends DriverSalarySummary {
+  driver_name: string | null;
+  driver_car_number: string | null;
+}
+
+export interface ContractorPaymentRecord {
+  id: number;
+  contractor_id: number;
+  amount: number;
+  note: string | null;
+  created_by: number | null;
+  created_at: string;
+  contractor_name: string;
+}
+
+export interface ContractorDebtSummary {
+  contractor_id: number;
+  contractor_name: string;
+  accrued: number;
+  paid: number;
+  debt: number;
+}
+
+export type ExpenseMethod = 'cash' | 'noncash' | null;
+
+export interface ExpenseRecord {
+  id: number;
+  exp_date: string;
+  exp_type: string;
+  method: ExpenseMethod;
+  amount: number;
+  comment: string | null;
+  driver_id: number | null;
+  car_number: string | null;
+  created_by: number | null;
+  created_at: string;
+  driver_name: string | null;
+}
+
+export interface Material {
+  id: number;
+  name: string;
+  unit: string;
+  price_per_ton: number | null;
+  created_by: number | null;
+  created_at: string;
+}
+
+export interface Vehicle {
+  id: number;
+  plate_number: string;
+  model: string | null;
+  capacity: number | null;
+  created_by: number | null;
+  created_at: string;
+}
+
+export interface Waybill {
+  id: number;
+  order_id: number;
+  number: string;
+  date: string;
+  file_path: string | null;
+  created_by: number | null;
+  created_at: string;
+  driver_id: number;
+  contractor_name: string | null;
+}
+
+export interface Invoice {
+  id: number;
+  order_id: number;
+  number: string;
+  date: string;
+  amount: number | null;
+  file_path: string | null;
+  created_by: number | null;
+  created_at: string;
+  driver_id: number;
+  contractor_name: string | null;
+}
+
+export interface NotificationItem {
+  id: number;
+  user_id: number;
+  message: string;
+  read: number;
+  created_at: string;
+  user_email?: string | null;
+}
+
+export interface ActivityLogItem {
+  id: number;
+  user_id: number | null;
+  action: string;
+  details: string | null;
+  created_at: string;
+  user_email?: string | null;
+}
+
+export const TRIP_STAGE_LABEL: Record<TripStage, string> = {
+  loading: 'Погрузка',
+  unloading: 'Разгрузка',
+};
 
 export type FinanceType = 'income' | 'expense';
 
@@ -105,6 +269,25 @@ export interface DocumentTemplate {
   name: string;
   type: DocumentType;
   content: string;
+  created_at: string;
+}
+
+export interface OrderTemplate {
+  id: number;
+  name: string;
+  contractor_id: number | null;
+  contractor_name: string | null;
+  material: string | null;
+  unit: string | null;
+  default_quantity: number | null;
+  driver_rate: number | null;
+  company_rate: number | null;
+  distance_km: number | null;
+  notes: string | null;
+  description: string | null;
+  load_address: string | null;
+  unload_address: string | null;
+  created_by: number | null;
   created_at: string;
 }
 

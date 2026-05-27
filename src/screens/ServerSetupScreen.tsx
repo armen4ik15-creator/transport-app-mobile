@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Alert } from 'react-native';
 import axios from 'axios';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Card, ErrorText, Field, PrimaryButton, Screen, Subtitle, Title } from '../components/ui';
 import {
+  buildApiUrl,
+  TOKEN_KEY,
   getServerUrl,
   setServerUrl,
-  clearServerUrl,
   SERVER_URL_KEY,
 } from '../api/client';
 import type { RootStackParamList } from '../navigation/RootNavigator';
@@ -17,13 +19,14 @@ type ComponentProps = Props & { onConfigured?: () => void };
 function parseSavedAddress(url: string): { ip: string; port: string } {
   const withoutApi = url.replace(/\/api\/?$/, '');
   const match = withoutApi.match(/^https?:\/\/([^:/]+)(?::(\d+))?$/i);
-  if (!match) return { ip: '', port: '3000' };
-  return { ip: match[1], port: match[2] || '3000' };
+  if (!match) return { ip: '', port: '443' };
+  const protocol = withoutApi.startsWith('https://') ? 'https' : 'http';
+  return { ip: match[1], port: match[2] || (protocol === 'https' ? '443' : '80') };
 }
 
 export function ServerSetupScreen({ route, onConfigured }: ComponentProps) {
   const [ip, setIp] = useState('');
-  const [port, setPort] = useState('3000');
+  const [port, setPort] = useState('443');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -44,7 +47,7 @@ export function ServerSetupScreen({ route, onConfigured }: ComponentProps) {
 
   const onConnect = async () => {
     const cleanIp = ip.trim();
-    const cleanPort = port.trim() || '3000';
+    const cleanPort = port.trim() || '443';
 
     if (!cleanIp) {
       setError('Введите IP-адрес сервера');
@@ -57,7 +60,7 @@ export function ServerSetupScreen({ route, onConfigured }: ComponentProps) {
 
     setBusy(true);
     setError(null);
-    const apiUrl = `http://${cleanIp}:${cleanPort}/api`;
+    const apiUrl = buildApiUrl(cleanIp, cleanPort);
 
     try {
       const response = await axios.get(`${apiUrl}/health`, { timeout: 6000 });
@@ -65,10 +68,10 @@ export function ServerSetupScreen({ route, onConfigured }: ComponentProps) {
         throw new Error('Некорректный ответ health');
       }
       await setServerUrl(apiUrl);
+      await AsyncStorage.removeItem(TOKEN_KEY);
       onConfigured?.();
       Alert.alert('Подключение успешно', `Сервер сохранён в ${SERVER_URL_KEY}`);
     } catch {
-      await clearServerUrl();
       setError('Не удалось подключиться к серверу');
       Alert.alert('Ошибка', 'Не удалось подключиться к серверу');
     } finally {
@@ -82,19 +85,19 @@ export function ServerSetupScreen({ route, onConfigured }: ComponentProps) {
       <Subtitle>{reasonText}</Subtitle>
       <Card>
         <Field
-          label="IP-адрес сервера"
+          label="Адрес сервера (IP или домен)"
           value={ip}
           onChangeText={setIp}
           autoCapitalize="none"
           autoCorrect={false}
-          placeholder="192.168.1.33"
+          placeholder="armen4ik15-creator-transport-app-server-43b9.twc1.net"
         />
         <Field
           label="Порт"
           value={port}
           onChangeText={setPort}
           keyboardType="number-pad"
-          placeholder="3000"
+          placeholder="443"
         />
         <ErrorText message={error} />
         <PrimaryButton label="Подключиться" onPress={onConnect} loading={busy} />

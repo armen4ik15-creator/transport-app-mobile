@@ -14,20 +14,22 @@ import {
 } from '../components/ui';
 import { apiErrorMessage } from '../api/client';
 import { createFinance, getDriverBalance, listFinances } from '../api/finances';
+import { listOrders } from '../api/orders';
 import { listDrivers } from '../api/drivers';
-import type { Driver, DriverBalance, FinanceRecord } from '../types';
+import type { Driver, DriverBalance, FinanceRecord, Order } from '../types';
 
 const initialForm = {
-  driver_id: '',
+  driver_id: 0,
   type: 'income' as 'income' | 'expense',
   amount: '',
   description: '',
-  order_id: '',
+  order_id: 0,
 };
 
 export function AdminFinancesScreen() {
   const [records, setRecords] = useState<FinanceRecord[]>([]);
   const [drivers, setDrivers] = useState<Driver[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
   const [selectedDriverId, setSelectedDriverId] = useState<number | null>(null);
   const [balance, setBalance] = useState<DriverBalance | null>(null);
   const [form, setForm] = useState(initialForm);
@@ -44,9 +46,14 @@ export function AdminFinancesScreen() {
   const load = useCallback(async () => {
     try {
       setError(null);
-      const [driversData, financesData] = await Promise.all([listDrivers(), listFinances(selectedDriverId ?? undefined)]);
+      const [driversData, financesData, ordersData] = await Promise.all([
+        listDrivers(),
+        listFinances(selectedDriverId ?? undefined),
+        listOrders(),
+      ]);
       setDrivers(driversData);
       setRecords(financesData);
+      setOrders(ordersData);
       if (selectedDriverId) {
         const b = await getDriverBalance(selectedDriverId);
         setBalance(b);
@@ -75,18 +82,14 @@ export function AdminFinancesScreen() {
     const driverId = Number(form.driver_id);
     const amount = Number(form.amount);
     if (!driverId || !Number.isFinite(driverId)) {
-      Alert.alert('Ошибка', 'Укажите ID водителя');
+      Alert.alert('Ошибка', 'Выберите водителя');
       return;
     }
     if (!Number.isFinite(amount) || amount <= 0) {
       Alert.alert('Ошибка', 'Введите корректную сумму');
       return;
     }
-    const orderId = form.order_id.trim() ? Number(form.order_id) : null;
-    if (orderId != null && (!Number.isFinite(orderId) || orderId <= 0)) {
-      Alert.alert('Ошибка', 'order_id должен быть положительным числом');
-      return;
-    }
+    const orderId = form.order_id > 0 ? form.order_id : null;
 
     setSaving(true);
     try {
@@ -124,14 +127,19 @@ export function AdminFinancesScreen() {
 
             <Card>
               <Subtitle>Фильтр по водителю</Subtitle>
-              <Field
-                label="Driver ID (пусто = все)"
-                value={selectedDriverId ? String(selectedDriverId) : ''}
-                onChangeText={(value) =>
-                  setSelectedDriverId(value.trim() ? Number(value) : null)
-                }
-                keyboardType="number-pad"
+              <MenuButton
+                label={selectedDriverId ? 'Показать всех водителей' : 'Фильтр: все водители'}
+                onPress={() => setSelectedDriverId(null)}
+                variant="secondary"
               />
+              {drivers.map((d) => (
+                <MenuButton
+                  key={d.id}
+                  label={`${selectedDriverId === d.id ? '✅ ' : ''}${d.full_name ?? d.email}`}
+                  onPress={() => setSelectedDriverId(d.id)}
+                  variant={selectedDriverId === d.id ? 'default' : 'secondary'}
+                />
+              ))}
               <MenuButton label="Применить фильтр" onPress={load} variant="secondary" />
               {selectedDriver ? (
                 <Subtitle>
@@ -150,24 +158,38 @@ export function AdminFinancesScreen() {
 
             <Card>
               <Title>Новая операция</Title>
-              <Field
-                label="Driver ID"
-                value={form.driver_id}
-                onChangeText={(value) => setForm((prev) => ({ ...prev, driver_id: value }))}
-                keyboardType="number-pad"
-              />
+              <Subtitle>Водитель</Subtitle>
+              {drivers.map((d) => (
+                <MenuButton
+                  key={d.id}
+                  label={`${form.driver_id === d.id ? '✅ ' : ''}${d.full_name ?? d.email}`}
+                  onPress={() => setForm((prev) => ({ ...prev, driver_id: d.id }))}
+                  variant={form.driver_id === d.id ? 'default' : 'secondary'}
+                />
+              ))}
               <Field
                 label="Сумма"
                 value={form.amount}
                 onChangeText={(value) => setForm((prev) => ({ ...prev, amount: value }))}
                 keyboardType="decimal-pad"
               />
-              <Field
-                label="Order ID (необязательно)"
-                value={form.order_id}
-                onChangeText={(value) => setForm((prev) => ({ ...prev, order_id: value }))}
-                keyboardType="number-pad"
+              <Subtitle>Связанный заказ (необязательно)</Subtitle>
+              <MenuButton
+                label={form.order_id ? 'Сбросить связь с заказом' : 'Без привязки к заказу'}
+                onPress={() => setForm((prev) => ({ ...prev, order_id: 0 }))}
+                variant="secondary"
               />
+              {orders
+                .filter((o) => !form.driver_id || o.driver_id === form.driver_id)
+                .slice(0, 10)
+                .map((o) => (
+                  <MenuButton
+                    key={o.id}
+                    label={`${form.order_id === o.id ? '✅ ' : ''}Заказ #${o.id} · ${o.contractor_name ?? 'Без контрагента'}`}
+                    onPress={() => setForm((prev) => ({ ...prev, order_id: o.id }))}
+                    variant={form.order_id === o.id ? 'default' : 'secondary'}
+                  />
+                ))}
               <Field
                 label="Описание"
                 value={form.description}

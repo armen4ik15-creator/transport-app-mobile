@@ -186,7 +186,9 @@ export function DocumentsScreen() {
             <Subtitle>Файл: {item.file_path}</Subtitle>
             <Subtitle>Дата: {item.created_at}</Subtitle>
             <Subtitle>Автор: {item.created_by_email}</Subtitle>
-            <MenuButton label="Удалить" onPress={() => onDelete(item)} variant="danger" />
+            {user?.role === 'admin' ? (
+              <MenuButton label="Удалить" onPress={() => onDelete(item)} variant="danger" />
+            ) : null}
           </Card>
         )}
         ListEmptyComponent={<EmptyText text="Документов пока нет" />}

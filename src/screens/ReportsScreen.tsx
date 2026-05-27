@@ -13,11 +13,15 @@ import {
 import { apiErrorMessage } from '../api/client';
 import { getReportSummary, type ReportSummary } from '../api/reports';
 import { useAuth } from '../auth/AuthContext';
+import { listDrivers } from '../api/drivers';
+import type { Driver } from '../types';
 
 const emptySummary: ReportSummary = {
   orders_total: 0,
   orders_completed: 0,
   documents_total: 0,
+  expenses_total: 0,
+  expenses_amount: 0,
   income: 0,
   expense: 0,
   balance: 0,
@@ -28,7 +32,8 @@ export function ReportsScreen() {
   const [summary, setSummary] = useState<ReportSummary>(emptySummary);
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
-  const [driverId, setDriverId] = useState('');
+  const [driverId, setDriverId] = useState<number | null>(null);
+  const [drivers, setDrivers] = useState<Driver[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -40,10 +45,12 @@ export function ReportsScreen() {
         await getReportSummary({
           from: from.trim() || undefined,
           to: to.trim() || undefined,
-          driver_id:
-            user?.role === 'admin' && driverId.trim() ? Number(driverId) : undefined,
+          driver_id: user?.role === 'admin' && driverId ? driverId : undefined,
         })
       );
+      if (user?.role === 'admin') {
+        setDrivers(await listDrivers());
+      }
     } catch (e) {
       const msg = apiErrorMessage(e, 'Не удалось загрузить отчёт');
       setError(msg);
@@ -95,12 +102,22 @@ export function ReportsScreen() {
           placeholder="2026-12-31"
         />
         {user?.role === 'admin' ? (
-          <Field
-            label="Driver ID (необязательно)"
-            value={driverId}
-            onChangeText={setDriverId}
-            keyboardType="number-pad"
-          />
+          <Card>
+            <Subtitle>Фильтр по водителю</Subtitle>
+            <MenuButton
+              label={driverId ? 'Показать всех водителей' : 'Все водители'}
+              onPress={() => setDriverId(null)}
+              variant="secondary"
+            />
+            {drivers.map((driver) => (
+              <MenuButton
+                key={driver.id}
+                label={`${driverId === driver.id ? '✅ ' : ''}${driver.full_name ?? driver.email}`}
+                onPress={() => setDriverId(driver.id)}
+                variant={driverId === driver.id ? 'default' : 'secondary'}
+              />
+            ))}
+          </Card>
         ) : null}
         <MenuButton label="Применить" onPress={load} variant="secondary" />
       </Card>
@@ -123,6 +140,11 @@ export function ReportsScreen() {
       <Card>
         <Subtitle>Документы</Subtitle>
         <Title>{summary.documents_total}</Title>
+      </Card>
+      <Card>
+        <Subtitle>Расходные операции</Subtitle>
+        <Title>{summary.expenses_total}</Title>
+        <Subtitle>Сумма: {summary.expenses_amount} ₽</Subtitle>
       </Card>
       <Card>
         <Subtitle>Доход</Subtitle>

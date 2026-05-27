@@ -16,10 +16,43 @@ export function setServerIssueHandler(handler: (() => Promise<void> | void) | nu
   serverIssueHandler = handler;
 }
 
+function getDefaultProtocol(port?: string): 'http' | 'https' {
+  return port === '443' ? 'https' : 'http';
+}
+
+function normalizePort(port?: string): string | null {
+  if (!port) return null;
+  const clean = port.trim();
+  if (!clean) return null;
+  return /^\d+$/.test(clean) ? clean : null;
+}
+
+export function buildApiUrl(hostOrUrl: string, inputPort?: string): string {
+  const hostValue = hostOrUrl.trim();
+  if (!hostValue) return FALLBACK_API_URL;
+
+  const explicitPort = normalizePort(inputPort);
+  const withoutApi = hostValue.replace(/\/api\/?$/i, '').replace(/\/+$/, '');
+  const hasProtocol = /^https?:\/\//i.test(withoutApi);
+
+  const protocol = hasProtocol
+    ? (withoutApi.split('://')[0].toLowerCase() as 'http' | 'https')
+    : getDefaultProtocol(explicitPort ?? undefined);
+
+  const withoutProtocol = withoutApi.replace(/^https?:\/\//i, '');
+  const hostWithPathRemoved = withoutProtocol.split('/')[0];
+  const hostMatch = hostWithPathRemoved.match(/^([^:]+)(?::(\d+))?$/);
+  if (!hostMatch) return FALLBACK_API_URL;
+
+  const host = hostMatch[1];
+  const embeddedPort = hostMatch[2];
+  const port = explicitPort ?? embeddedPort ?? null;
+
+  return `${protocol}://${host}${port ? `:${port}` : ''}/api`;
+}
+
 function normalizeApiUrl(url: string): string {
-  const trimmed = url.trim().replace(/\/+$/, '');
-  if (trimmed.endsWith('/api')) return trimmed;
-  return `${trimmed}/api`;
+  return buildApiUrl(url);
 }
 
 export async function getServerUrl(): Promise<string | null> {

@@ -7,12 +7,11 @@
     "scheme": "reestrpro",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
-    "cli": {
-      "appVersionSource": "local"
-    },
     "ios": {
+      "bundleIdentifier": "com.reestrpro.mobile",
       "supportsTablet": true,
       "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false,
         "NSCameraUsageDescription": "Доступ к камере нужен для фото ТТН по заказу.",
         "NSPhotoLibraryUsageDescription": "Доступ к фото нужен для прикрепления ТТН."
       }

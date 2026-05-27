@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert, FlatList, RefreshControl, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
@@ -18,10 +18,12 @@ import { STATUS_LABEL, type Order } from '../types';
 import type { RootStackParamList } from '../navigation/RootNavigator';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'DriverOrders'>;
+const PAGE_SIZE = 20;
 
 export function DriverOrdersScreen({ navigation }: Props) {
   const { user, driver } = useAuth();
   const [orders, setOrders] = useState<Order[]>([]);
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -50,12 +52,22 @@ export function DriverOrdersScreen({ navigation }: Props) {
     setRefreshing(false);
   };
 
+  useEffect(() => {
+    setVisibleCount(PAGE_SIZE);
+  }, [orders]);
+
+  const pagedOrders = useMemo(
+    () => orders.slice(0, visibleCount),
+    [orders, visibleCount]
+  );
+  const canLoadMore = orders.length > visibleCount;
+
   if (loading && orders.length === 0) return <LoadingScreen />;
 
   return (
     <View style={{ flex: 1, backgroundColor: '#f4f6f8' }}>
       <FlatList
-        data={orders}
+        data={pagedOrders}
         keyExtractor={(o) => String(o.id)}
         contentContainerStyle={{ padding: 16, paddingBottom: 32 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
@@ -79,13 +91,28 @@ export function DriverOrdersScreen({ navigation }: Props) {
               label="Открыть"
               onPress={() => navigation.navigate('OrderDetail', { id: item.id })}
             />
+            <MenuButton
+              label="Загрузка / Разгрузка"
+              onPress={() => navigation.navigate('TripCreate', { orderId: item.id })}
+              variant="secondary"
+            />
           </Card>
         )}
+        onEndReached={() => {
+          if (canLoadMore) setVisibleCount((prev) => prev + PAGE_SIZE);
+        }}
+        onEndReachedThreshold={0.2}
+        ListFooterComponent={
+          canLoadMore ? (
+            <MenuButton
+              label="Показать ещё"
+              onPress={() => setVisibleCount((prev) => prev + PAGE_SIZE)}
+              variant="secondary"
+            />
+          ) : null
+        }
         ListEmptyComponent={<EmptyText text="Заказов нет. Потяните вниз, чтобы обновить." />}
       />
-      <View style={{ padding: 16 }}>
-        <MenuButton label="← Меню" onPress={() => navigation.goBack()} variant="secondary" />
-      </View>
     </View>
   );
 }

@@ -97,7 +97,7 @@ export function DriversScreen({ navigation }: Props) {
   };
 
   const onDelete = (d: Driver) => {
-    Alert.alert('Удалить водителя?', d.full_name, [
+    Alert.alert('Удалить водителя?', d.full_name ?? d.email, [
       { text: 'Отмена', style: 'cancel' },
       {
         text: 'Удалить',
