@@ -1,21 +1,14 @@
 import { useCallback, useState } from 'react';
-import { Alert, FlatList, RefreshControl, View } from 'react-native';
+import { Alert, FlatList, Pressable, RefreshControl, Text, View } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
-import {
-  Card,
-  EmptyText,
-  ErrorText,
-  Field,
-  LoadingScreen,
-  MenuButton,
-  PrimaryButton,
-  Subtitle,
-  Title,
-} from '../components/ui';
+import { FormBottomModal } from '../components/FormBottomModal';
+import { ScreenHeader } from '../components/ScreenHeader';
+import { ErrorText, Field, LoadingScreen, MenuButton } from '../components/ui';
 import { apiErrorMessage } from '../api/client';
 import { createTrip, listTrips } from '../api/trips';
+import { screenUi } from '../styles/screenUi';
 import { TRIP_STAGE_LABEL, type TripRecord, type TripStage } from '../types';
 import type { RootStackParamList } from '../navigation/RootNavigator';
 
@@ -28,6 +21,7 @@ export function TripCreateScreen({ route }: Props) {
   const [refreshing, setRefreshing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [formVisible, setFormVisible] = useState(false);
   const [stage, setStage] = useState<TripStage>('loading');
   const [ttnNumber, setTtnNumber] = useState('');
   const [volume, setVolume] = useState('');
@@ -73,6 +67,14 @@ export function TripCreateScreen({ route }: Props) {
     setPhotoUri(result.assets[0].uri);
   };
 
+  const resetForm = () => {
+    setStage('loading');
+    setTtnNumber('');
+    setVolume('');
+    setNote('');
+    setPhotoUri(null);
+  };
+
   const onSave = async () => {
     const parsedVolume = volume.trim() ? Number(volume.replace(',', '.')) : null;
     if (parsedVolume != null && !Number.isFinite(parsedVolume)) {
@@ -90,10 +92,8 @@ export function TripCreateScreen({ route }: Props) {
         note: note.trim() || undefined,
         photoUri,
       });
-      setTtnNumber('');
-      setVolume('');
-      setNote('');
-      setPhotoUri(null);
+      resetForm();
+      setFormVisible(false);
       await load();
       Alert.alert('Готово', 'Рейс сохранён');
     } catch (e) {
@@ -103,53 +103,82 @@ export function TripCreateScreen({ route }: Props) {
     }
   };
 
-  if (loading) return <LoadingScreen />;
+  if (loading) return <LoadingScreen label="Загрузка рейсов…" />;
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#f4f6f8' }}>
+    <View style={screenUi.container}>
       <FlatList
         data={trips}
         keyExtractor={(item) => String(item.id)}
-        contentContainerStyle={{ padding: 16, paddingBottom: 24 }}
+        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 24 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         ListHeaderComponent={
-          <View>
-            <Title>Рейсы по заказу #{orderId}</Title>
+          <View style={screenUi.content}>
+            <ScreenHeader
+              title={`🧾 Рейсы #${orderId}`}
+              actionLabel="+ Рейс"
+              onAction={() => setFormVisible(true)}
+            />
+            <View style={screenUi.summaryBar}>
+              <View style={screenUi.sumItem}>
+                <Text style={screenUi.sumLabel}>Рейсов</Text>
+                <Text style={[screenUi.sumValue, { color: '#2563eb' }]}>{trips.length}</Text>
+              </View>
+            </View>
             <ErrorText message={error} />
-            <Card>
-              <Subtitle>Этап рейса</Subtitle>
-              <MenuButton
-                label={`${stage === 'loading' ? '✅ ' : ''}${TRIP_STAGE_LABEL.loading}`}
-                onPress={() => setStage('loading')}
-                variant={stage === 'loading' ? 'default' : 'secondary'}
-              />
-              <MenuButton
-                label={`${stage === 'unloading' ? '✅ ' : ''}${TRIP_STAGE_LABEL.unloading}`}
-                onPress={() => setStage('unloading')}
-                variant={stage === 'unloading' ? 'default' : 'secondary'}
-              />
-              <Field label="Номер ТТН" value={ttnNumber} onChangeText={setTtnNumber} />
-              <Field label="Объём" value={volume} onChangeText={setVolume} keyboardType="decimal-pad" />
-              <Field label="Комментарий" value={note} onChangeText={setNote} />
-              <MenuButton label="📷 Камера" onPress={() => onPickPhoto('camera')} variant="secondary" />
-              <MenuButton label="🖼 Галерея" onPress={() => onPickPhoto('library')} variant="secondary" />
-              <Subtitle>{photoUri ? 'Фото выбрано' : 'Фото не выбрано'}</Subtitle>
-              <PrimaryButton label="Сохранить рейс" onPress={onSave} loading={saving} />
-            </Card>
           </View>
         }
         renderItem={({ item }) => (
-          <Card>
-            <Subtitle>
-              #{item.id} · {TRIP_STAGE_LABEL[item.stage]} · {item.created_at}
-            </Subtitle>
-            {item.ttn_number ? <Subtitle>ТТН: {item.ttn_number}</Subtitle> : null}
-            {item.volume != null ? <Subtitle>Объём: {item.volume}</Subtitle> : null}
-            {item.note ? <Subtitle>Комментарий: {item.note}</Subtitle> : null}
-          </Card>
+          <Pressable style={screenUi.card}>
+            <Text style={{ fontSize: 15, fontWeight: '600', color: '#111827' }}>
+              #{item.id} · {TRIP_STAGE_LABEL[item.stage]}
+            </Text>
+            <Text style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>{item.created_at}</Text>
+            {item.ttn_number ? (
+              <Text style={{ fontSize: 13, color: '#4b5563', marginTop: 4 }}>📄 ТТН: {item.ttn_number}</Text>
+            ) : null}
+            {item.volume != null ? (
+              <Text style={{ fontSize: 14, fontWeight: '600', color: '#2563eb', marginTop: 4 }}>⚖️ {item.volume}</Text>
+            ) : null}
+            {item.note ? (
+              <Text style={{ fontSize: 13, color: '#4b5563', marginTop: 4, fontStyle: 'italic' }}>{item.note}</Text>
+            ) : null}
+          </Pressable>
         )}
-        ListEmptyComponent={<EmptyText text="Пока нет рейсов по этому заказу" />}
+        ListEmptyComponent={<Text style={screenUi.emptyText}>Пока нет рейсов по этому заказу</Text>}
       />
+
+      <FormBottomModal
+        visible={formVisible}
+        title="➕ Новый рейс"
+        saveLabel="Сохранить рейс"
+        saving={saving}
+        onSave={onSave}
+        onClose={() => {
+          setFormVisible(false);
+          resetForm();
+        }}
+      >
+        <Text style={screenUi.fieldLabel}>Этап рейса</Text>
+        <MenuButton
+          label={`${stage === 'loading' ? '✅ ' : ''}${TRIP_STAGE_LABEL.loading}`}
+          onPress={() => setStage('loading')}
+          variant={stage === 'loading' ? 'default' : 'secondary'}
+        />
+        <MenuButton
+          label={`${stage === 'unloading' ? '✅ ' : ''}${TRIP_STAGE_LABEL.unloading}`}
+          onPress={() => setStage('unloading')}
+          variant={stage === 'unloading' ? 'default' : 'secondary'}
+        />
+        <Field label="Номер ТТН" value={ttnNumber} onChangeText={setTtnNumber} />
+        <Field label="Объём" value={volume} onChangeText={setVolume} keyboardType="decimal-pad" />
+        <Field label="Комментарий" value={note} onChangeText={setNote} />
+        <MenuButton label="📷 Камера" onPress={() => onPickPhoto('camera')} variant="secondary" />
+        <MenuButton label="🖼 Галерея" onPress={() => onPickPhoto('library')} variant="secondary" />
+        <Text style={{ fontSize: 13, color: '#6b7280', marginTop: 8 }}>
+          {photoUri ? '✅ Фото выбрано' : 'Фото не выбрано'}
+        </Text>
+      </FormBottomModal>
     </View>
   );
 }

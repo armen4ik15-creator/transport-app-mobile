@@ -1,21 +1,14 @@
 import { useCallback, useState } from 'react';
-import { Alert, FlatList, RefreshControl, View } from 'react-native';
+import { Alert, FlatList, Pressable, RefreshControl, Text, View } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { useFocusEffect } from '@react-navigation/native';
-import {
-  Card,
-  EmptyText,
-  ErrorText,
-  Field,
-  LoadingScreen,
-  MenuButton,
-  PrimaryButton,
-  Subtitle,
-  Title,
-} from '../components/ui';
+import { FormBottomModal } from '../components/FormBottomModal';
+import { ScreenHeader } from '../components/ScreenHeader';
+import { ErrorText, Field, LoadingScreen, MenuButton } from '../components/ui';
 import { apiErrorMessage } from '../api/client';
 import { deleteDocument, listDocuments, uploadDocument } from '../api/documents';
 import { listOrders } from '../api/orders';
+import { screenUi } from '../styles/screenUi';
 import { withFallback } from '../utils/safeRequest';
 import { useAuth } from '../auth/AuthContext';
 import type { DocumentRecord, DocumentType, Order } from '../types';
@@ -27,9 +20,9 @@ const initialForm = {
 };
 
 function getDocTypeLabel(type: DocumentType): string {
-  if (type === 'waybill') return 'Путевой лист';
-  if (type === 'invoice') return 'Счёт';
-  return 'Акт';
+  if (type === 'waybill') return '📄 Путевой лист';
+  if (type === 'invoice') return '🧮 Счёт';
+  return '📋 Акт';
 }
 
 export function DocumentsScreen() {
@@ -39,6 +32,7 @@ export function DocumentsScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [formVisible, setFormVisible] = useState(false);
   const [form, setForm] = useState(initialForm);
   const [orders, setOrders] = useState<Order[]>([]);
 
@@ -78,7 +72,6 @@ export function DocumentsScreen() {
       Alert.alert('Доступ', 'Разрешите доступ в настройках');
       return;
     }
-
     const result =
       source === 'camera'
         ? await ImagePicker.launchCameraAsync({ quality: 0.8 })
@@ -99,12 +92,9 @@ export function DocumentsScreen() {
     }
     setUploading(true);
     try {
-      await uploadDocument({
-        order_id: orderId,
-        type: form.type,
-        fileUri: form.fileUri,
-      });
+      await uploadDocument({ order_id: orderId, type: form.type, fileUri: form.fileUri });
       setForm(initialForm);
+      setFormVisible(false);
       await load();
       Alert.alert('Успех', 'Документ загружен');
     } catch (e) {
@@ -132,86 +122,96 @@ export function DocumentsScreen() {
     ]);
   };
 
-  if (loading && documents.length === 0) return <LoadingScreen />;
+  if (loading && documents.length === 0) return <LoadingScreen label="Загрузка документов…" />;
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#f4f6f8' }}>
+    <View style={screenUi.container}>
       <FlatList
         data={documents}
         keyExtractor={(item) => String(item.id)}
-        contentContainerStyle={{ padding: 16, paddingBottom: 32 }}
+        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 24 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         ListHeaderComponent={
-          <View>
-            <Title>Документы</Title>
-            <Subtitle>
-              {user?.role === 'admin'
-                ? 'Все загруженные документы'
-                : 'Ваши документы по вашим заказам'}
-            </Subtitle>
-            <ErrorText message={error} />
-            <Card>
-              <Title>Загрузить документ</Title>
-              <Field
-                label="Поиск заказа по номеру (необязательно)"
-                value={String(form.order_id || '')}
-                onChangeText={(value) => {
-                  const parsed = Number(value);
-                  setForm((prev) => ({ ...prev, order_id: Number.isFinite(parsed) ? parsed : 0 }));
-                }}
-                keyboardType="number-pad"
-              />
-              {orders.slice(0, 12).map((order) => (
-                <MenuButton
-                  key={order.id}
-                  label={`${form.order_id === order.id ? '✅ ' : ''}Заказ #${order.id} · ${order.contractor_name ?? 'Без контрагента'}`}
-                  onPress={() => setForm((prev) => ({ ...prev, order_id: order.id }))}
-                  variant={form.order_id === order.id ? 'default' : 'secondary'}
-                />
-              ))}
-              <View style={{ flexDirection: 'row', gap: 10 }}>
-                <View style={{ flex: 1 }}>
-                  <MenuButton
-                    label={form.type === 'waybill' ? '✅ Путевой лист' : 'Путевой лист'}
-                    onPress={() => setForm((prev) => ({ ...prev, type: 'waybill' }))}
-                    variant={form.type === 'waybill' ? 'default' : 'secondary'}
-                  />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <MenuButton
-                    label={form.type === 'invoice' ? '✅ Счёт' : 'Счёт'}
-                    onPress={() => setForm((prev) => ({ ...prev, type: 'invoice' }))}
-                    variant={form.type === 'invoice' ? 'default' : 'secondary'}
-                  />
-                </View>
+          <View style={screenUi.content}>
+            <ScreenHeader
+              title="📑 Документы"
+              actionLabel="+ Загрузить"
+              onAction={() => setFormVisible(true)}
+            />
+            <Text style={{ fontSize: 13, color: '#6b7280', marginBottom: 8 }}>
+              {user?.role === 'admin' ? 'Все загруженные документы' : 'Ваши документы по заказам'}
+            </Text>
+            <View style={screenUi.summaryBar}>
+              <View style={screenUi.sumItem}>
+                <Text style={screenUi.sumLabel}>Документов</Text>
+                <Text style={[screenUi.sumValue, { color: '#2563eb' }]}>{documents.length}</Text>
               </View>
-              <MenuButton
-                label={form.type === 'act' ? '✅ Акт' : 'Акт'}
-                onPress={() => setForm((prev) => ({ ...prev, type: 'act' }))}
-                variant={form.type === 'act' ? 'default' : 'secondary'}
-              />
-              <MenuButton label="📷 Камера" onPress={() => pickDocumentImage('camera')} variant="secondary" />
-              <MenuButton label="🖼 Галерея" onPress={() => pickDocumentImage('library')} variant="secondary" />
-              {form.fileUri ? <Subtitle>Файл выбран</Subtitle> : <Subtitle>Файл не выбран</Subtitle>}
-              <PrimaryButton label="Загрузить" onPress={onUpload} loading={uploading} />
-            </Card>
+            </View>
+            <ErrorText message={error} />
           </View>
         }
         renderItem={({ item }) => (
-          <Card>
-            <Subtitle>
-              #{item.id} · {getDocTypeLabel(item.type)} · Заказ #{item.order_id}
-            </Subtitle>
-            <Subtitle>Файл: {item.file_path}</Subtitle>
-            <Subtitle>Дата: {item.created_at}</Subtitle>
-            <Subtitle>Автор: {item.created_by_email}</Subtitle>
+          <Pressable style={screenUi.card}>
+            <Text style={{ fontSize: 15, fontWeight: '600', color: '#111827' }}>
+              {getDocTypeLabel(item.type)} · Заказ #{item.order_id}
+            </Text>
+            <Text style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>#{item.id} · {item.created_at}</Text>
+            <Text style={{ fontSize: 13, color: '#4b5563', marginTop: 4 }}>👤 {item.created_by_email}</Text>
             {user?.role === 'admin' ? (
-              <MenuButton label="Удалить" onPress={() => onDelete(item)} variant="danger" />
+              <Pressable onPress={() => onDelete(item)} style={{ marginTop: 8 }}>
+                <Text style={{ color: '#ef4444', fontSize: 13 }}>🗑 Удалить</Text>
+              </Pressable>
             ) : null}
-          </Card>
+          </Pressable>
         )}
-        ListEmptyComponent={<EmptyText text="Документов пока нет" />}
+        ListEmptyComponent={<Text style={screenUi.emptyText}>Документов пока нет</Text>}
       />
+
+      <FormBottomModal
+        visible={formVisible}
+        title="📤 Загрузить документ"
+        saveLabel="Загрузить"
+        saving={uploading}
+        onSave={onUpload}
+        onClose={() => {
+          setFormVisible(false);
+          setForm(initialForm);
+        }}
+      >
+        <Field
+          label="ID заказа"
+          value={String(form.order_id || '')}
+          onChangeText={(value) => {
+            const parsed = Number(value);
+            setForm((prev) => ({ ...prev, order_id: Number.isFinite(parsed) ? parsed : 0 }));
+          }}
+          keyboardType="number-pad"
+        />
+        {orders.slice(0, 12).map((order) => (
+          <MenuButton
+            key={order.id}
+            label={`${form.order_id === order.id ? '✅ ' : ''}Заказ #${order.id} · ${order.contractor_name ?? '—'}`}
+            onPress={() => setForm((prev) => ({ ...prev, order_id: order.id }))}
+            variant={form.order_id === order.id ? 'default' : 'secondary'}
+          />
+        ))}
+        <View style={{ flexDirection: 'row', gap: 8 }}>
+          {(['waybill', 'invoice', 'act'] as DocumentType[]).map((t) => (
+            <View key={t} style={{ flex: 1 }}>
+              <MenuButton
+                label={form.type === t ? `✅ ${getDocTypeLabel(t)}` : getDocTypeLabel(t)}
+                onPress={() => setForm((prev) => ({ ...prev, type: t }))}
+                variant={form.type === t ? 'default' : 'secondary'}
+              />
+            </View>
+          ))}
+        </View>
+        <MenuButton label="📷 Камера" onPress={() => pickDocumentImage('camera')} variant="secondary" />
+        <MenuButton label="🖼 Галерея" onPress={() => pickDocumentImage('library')} variant="secondary" />
+        <Text style={{ fontSize: 13, color: '#6b7280', marginTop: 8 }}>
+          {form.fileUri ? '✅ Файл выбран' : 'Файл не выбран'}
+        </Text>
+      </FormBottomModal>
     </View>
   );
 }

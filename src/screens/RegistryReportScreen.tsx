@@ -1,9 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { FlatList, RefreshControl, View } from 'react-native';
-import { Card, EmptyText, ErrorText, Field, LoadingScreen, MenuButton, Subtitle, Title } from '../components/ui';
+import { FlatList, Pressable, RefreshControl, Text, View } from 'react-native';
+import { FilterChipRow } from '../components/FilterChipRow';
+import { ScreenHeader } from '../components/ScreenHeader';
+import { ErrorText, Field, LoadingScreen, MenuButton } from '../components/ui';
 import { apiErrorMessage } from '../api/client';
 import { listDrivers } from '../api/drivers';
 import { listTrips } from '../api/trips';
+import { screenUi } from '../styles/screenUi';
 import { withFallback } from '../utils/safeRequest';
 import type { Driver, TripRecord } from '../types';
 
@@ -55,53 +58,70 @@ export function RegistryReportScreen() {
     [rows]
   );
 
-  if (loading && rows.length === 0) return <LoadingScreen />;
+  const driverChips = useMemo(
+    () => [
+      { id: 'all', label: '👥 Все' },
+      ...drivers.map((d) => ({ id: String(d.id), label: d.full_name ?? d.email })),
+    ],
+    [drivers]
+  );
+
+  if (loading && rows.length === 0) return <LoadingScreen label="Загрузка реестра…" />;
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#f4f6f8' }}>
+    <View style={screenUi.container}>
       <FlatList
         data={rows}
         keyExtractor={(item) => String(item.id)}
-        contentContainerStyle={{ padding: 16, paddingBottom: 32 }}
+        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 24 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         ListHeaderComponent={
-          <View>
-            <Title>Реестр рейсов</Title>
-            <Subtitle>Разгрузки за период с фильтром по водителю</Subtitle>
+          <View style={screenUi.content}>
+            <ScreenHeader title="📑 Реестр рейсов" showBack={false} />
+            <Field label="Дата от (YYYY-MM-DD)" value={from} onChangeText={setFrom} />
+            <Field label="Дата до (YYYY-MM-DD)" value={to} onChangeText={setTo} />
+            <Text style={screenUi.filterLabel}>Водитель:</Text>
+            <FilterChipRow
+              items={driverChips}
+              activeId={driverId == null ? 'all' : String(driverId)}
+              onSelect={(id) => setDriverId(id === 'all' ? null : Number(id))}
+            />
+            <MenuButton label="🔍 Применить фильтр" onPress={load} variant="secondary" />
+            <View style={screenUi.summaryBar}>
+              <View style={screenUi.sumItem}>
+                <Text style={screenUi.sumLabel}>Разгрузок</Text>
+                <Text style={[screenUi.sumValue, { color: '#2563eb' }]}>{rows.length}</Text>
+              </View>
+              <View style={screenUi.sumDivider} />
+              <View style={screenUi.sumItem}>
+                <Text style={screenUi.sumLabel}>Объём</Text>
+                <Text style={[screenUi.sumValue, { color: '#16a34a' }]}>{totalVolume.toFixed(2)}</Text>
+              </View>
+            </View>
             <ErrorText message={error} />
-            <Card>
-              <Field label="Дата от (YYYY-MM-DD)" value={from} onChangeText={setFrom} />
-              <Field label="Дата до (YYYY-MM-DD)" value={to} onChangeText={setTo} />
-              <MenuButton
-                label={driverId ? 'Показать всех водителей' : 'Все водители'}
-                onPress={() => setDriverId(null)}
-                variant="secondary"
-              />
-              {drivers.map((driver) => (
-                <MenuButton
-                  key={driver.id}
-                  label={`${driverId === driver.id ? '✅ ' : ''}${driver.full_name ?? driver.email}`}
-                  onPress={() => setDriverId(driver.id)}
-                  variant={driverId === driver.id ? 'default' : 'secondary'}
-                />
-              ))}
-              <MenuButton label="Применить фильтр" onPress={load} variant="secondary" />
-              <Subtitle>Разгрузок: {rows.length}</Subtitle>
-              <Subtitle>Общий объём: {totalVolume.toFixed(2)}</Subtitle>
-            </Card>
           </View>
         }
         renderItem={({ item }) => (
-          <Card>
-            <Title>Рейс #{item.id} · Заказ #{item.order_id}</Title>
-            <Subtitle>{item.created_at}</Subtitle>
-            <Subtitle>Водитель: {item.driver_name ?? '—'}</Subtitle>
-            {item.driver_car_number ? <Subtitle>Машина: {item.driver_car_number}</Subtitle> : null}
-            {item.ttn_number ? <Subtitle>ТТН: {item.ttn_number}</Subtitle> : null}
-            {item.volume != null ? <Subtitle>Объём: {item.volume}</Subtitle> : null}
-          </Card>
+          <Pressable style={screenUi.card}>
+            <Text style={{ fontSize: 15, fontWeight: '600', color: '#111827' }}>
+              Рейс #{item.id} · Заказ #{item.order_id}
+            </Text>
+            <Text style={{ fontSize: 12, color: '#6b7280', marginTop: 4 }}>{item.created_at}</Text>
+            <Text style={{ fontSize: 13, color: '#4b5563', marginTop: 4 }}>
+              👤 {item.driver_name ?? '—'}
+              {item.driver_car_number ? ` · 🚚 ${item.driver_car_number}` : ''}
+            </Text>
+            {item.ttn_number ? (
+              <Text style={{ fontSize: 13, color: '#4b5563', marginTop: 2 }}>📄 ТТН: {item.ttn_number}</Text>
+            ) : null}
+            {item.volume != null ? (
+              <Text style={{ fontSize: 14, fontWeight: '600', color: '#2563eb', marginTop: 4 }}>
+                ⚖️ {item.volume}
+              </Text>
+            ) : null}
+          </Pressable>
         )}
-        ListEmptyComponent={<EmptyText text="Данных для реестра нет" />}
+        ListEmptyComponent={<Text style={screenUi.emptyText}>Данных для реестра нет</Text>}
       />
     </View>
   );

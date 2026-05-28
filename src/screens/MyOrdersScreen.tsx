@@ -1,20 +1,13 @@
-import { useCallback, useState } from 'react';
-import { Alert, FlatList, RefreshControl, View } from 'react-native';
-import { useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import { Alert, FlatList, Pressable, RefreshControl, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import {
-  Card,
-  EmptyText,
-  ErrorText,
-  LoadingScreen,
-  MenuButton,
-  Subtitle,
-  Title,
-} from '../components/ui';
+import { ScreenHeader } from '../components/ScreenHeader';
+import { ErrorText, LoadingScreen, MenuButton } from '../components/ui';
 import { listOrders } from '../api/orders';
 import { apiErrorMessage } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
+import { screenUi } from '../styles/screenUi';
 import { STATUS_LABEL, type Order } from '../types';
 import type { RootStackParamList } from '../navigation/types';
 
@@ -55,45 +48,70 @@ export function MyOrdersScreen() {
     ]);
   };
 
-  if (loading && orders.length === 0) return <LoadingScreen />;
+  if (loading && orders.length === 0) return <LoadingScreen label="Загрузка заказов…" />;
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#f4f6f8' }}>
+    <View style={screenUi.container}>
       <FlatList
         data={orders}
         keyExtractor={(o) => String(o.id)}
-        contentContainerStyle={{ padding: 16, paddingBottom: 32 }}
+        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 24 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         ListHeaderComponent={
-          <View>
-            <Title>Мои заказы ({orders.length})</Title>
-            <Subtitle>
-              {driver?.full_name ?? user?.email} · {driver?.car_number ?? 'без номера'}
-            </Subtitle>
+          <View style={screenUi.content}>
+            <ScreenHeader title="📦 Мои заказы" showBack={false} />
+            <Text style={{ fontSize: 13, color: '#6b7280', marginBottom: 8 }}>
+              {driver?.full_name ?? user?.email} · 🚚 {driver?.car_number ?? 'без номера'}
+            </Text>
+            <View style={{ flexDirection: 'row', gap: 8, marginBottom: 8 }}>
+              <Pressable
+                style={{ flex: 1, backgroundColor: '#2563eb', paddingVertical: 10, borderRadius: 8, alignItems: 'center' }}
+                onPress={() => navigation.navigate('DriverFinances')}
+              >
+                <Text style={{ color: '#fff', fontWeight: '600', fontSize: 13 }}>💰 Финансы</Text>
+              </Pressable>
+              <Pressable
+                style={{ flex: 1, backgroundColor: '#7c3aed', paddingVertical: 10, borderRadius: 8, alignItems: 'center' }}
+                onPress={() => navigation.navigate('Documents')}
+              >
+                <Text style={{ color: '#fff', fontWeight: '600', fontSize: 13 }}>📑 Документы</Text>
+              </Pressable>
+              <Pressable
+                style={{ flex: 1, backgroundColor: '#6b7280', paddingVertical: 10, borderRadius: 8, alignItems: 'center' }}
+                onPress={() => navigation.navigate('Reports')}
+              >
+                <Text style={{ color: '#fff', fontWeight: '600', fontSize: 13 }}>📊 Отчёты</Text>
+              </Pressable>
+            </View>
             <ErrorText message={error} />
-            <MenuButton label="💰 Мои финансы" onPress={() => navigation.navigate('DriverFinances')} />
-            <MenuButton label="📑 Мои документы" onPress={() => navigation.navigate('Documents')} />
-            <MenuButton label="📊 Мои отчёты" onPress={() => navigation.navigate('Reports')} variant="secondary" />
           </View>
         }
         renderItem={({ item }) => (
-          <Card>
-            <Subtitle>#{item.id} · {STATUS_LABEL[item.status]}</Subtitle>
-            <Title>{item.contractor_name ?? 'Без контрагента'}</Title>
-            {item.material ? <Subtitle>Материал: {item.material}</Subtitle> : null}
-            {item.load_address ? <Subtitle>Погрузка: {item.load_address}</Subtitle> : null}
-            {item.unload_address ? <Subtitle>Разгрузка: {item.unload_address}</Subtitle> : null}
-            <MenuButton
-              label="Открыть"
-              onPress={() => navigation.navigate('OrderDetail', { id: item.id })}
-            />
-          </Card>
+          <Pressable
+            style={screenUi.card}
+            onPress={() => navigation.navigate('OrderDetail', { id: item.id })}
+          >
+            <Text style={{ fontSize: 16, fontWeight: '600', color: '#111827' }}>
+              {item.contractor_name ?? 'Без контрагента'}
+            </Text>
+            <Text style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>
+              #{item.id} · {STATUS_LABEL[item.status]}
+            </Text>
+            {item.material ? (
+              <Text style={{ fontSize: 13, color: '#4b5563', marginTop: 4 }}>🧱 {item.material}</Text>
+            ) : null}
+            {item.load_address ? (
+              <Text style={{ fontSize: 13, color: '#4b5563', marginTop: 2 }}>📍 {item.load_address}</Text>
+            ) : null}
+          </Pressable>
         )}
-        ListEmptyComponent={<EmptyText text="Заказов нет. Потяните список вниз, чтобы обновить." />}
+        ListEmptyComponent={
+          <Text style={screenUi.emptyText}>Заказов нет. Потяните список вниз, чтобы обновить.</Text>
+        }
+        ListFooterComponent={
+          <MenuButton label="🚪 Выйти" onPress={onLogout} variant="danger" />
+        }
       />
-      <View style={{ padding: 16 }}>
-        <MenuButton label="Выйти" onPress={onLogout} variant="danger" />
-      </View>
     </View>
   );
 }

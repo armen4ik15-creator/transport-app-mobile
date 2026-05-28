@@ -1,9 +1,11 @@
 import { useCallback, useMemo, useState } from 'react';
-import { FlatList, RefreshControl, View } from 'react-native';
+import { FlatList, Pressable, RefreshControl, Text, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import { Card, EmptyText, ErrorText, LoadingScreen, Subtitle, Title } from '../components/ui';
+import { ScreenHeader } from '../components/ScreenHeader';
+import { ErrorText, LoadingScreen } from '../components/ui';
 import { apiErrorMessage } from '../api/client';
 import { listActivity } from '../api/activity';
+import { screenUi } from '../styles/screenUi';
 import type { ActivityLogItem } from '../types';
 
 function formatDetails(details: string | null): string {
@@ -55,31 +57,42 @@ export function ActivityLogScreen() {
     [rows]
   );
 
-  if (loading && rows.length === 0) return <LoadingScreen />;
+  if (loading && rows.length === 0) return <LoadingScreen label="Загрузка журнала…" />;
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#f4f6f8' }}>
+    <View style={screenUi.container}>
       <FlatList
         data={formatted}
         keyExtractor={(item) => String(item.id)}
-        contentContainerStyle={{ padding: 16, paddingBottom: 32 }}
+        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 24 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         ListHeaderComponent={
-          <View>
-            <Title>Журнал действий</Title>
-            <Subtitle>История операций пользователей</Subtitle>
+          <View style={screenUi.content}>
+            <ScreenHeader title="📜 Журнал действий" />
+            <View style={screenUi.summaryBar}>
+              <View style={screenUi.sumItem}>
+                <Text style={screenUi.sumLabel}>Событий</Text>
+                <Text style={[screenUi.sumValue, { color: '#2563eb' }]}>{rows.length}</Text>
+              </View>
+            </View>
             <ErrorText message={error} />
           </View>
         }
         renderItem={({ item }) => (
-          <Card>
-            <Title>{item.action}</Title>
-            {item.user_email ? <Subtitle>Пользователь: {item.user_email}</Subtitle> : null}
-            <Subtitle>{item.created_at}</Subtitle>
-            {item.detailsText ? <Subtitle>{item.detailsText}</Subtitle> : null}
-          </Card>
+          <Pressable style={screenUi.card}>
+            <Text style={{ fontSize: 15, fontWeight: '600', color: '#111827' }}>{item.action}</Text>
+            {item.user_email ? (
+              <Text style={{ fontSize: 13, color: '#6b7280', marginTop: 4 }}>👤 {item.user_email}</Text>
+            ) : null}
+            <Text style={{ fontSize: 12, color: '#9ca3af', marginTop: 2 }}>{item.created_at}</Text>
+            {item.detailsText ? (
+              <Text style={{ fontSize: 13, color: '#4b5563', marginTop: 6, fontStyle: 'italic' }}>
+                {item.detailsText}
+              </Text>
+            ) : null}
+          </Pressable>
         )}
-        ListEmptyComponent={<EmptyText text="Событий пока нет" />}
+        ListEmptyComponent={<Text style={screenUi.emptyText}>Событий пока нет</Text>}
       />
     </View>
   );

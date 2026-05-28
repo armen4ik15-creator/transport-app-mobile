@@ -12,14 +12,14 @@ import {
 import type { ReactNode } from 'react';
 
 const colors = {
-  bg: '#f4f6f8',
+  bg: '#f5f5f5',
   card: '#ffffff',
-  primary: '#1a5fb4',
-  primaryDark: '#0d3d7a',
-  text: '#1c1c1e',
+  primary: '#2563eb',
+  primaryDark: '#1d4ed8',
+  text: '#111827',
   muted: '#6b7280',
   border: '#e5e7eb',
-  danger: '#c01c28',
+  danger: '#ef4444',
 };
 
 export const theme = colors;

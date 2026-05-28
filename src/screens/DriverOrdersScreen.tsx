@@ -1,19 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Alert, FlatList, RefreshControl, View } from 'react-native';
+import { Alert, FlatList, Pressable, RefreshControl, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import {
-  Card,
-  EmptyText,
-  ErrorText,
-  LoadingScreen,
-  MenuButton,
-  Subtitle,
-  Title,
-} from '../components/ui';
+import { ScreenHeader } from '../components/ScreenHeader';
+import { ErrorText, LoadingScreen, MenuButton } from '../components/ui';
 import { listOrders } from '../api/orders';
 import { apiErrorMessage } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
+import { screenUi } from '../styles/screenUi';
 import { STATUS_LABEL, type Order } from '../types';
 import type { RootStackParamList } from '../navigation/types';
 
@@ -54,47 +48,63 @@ export function DriverOrdersScreen() {
     setVisibleCount(PAGE_SIZE);
   }, [orders]);
 
-  const pagedOrders = useMemo(
-    () => orders.slice(0, visibleCount),
-    [orders, visibleCount]
-  );
+  const pagedOrders = useMemo(() => orders.slice(0, visibleCount), [orders, visibleCount]);
   const canLoadMore = orders.length > visibleCount;
 
-  if (loading && orders.length === 0) return <LoadingScreen />;
+  if (loading && orders.length === 0) return <LoadingScreen label="Загрузка заказов…" />;
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#f4f6f8' }}>
+    <View style={screenUi.container}>
       <FlatList
         data={pagedOrders}
         keyExtractor={(o) => String(o.id)}
-        contentContainerStyle={{ padding: 16, paddingBottom: 32 }}
+        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 24 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         ListHeaderComponent={
-          <View>
-            <Title>Мои заказы ({orders.length})</Title>
-            <Subtitle>
-              {driver?.full_name ?? user?.full_name ?? user?.email} · {driver?.car_number ?? 'без номера'}
-            </Subtitle>
+          <View style={screenUi.content}>
+            <ScreenHeader title="📦 Мои заказы" showBack={false} />
+            <Text style={{ fontSize: 13, color: '#6b7280', marginBottom: 8 }}>
+              {driver?.full_name ?? user?.full_name ?? user?.email} · 🚚{' '}
+              {driver?.car_number ?? 'без номера'}
+            </Text>
+            <View style={screenUi.summaryBar}>
+              <View style={screenUi.sumItem}>
+                <Text style={screenUi.sumLabel}>Заказов</Text>
+                <Text style={[screenUi.sumValue, { color: '#2563eb' }]}>{orders.length}</Text>
+              </View>
+            </View>
             <ErrorText message={error} />
           </View>
         }
         renderItem={({ item }) => (
-          <Card>
-            <Subtitle>#{item.id} · {STATUS_LABEL[item.status]}</Subtitle>
-            <Title>{item.contractor_name ?? 'Без контрагента'}</Title>
-            {item.material ? <Subtitle>Материал: {item.material}</Subtitle> : null}
-            {item.quantity != null ? <Subtitle>Объём: {item.quantity}</Subtitle> : null}
-            {item.notes ? <Subtitle>Примечание: {item.notes}</Subtitle> : null}
-            <MenuButton
-              label="Открыть"
-              onPress={() => navigation.navigate('OrderDetail', { id: item.id })}
-            />
-            <MenuButton
-              label="Загрузка / Разгрузка"
-              onPress={() => navigation.navigate('TripCreate', { orderId: item.id })}
-              variant="secondary"
-            />
-          </Card>
+          <View style={screenUi.card}>
+            <Text style={{ fontSize: 16, fontWeight: '600', color: '#111827' }}>
+              {item.contractor_name ?? 'Без контрагента'}
+            </Text>
+            <Text style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>
+              #{item.id} · {STATUS_LABEL[item.status]}
+            </Text>
+            {item.material ? (
+              <Text style={{ fontSize: 13, color: '#4b5563', marginTop: 4 }}>🧱 {item.material}</Text>
+            ) : null}
+            {item.quantity != null ? (
+              <Text style={{ fontSize: 13, color: '#4b5563', marginTop: 2 }}>⚖️ {item.quantity}</Text>
+            ) : null}
+            <View style={{ flexDirection: 'row', gap: 8, marginTop: 10, borderTopWidth: 1, borderTopColor: '#f3f4f6', paddingTop: 10 }}>
+              <Pressable
+                onPress={() => navigation.navigate('OrderDetail', { id: item.id })}
+                style={{ flex: 1, backgroundColor: '#2563eb', paddingVertical: 8, borderRadius: 7, alignItems: 'center' }}
+              >
+                <Text style={{ color: '#fff', fontSize: 12, fontWeight: '600' }}>Открыть</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => navigation.navigate('TripCreate', { orderId: item.id })}
+                style={{ flex: 1, backgroundColor: '#16a34a', paddingVertical: 8, borderRadius: 7, alignItems: 'center' }}
+              >
+                <Text style={{ color: '#fff', fontSize: 12, fontWeight: '600' }}>🧾 Рейс</Text>
+              </Pressable>
+            </View>
+          </View>
         )}
         onEndReached={() => {
           if (canLoadMore) setVisibleCount((prev) => prev + PAGE_SIZE);
@@ -109,7 +119,7 @@ export function DriverOrdersScreen() {
             />
           ) : null
         }
-        ListEmptyComponent={<EmptyText text="Заказов нет. Потяните вниз, чтобы обновить." />}
+        ListEmptyComponent={<Text style={screenUi.emptyText}>Заказов нет. Потяните вниз, чтобы обновить.</Text>}
       />
     </View>
   );

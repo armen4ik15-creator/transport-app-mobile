@@ -1,17 +1,21 @@
 import { useCallback, useState } from 'react';
-import { Alert, FlatList, RefreshControl, View } from 'react-native';
+import { Alert, FlatList, Pressable, RefreshControl, Text, View } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { useFocusEffect } from '@react-navigation/native';
-import { Card, EmptyText, ErrorText, Field, LoadingScreen, MenuButton, PrimaryButton, Subtitle, Title } from '../components/ui';
+import { FormBottomModal } from '../components/FormBottomModal';
+import { ScreenHeader } from '../components/ScreenHeader';
+import { ErrorText, Field, LoadingScreen, MenuButton } from '../components/ui';
 import { apiErrorMessage } from '../api/client';
 import { listOrders } from '../api/orders';
 import { createWaybill, deleteWaybill, listWaybills } from '../api/waybills';
+import { screenUi } from '../styles/screenUi';
 import { withFallback } from '../utils/safeRequest';
 import type { Order, Waybill } from '../types';
 
 export function WaybillsScreen() {
   const [rows, setRows] = useState<Waybill[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
+  const [formVisible, setFormVisible] = useState(false);
   const [orderId, setOrderId] = useState<number | null>(null);
   const [number, setNumber] = useState('');
   const [date, setDate] = useState('');
@@ -59,6 +63,13 @@ export function WaybillsScreen() {
     setFileUri(result.assets[0].uri);
   };
 
+  const resetForm = () => {
+    setOrderId(null);
+    setNumber('');
+    setDate('');
+    setFileUri('');
+  };
+
   const onCreate = async () => {
     if (!orderId || !number.trim()) {
       Alert.alert('Ошибка', 'Выберите заказ и введите номер');
@@ -72,9 +83,8 @@ export function WaybillsScreen() {
         date: date.trim() || undefined,
         fileUri: fileUri || null,
       });
-      setNumber('');
-      setDate('');
-      setFileUri('');
+      resetForm();
+      setFormVisible(false);
       await load();
     } catch (e) {
       Alert.alert('Ошибка', apiErrorMessage(e, 'Не удалось создать путевой лист'));
@@ -101,49 +111,63 @@ export function WaybillsScreen() {
     ]);
   };
 
-  if (loading && rows.length === 0) return <LoadingScreen />;
+  if (loading && rows.length === 0) return <LoadingScreen label="Загрузка путевых листов…" />;
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#f4f6f8' }}>
+    <View style={screenUi.container}>
       <FlatList
         data={rows}
         keyExtractor={(item) => String(item.id)}
-        contentContainerStyle={{ padding: 16, paddingBottom: 32 }}
+        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 24 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         ListHeaderComponent={
-          <View>
-            <Title>Путевые листы</Title>
-            <Subtitle>Реестр путевых листов по заказам</Subtitle>
+          <View style={screenUi.content}>
+            <ScreenHeader title="📄 Путевые листы" actionLabel="+ Создать" onAction={() => setFormVisible(true)} />
             <ErrorText message={error} />
-            <Card>
-              <Title>Новый путевой лист</Title>
-              <Subtitle>Выберите заказ</Subtitle>
-              {orders.slice(0, 15).map((item) => (
-                <MenuButton
-                  key={item.id}
-                  label={`${orderId === item.id ? '✅ ' : ''}Заказ #${item.id}`}
-                  onPress={() => setOrderId(item.id)}
-                  variant={orderId === item.id ? 'default' : 'secondary'}
-                />
-              ))}
-              <Field label="Номер путевого листа" value={number} onChangeText={setNumber} />
-              <Field label="Дата (YYYY-MM-DD)" value={date} onChangeText={setDate} />
-              <MenuButton label={fileUri ? 'Файл выбран' : 'Прикрепить файл'} onPress={pickFile} variant="secondary" />
-              <PrimaryButton label="Сохранить" onPress={onCreate} loading={saving} />
-            </Card>
           </View>
         }
         renderItem={({ item }) => (
-          <Card>
-            <Title>#{item.id} · {item.number}</Title>
-            <Subtitle>Заказ #{item.order_id} · {item.date}</Subtitle>
-            {item.contractor_name ? <Subtitle>Контрагент: {item.contractor_name}</Subtitle> : null}
-            {item.file_path ? <Subtitle>Файл: {item.file_path}</Subtitle> : null}
-            <MenuButton label="Удалить" onPress={() => onDelete(item.id)} variant="danger" />
-          </Card>
+          <Pressable style={screenUi.card} onLongPress={() => onDelete(item.id)}>
+            <Text style={{ fontSize: 16, fontWeight: '600', color: '#111827' }}>
+              #{item.id} · {item.number}
+            </Text>
+            <Text style={{ fontSize: 13, color: '#6b7280', marginTop: 2 }}>
+              Заказ #{item.order_id} · {item.date}
+            </Text>
+            {item.contractor_name ? (
+              <Text style={{ fontSize: 13, color: '#4b5563', marginTop: 4 }}>🏢 {item.contractor_name}</Text>
+            ) : null}
+            <Pressable onPress={() => onDelete(item.id)} style={{ marginTop: 8 }}>
+              <Text style={{ color: '#ef4444', fontSize: 13 }}>🗑 Удалить</Text>
+            </Pressable>
+          </Pressable>
         )}
-        ListEmptyComponent={<EmptyText text="Путевых листов пока нет" />}
+        ListEmptyComponent={<Text style={screenUi.emptyText}>Путевых листов пока нет</Text>}
       />
+
+      <FormBottomModal
+        visible={formVisible}
+        title="➕ Новый путевой лист"
+        saving={saving}
+        onSave={onCreate}
+        onClose={() => {
+          setFormVisible(false);
+          resetForm();
+        }}
+      >
+        <Text style={screenUi.fieldLabel}>Выберите заказ</Text>
+        {orders.slice(0, 15).map((item) => (
+          <MenuButton
+            key={item.id}
+            label={`${orderId === item.id ? '✅ ' : ''}Заказ #${item.id}`}
+            onPress={() => setOrderId(item.id)}
+            variant={orderId === item.id ? 'default' : 'secondary'}
+          />
+        ))}
+        <Field label="Номер путевого листа" value={number} onChangeText={setNumber} />
+        <Field label="Дата (YYYY-MM-DD)" value={date} onChangeText={setDate} />
+        <MenuButton label={fileUri ? '✅ Файл выбран' : '📎 Прикрепить файл'} onPress={pickFile} variant="secondary" />
+      </FormBottomModal>
     </View>
   );
 }

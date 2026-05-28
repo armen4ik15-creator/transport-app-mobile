@@ -1,16 +1,22 @@
 import { useCallback, useState } from 'react';
-import { Alert, FlatList, RefreshControl, View } from 'react-native';
+import { Alert, FlatList, Pressable, RefreshControl, Text, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import { Card, EmptyText, ErrorText, Field, LoadingScreen, MenuButton, PrimaryButton, Subtitle, Title } from '../components/ui';
+import { FormBottomModal } from '../components/FormBottomModal';
+import { ScreenHeader } from '../components/ScreenHeader';
+import { SearchBar } from '../components/SearchBar';
+import { ErrorText, Field, LoadingScreen } from '../components/ui';
 import { apiErrorMessage } from '../api/client';
 import { createMaterial, deleteMaterial, listMaterials } from '../api/materials';
 import { useAuth } from '../auth/AuthContext';
+import { screenUi } from '../styles/screenUi';
 import type { Material } from '../types';
 
 export function MaterialsScreen() {
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
   const [materials, setMaterials] = useState<Material[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [formVisible, setFormVisible] = useState(false);
   const [name, setName] = useState('');
   const [unit, setUnit] = useState('т');
   const [price, setPrice] = useState('');
@@ -41,6 +47,11 @@ export function MaterialsScreen() {
     setRefreshing(false);
   };
 
+  const filtered = materials.filter((m) => {
+    const q = searchQuery.trim().toLowerCase();
+    return !q || m.name.toLowerCase().includes(q);
+  });
+
   const onCreate = async () => {
     if (!isAdmin) return;
     if (!name.trim()) {
@@ -58,6 +69,7 @@ export function MaterialsScreen() {
       setName('');
       setUnit('т');
       setPrice('');
+      setFormVisible(false);
       await load();
     } catch (e) {
       Alert.alert('Ошибка', apiErrorMessage(e, 'Не удалось создать материал'));
@@ -85,44 +97,65 @@ export function MaterialsScreen() {
     ]);
   };
 
-  if (loading && materials.length === 0) return <LoadingScreen />;
+  if (loading && materials.length === 0) return <LoadingScreen label="Загрузка материалов…" />;
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#f4f6f8' }}>
+    <View style={screenUi.container}>
       <FlatList
-        data={materials}
+        data={filtered}
         keyExtractor={(item) => String(item.id)}
-        contentContainerStyle={{ padding: 16, paddingBottom: 32 }}
+        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 24 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         ListHeaderComponent={
-          <View>
-            <Title>Материалы</Title>
-            <Subtitle>Справочник материалов и базовых ставок</Subtitle>
+          <View style={screenUi.content}>
+            <ScreenHeader
+              title="🧱 Материалы"
+              actionLabel={isAdmin ? '+ Добавить' : undefined}
+              onAction={isAdmin ? () => setFormVisible(true) : undefined}
+            />
+            <SearchBar value={searchQuery} onChangeText={setSearchQuery} placeholder="Поиск материала…" />
             <ErrorText message={error} />
-            {isAdmin ? (
-              <Card>
-                <Title>Добавить материал</Title>
-                <Field label="Название" value={name} onChangeText={setName} />
-                <Field label="Ед. измерения" value={unit} onChangeText={setUnit} />
-                <Field label="Цена за тонну (опционально)" value={price} onChangeText={setPrice} keyboardType="decimal-pad" />
-                <PrimaryButton label="Сохранить" onPress={onCreate} loading={saving} />
-              </Card>
-            ) : null}
           </View>
         }
         renderItem={({ item }) => (
-          <Card>
-            <Title>{item.name}</Title>
-            <Subtitle>
-              Ед.: {item.unit} {item.price_per_ton != null ? `· ${item.price_per_ton} ₽/т` : ''}
-            </Subtitle>
-            {isAdmin ? (
-              <MenuButton label="Удалить" onPress={() => onDelete(item.id, item.name)} variant="danger" />
-            ) : null}
-          </Card>
+          <Pressable style={screenUi.card} onLongPress={() => isAdmin && onDelete(item.id, item.name)}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 16, fontWeight: '600', color: '#111827' }}>{item.name}</Text>
+                <Text style={{ fontSize: 13, color: '#6b7280', marginTop: 2 }}>
+                  Ед.: {item.unit}
+                  {item.price_per_ton != null ? ` · 💰 ${item.price_per_ton} ₽/т` : ''}
+                </Text>
+              </View>
+              {isAdmin ? (
+                <Pressable onPress={() => onDelete(item.id, item.name)} hitSlop={8}>
+                  <Text style={{ color: '#ef4444', fontSize: 16 }}>🗑</Text>
+                </Pressable>
+              ) : null}
+            </View>
+          </Pressable>
         )}
-        ListEmptyComponent={<EmptyText text="Материалы пока не добавлены" />}
+        ListEmptyComponent={<Text style={screenUi.emptyText}>Материалы пока не добавлены</Text>}
       />
+
+      {isAdmin ? (
+        <FormBottomModal
+          visible={formVisible}
+          title="➕ Новый материал"
+          saving={saving}
+          onSave={onCreate}
+          onClose={() => {
+            setFormVisible(false);
+            setName('');
+            setUnit('т');
+            setPrice('');
+          }}
+        >
+          <Field label="Название" value={name} onChangeText={setName} />
+          <Field label="Ед. измерения" value={unit} onChangeText={setUnit} />
+          <Field label="Цена за тонну (опционально)" value={price} onChangeText={setPrice} keyboardType="decimal-pad" />
+        </FormBottomModal>
+      ) : null}
     </View>
   );
 }

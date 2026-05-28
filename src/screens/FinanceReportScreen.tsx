@@ -1,11 +1,14 @@
 import { useCallback, useMemo, useState } from 'react';
-import { FlatList, RefreshControl, View } from 'react-native';
+import { FlatList, RefreshControl, Text, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import { Card, EmptyText, ErrorText, Field, LoadingScreen, MenuButton, Subtitle, Title } from '../components/ui';
+import { FilterChipRow } from '../components/FilterChipRow';
+import { ScreenHeader } from '../components/ScreenHeader';
+import { ErrorText, Field, LoadingScreen, MenuButton } from '../components/ui';
 import { apiErrorMessage } from '../api/client';
 import { listDrivers } from '../api/drivers';
 import { listExpenses } from '../api/expenses';
 import { listTrips } from '../api/trips';
+import { screenUi } from '../styles/screenUi';
 import { withFallback } from '../utils/safeRequest';
 import type { Driver, ExpenseRecord, TripRecord } from '../types';
 
@@ -13,6 +16,7 @@ interface FinanceRow {
   key: string;
   title: string;
   value: string;
+  color: string;
 }
 
 export function FinanceReportScreen() {
@@ -67,63 +71,65 @@ export function FinanceReportScreen() {
     return { tripCount, totalVolume, totalExpenses };
   }, [trips, expenses]);
 
+  const driverChips = useMemo(
+    () => [
+      { id: 'all', label: '👥 Все' },
+      ...drivers.map((d) => ({ id: String(d.id), label: d.full_name ?? d.email })),
+    ],
+    [drivers]
+  );
+
   const rows: FinanceRow[] = [
-    { key: 'trips', title: 'Рейсов', value: String(totals.tripCount) },
-    { key: 'volume', title: 'Суммарный объём', value: totals.totalVolume.toFixed(2) },
-    { key: 'expenses', title: 'Расходы', value: `${totals.totalExpenses.toFixed(2)} ₽` },
+    { key: 'trips', title: '🚛 Рейсов', value: String(totals.tripCount), color: '#2563eb' },
+    { key: 'volume', title: '⚖️ Суммарный объём', value: totals.totalVolume.toFixed(2), color: '#16a34a' },
+    { key: 'expenses', title: '💸 Расходы', value: `${totals.totalExpenses.toFixed(2)} ₽`, color: '#ef4444' },
   ];
 
-  if (loading && trips.length === 0 && expenses.length === 0) return <LoadingScreen />;
+  if (loading && trips.length === 0 && expenses.length === 0) return <LoadingScreen label="Загрузка отчёта…" />;
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#f4f6f8' }}>
+    <View style={screenUi.container}>
       <FlatList
         data={rows}
         keyExtractor={(item) => item.key}
-        contentContainerStyle={{ padding: 16, paddingBottom: 32 }}
+        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 24 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         ListHeaderComponent={
-          <View>
-            <Title>Финансовый отчёт</Title>
-            <Subtitle>Сводка по рейсам и расходам за период</Subtitle>
+          <View style={screenUi.content}>
+            <ScreenHeader title="📊 Финансовый отчёт" />
+            <Field label="Дата от (YYYY-MM-DD)" value={from} onChangeText={setFrom} />
+            <Field label="Дата до (YYYY-MM-DD)" value={to} onChangeText={setTo} />
+            <Text style={screenUi.filterLabel}>Водитель:</Text>
+            <FilterChipRow
+              items={driverChips}
+              activeId={driverId == null ? 'all' : String(driverId)}
+              onSelect={(id) => setDriverId(id === 'all' ? null : Number(id))}
+            />
+            <MenuButton label="🔍 Применить фильтр" onPress={load} variant="secondary" />
             <ErrorText message={error} />
-            <Card>
-              <Field label="Дата от (YYYY-MM-DD)" value={from} onChangeText={setFrom} />
-              <Field label="Дата до (YYYY-MM-DD)" value={to} onChangeText={setTo} />
-              <MenuButton
-                label={driverId ? 'Показать всех водителей' : 'Все водители'}
-                onPress={() => setDriverId(null)}
-                variant="secondary"
-              />
-              {drivers.map((driver) => (
-                <MenuButton
-                  key={driver.id}
-                  label={`${driverId === driver.id ? '✅ ' : ''}${driver.full_name ?? driver.email}`}
-                  onPress={() => setDriverId(driver.id)}
-                  variant={driverId === driver.id ? 'default' : 'secondary'}
-                />
-              ))}
-              <MenuButton label="Применить фильтр" onPress={load} variant="secondary" />
-            </Card>
           </View>
         }
         renderItem={({ item }) => (
-          <Card>
-            <Title>{item.title}</Title>
-            <Subtitle>{item.value}</Subtitle>
-          </Card>
+          <View style={screenUi.card}>
+            <Text style={{ fontSize: 14, color: '#6b7280' }}>{item.title}</Text>
+            <Text style={{ fontSize: 22, fontWeight: '700', color: item.color, marginTop: 4 }}>{item.value}</Text>
+          </View>
         )}
         ListFooterComponent={
-          <Card>
-            <Subtitle>Детализация расходов: {expenses.length} записей</Subtitle>
-            {expenses.slice(0, 10).map((item) => (
-              <Subtitle key={item.id}>
-                #{item.id} · {item.exp_type} · {item.amount.toFixed(2)} ₽ · {item.exp_date}
-              </Subtitle>
-            ))}
-          </Card>
+          expenses.length > 0 ? (
+            <View style={screenUi.card}>
+              <Text style={{ fontSize: 14, fontWeight: '600', color: '#374151', marginBottom: 8 }}>
+                💸 Детализация расходов ({expenses.length})
+              </Text>
+              {expenses.slice(0, 10).map((item) => (
+                <Text key={item.id} style={{ fontSize: 12, color: '#6b7280', marginBottom: 4 }}>
+                  #{item.id} · {item.exp_type} · {item.amount.toFixed(2)} ₽ · {item.exp_date}
+                </Text>
+              ))}
+            </View>
+          ) : null
         }
-        ListEmptyComponent={<EmptyText text="Нет данных за выбранный период" />}
+        ListEmptyComponent={<Text style={screenUi.emptyText}>Нет данных за выбранный период</Text>}
       />
     </View>
   );

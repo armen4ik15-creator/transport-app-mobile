@@ -1,17 +1,10 @@
 import { useCallback, useMemo, useState } from 'react';
-import { Alert, FlatList, RefreshControl, View } from 'react-native';
+import { Alert, FlatList, Pressable, RefreshControl, Text, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import {
-  Card,
-  EmptyText,
-  ErrorText,
-  Field,
-  LoadingScreen,
-  MenuButton,
-  PrimaryButton,
-  Subtitle,
-  Title,
-} from '../components/ui';
+import { FilterChipRow } from '../components/FilterChipRow';
+import { FormBottomModal } from '../components/FormBottomModal';
+import { ScreenHeader } from '../components/ScreenHeader';
+import { ErrorText, Field, LoadingScreen, MenuButton } from '../components/ui';
 import { apiErrorMessage } from '../api/client';
 import { listDrivers } from '../api/drivers';
 import {
@@ -21,6 +14,7 @@ import {
   getSalarySummary,
   listSalaryPayments,
 } from '../api/salary';
+import { screenUi } from '../styles/screenUi';
 import { withFallback } from '../utils/safeRequest';
 import type {
   Driver,
@@ -46,10 +40,10 @@ const initialForm = {
 };
 
 const paymentTypeLabels: Record<DriverPaymentType, string> = {
-  salary: 'Зарплата',
-  advance: 'Аванс',
-  bonus: 'Премия',
-  deduction: 'Удержание',
+  salary: '💵 Зарплата',
+  advance: '💳 Аванс',
+  bonus: '🎁 Премия',
+  deduction: '➖ Удержание',
 };
 
 export function SalaryScreen() {
@@ -59,6 +53,7 @@ export function SalaryScreen() {
   const [selectedDriverId, setSelectedDriverId] = useState<number | null>(null);
   const [summary, setSummary] = useState<DriverSalarySummary>(initialSummary);
   const [form, setForm] = useState(initialForm);
+  const [formVisible, setFormVisible] = useState(false);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -102,6 +97,14 @@ export function SalaryScreen() {
     setRefreshing(false);
   };
 
+  const driverChips = useMemo(
+    () => [
+      { id: 'all', label: '👥 Все' },
+      ...drivers.map((d) => ({ id: String(d.id), label: d.full_name ?? d.email })),
+    ],
+    [drivers]
+  );
+
   const onCreate = async () => {
     const amount = Number(form.amount.replace(',', '.'));
     if (!form.driver_id) {
@@ -122,6 +125,7 @@ export function SalaryScreen() {
         note: form.note.trim() || undefined,
       });
       setForm(initialForm);
+      setFormVisible(false);
       await load();
       Alert.alert('Успех', 'Выплата сохранена');
     } catch (e) {
@@ -149,111 +153,115 @@ export function SalaryScreen() {
     ]);
   };
 
-  if (loading && records.length === 0) return <LoadingScreen />;
+  if (loading && records.length === 0) return <LoadingScreen label="Загрузка зарплат…" />;
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#f4f6f8' }}>
+    <View style={screenUi.container}>
       <FlatList
         data={records}
         keyExtractor={(item) => String(item.id)}
-        contentContainerStyle={{ padding: 16, paddingBottom: 24 }}
+        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 24 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         ListHeaderComponent={
-          <View>
-            <Title>Зарплаты водителей</Title>
-            <Subtitle>Выплаты, авансы, премии и удержания</Subtitle>
+          <View style={screenUi.content}>
+            <ScreenHeader title="💵 Зарплаты" actionLabel="+ Выплата" onAction={() => setFormVisible(true)} />
+            <Text style={screenUi.filterLabel}>Водитель:</Text>
+            <FilterChipRow
+              items={driverChips}
+              activeId={selectedDriverId == null ? 'all' : String(selectedDriverId)}
+              onSelect={(id) => setSelectedDriverId(id === 'all' ? null : Number(id))}
+            />
+            {selectedDriver && (
+              <View style={screenUi.summaryBar}>
+                <View style={screenUi.sumItem}>
+                  <Text style={screenUi.sumLabel}>Начислено</Text>
+                  <Text style={[screenUi.sumValue, { color: '#2563eb' }]}>{summary.gross.toFixed(0)} ₽</Text>
+                </View>
+                <View style={screenUi.sumDivider} />
+                <View style={screenUi.sumItem}>
+                  <Text style={screenUi.sumLabel}>Долг</Text>
+                  <Text style={[screenUi.sumValue, { color: '#ef4444' }]}>{summary.debt.toFixed(0)} ₽</Text>
+                </View>
+              </View>
+            )}
+            {debts.length > 0 ? (
+              <View style={[screenUi.card, { marginBottom: 8 }]}>
+                <Text style={{ fontSize: 13, fontWeight: '600', color: '#374151', marginBottom: 6 }}>
+                  📋 Реестр задолженности
+                </Text>
+                {debts.slice(0, 5).map((item) => (
+                  <Text key={item.driver_id} style={{ fontSize: 12, color: '#6b7280', marginBottom: 2 }}>
+                    {item.driver_name ?? `#${item.driver_id}`}: {item.debt.toFixed(0)} ₽
+                  </Text>
+                ))}
+              </View>
+            ) : null}
             <ErrorText message={error} />
-            <Card>
-              <Subtitle>Фильтр по водителю</Subtitle>
-              <MenuButton
-                label={selectedDriverId ? 'Показать всех' : 'Все водители'}
-                onPress={() => setSelectedDriverId(null)}
-                variant="secondary"
-              />
-              {drivers.map((d) => (
-                <MenuButton
-                  key={d.id}
-                  label={`${selectedDriverId === d.id ? '✅ ' : ''}${d.full_name ?? d.email}`}
-                  onPress={() => setSelectedDriverId(d.id)}
-                  variant={selectedDriverId === d.id ? 'default' : 'secondary'}
-                />
-              ))}
-              <MenuButton label="Обновить" onPress={load} variant="secondary" />
-              {selectedDriver ? (
-                <>
-                  <Subtitle>
-                    {selectedDriver.full_name ?? selectedDriver.email}
-                    {selectedDriver.car_number ? ` (${selectedDriver.car_number})` : ''}
-                  </Subtitle>
-                  <Subtitle>Начислено (до выплат): {summary.gross.toFixed(2)} ₽</Subtitle>
-                  <Subtitle>Выплачено: {summary.paid.toFixed(2)} ₽</Subtitle>
-                  <Subtitle>Удержано: {summary.deducted.toFixed(2)} ₽</Subtitle>
-                  <Title>Долг: {summary.debt.toFixed(2)} ₽</Title>
-                </>
-              ) : null}
-            </Card>
-
-            <Card>
-              <Title>Реестр задолженности</Title>
-              {debts.slice(0, 20).map((item) => (
-                <Subtitle key={item.driver_id}>
-                  {(item.driver_name ?? `Водитель #${item.driver_id}`) +
-                    (item.driver_car_number ? ` (${item.driver_car_number})` : '')}
-                  : долг {item.debt.toFixed(2)} ₽
-                </Subtitle>
-              ))}
-            </Card>
-
-            <Card>
-              <Title>Новая выплата</Title>
-              <Subtitle>Водитель</Subtitle>
-              {drivers.map((d) => (
-                <MenuButton
-                  key={d.id}
-                  label={`${form.driver_id === d.id ? '✅ ' : ''}${d.full_name ?? d.email}`}
-                  onPress={() => setForm((prev) => ({ ...prev, driver_id: d.id }))}
-                  variant={form.driver_id === d.id ? 'default' : 'secondary'}
-                />
-              ))}
-              <Field
-                label="Сумма"
-                value={form.amount}
-                onChangeText={(value) => setForm((prev) => ({ ...prev, amount: value }))}
-                keyboardType="decimal-pad"
-              />
-              <Field
-                label="Комментарий"
-                value={form.note}
-                onChangeText={(value) => setForm((prev) => ({ ...prev, note: value }))}
-              />
-              {(Object.keys(paymentTypeLabels) as DriverPaymentType[]).map((type) => (
-                <MenuButton
-                  key={type}
-                  label={`${form.type === type ? '✅ ' : ''}${paymentTypeLabels[type]}`}
-                  onPress={() => setForm((prev) => ({ ...prev, type }))}
-                  variant={form.type === type ? 'default' : 'secondary'}
-                />
-              ))}
-              <PrimaryButton label="Сохранить выплату" onPress={onCreate} loading={saving} />
-            </Card>
           </View>
         }
         renderItem={({ item }) => (
-          <Card>
-            <Subtitle>
-              #{item.id} · {paymentTypeLabels[item.type]} · {item.amount} ₽
-            </Subtitle>
-            <Title>
-              {item.driver_name}
-              {item.driver_car_number ? ` (${item.driver_car_number})` : ''}
-            </Title>
-            <Subtitle>{item.created_at}</Subtitle>
-            {item.note ? <Subtitle>{item.note}</Subtitle> : null}
-            <MenuButton label="Удалить" onPress={() => onDelete(item.id)} variant="danger" />
-          </Card>
+          <Pressable style={screenUi.card} onLongPress={() => onDelete(item.id)}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Text style={{ fontSize: 16, fontWeight: '600', color: '#111827' }}>
+                {item.driver_name}
+                {item.driver_car_number ? ` (${item.driver_car_number})` : ''}
+              </Text>
+              <Text style={{ fontSize: 17, fontWeight: '700', color: '#2563eb' }}>{item.amount} ₽</Text>
+            </View>
+            <Text style={{ fontSize: 12, color: '#6b7280', marginTop: 4 }}>
+              #{item.id} · {paymentTypeLabels[item.type]} · {item.created_at}
+            </Text>
+            {item.note ? (
+              <Text style={{ fontSize: 13, color: '#4b5563', marginTop: 4, fontStyle: 'italic' }}>{item.note}</Text>
+            ) : null}
+            <Pressable onPress={() => onDelete(item.id)} style={{ marginTop: 8 }}>
+              <Text style={{ color: '#ef4444', fontSize: 13 }}>🗑 Удалить</Text>
+            </Pressable>
+          </Pressable>
         )}
-        ListEmptyComponent={<EmptyText text="Записей по зарплатам пока нет" />}
+        ListEmptyComponent={<Text style={screenUi.emptyText}>Записей по зарплатам пока нет</Text>}
       />
+
+      <FormBottomModal
+        visible={formVisible}
+        title="➕ Новая выплата"
+        saveLabel="Сохранить выплату"
+        saving={saving}
+        onSave={onCreate}
+        onClose={() => {
+          setFormVisible(false);
+          setForm(initialForm);
+        }}
+      >
+        <Text style={screenUi.fieldLabel}>Водитель</Text>
+        {drivers.map((d) => (
+          <MenuButton
+            key={d.id}
+            label={`${form.driver_id === d.id ? '✅ ' : ''}${d.full_name ?? d.email}`}
+            onPress={() => setForm((prev) => ({ ...prev, driver_id: d.id }))}
+            variant={form.driver_id === d.id ? 'default' : 'secondary'}
+          />
+        ))}
+        <Field
+          label="Сумма"
+          value={form.amount}
+          onChangeText={(value) => setForm((prev) => ({ ...prev, amount: value }))}
+          keyboardType="decimal-pad"
+        />
+        <Field
+          label="Комментарий"
+          value={form.note}
+          onChangeText={(value) => setForm((prev) => ({ ...prev, note: value }))}
+        />
+        {(Object.keys(paymentTypeLabels) as DriverPaymentType[]).map((type) => (
+          <MenuButton
+            key={type}
+            label={`${form.type === type ? '✅ ' : ''}${paymentTypeLabels[type]}`}
+            onPress={() => setForm((prev) => ({ ...prev, type }))}
+            variant={form.type === type ? 'default' : 'secondary'}
+          />
+        ))}
+      </FormBottomModal>
     </View>
   );
 }

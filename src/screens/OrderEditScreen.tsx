@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Alert, ScrollView } from 'react-native';
+import { Alert, ScrollView, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Card, Field, LoadingScreen, MenuButton, PrimaryButton, Subtitle, Title } from '../components/ui';
+import { ScreenHeader } from '../components/ScreenHeader';
+import { Field, LoadingScreen, MenuButton, PrimaryButton } from '../components/ui';
 import { apiErrorMessage } from '../api/client';
 import { listContractors } from '../api/contractors';
 import { listDrivers } from '../api/drivers';
 import { getOrder, updateOrder } from '../api/orders';
+import { screenUi } from '../styles/screenUi';
 import { withFallback } from '../utils/safeRequest';
 import type { Contractor, Driver } from '../types';
 import type { RootStackParamList } from '../navigation/RootNavigator';
@@ -45,26 +47,26 @@ export function OrderEditScreen({ route, navigation }: Props) {
         withFallback(() => listDrivers(), []),
         withFallback(() => listContractors(), []),
       ]);
-    setDrivers(driversData);
-    setContractors(contractorsData);
-    setDriverId(order.driver_id ?? null);
-    setContractorId(order.contractor_id ?? null);
-    setTaskName(order.task_name ?? '');
-    setSender(order.sender ?? '');
-    setReceiver(order.receiver ?? '');
-    setPlannedVolume(order.total_planned_volume != null ? String(order.total_planned_volume) : '');
-    setMaterial(order.material ?? '');
-    setQuantity(order.quantity != null ? String(order.quantity) : '');
-    setUnit(order.unit ?? '');
-    setDriverRate(order.driver_rate != null ? String(order.driver_rate) : '');
-    setCompanyRate(order.company_rate != null ? String(order.company_rate) : '');
-    setDistanceKm(order.distance_km != null ? String(order.distance_km) : '');
-    setDescription(order.description ?? '');
-    setNotes(order.notes ?? '');
-    setLoadAddress(order.load_address ?? '');
-    setUnloadAddress(order.unload_address ?? '');
-    setAmount(order.amount != null ? String(order.amount) : '');
-    setIsActive(Boolean(order.is_active));
+      setDrivers(driversData);
+      setContractors(contractorsData);
+      setDriverId(order.driver_id ?? null);
+      setContractorId(order.contractor_id ?? null);
+      setTaskName(order.task_name ?? '');
+      setSender(order.sender ?? '');
+      setReceiver(order.receiver ?? '');
+      setPlannedVolume(order.total_planned_volume != null ? String(order.total_planned_volume) : '');
+      setMaterial(order.material ?? '');
+      setQuantity(order.quantity != null ? String(order.quantity) : '');
+      setUnit(order.unit ?? '');
+      setDriverRate(order.driver_rate != null ? String(order.driver_rate) : '');
+      setCompanyRate(order.company_rate != null ? String(order.company_rate) : '');
+      setDistanceKm(order.distance_km != null ? String(order.distance_km) : '');
+      setDescription(order.description ?? '');
+      setNotes(order.notes ?? '');
+      setLoadAddress(order.load_address ?? '');
+      setUnloadAddress(order.unload_address ?? '');
+      setAmount(order.amount != null ? String(order.amount) : '');
+      setIsActive(Boolean(order.is_active));
     } catch (e) {
       Alert.alert('Ошибка', apiErrorMessage(e, 'Не удалось загрузить заказ'));
     }
@@ -111,69 +113,69 @@ export function OrderEditScreen({ route, navigation }: Props) {
     }
   };
 
-  if (loading) return <LoadingScreen />;
+  if (loading) return <LoadingScreen label="Загрузка заказа…" />;
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: '#f4f6f8' }} contentContainerStyle={{ padding: 16, paddingBottom: 32 }}>
-      <Title>Редактирование заказа #{id}</Title>
-      <Subtitle>Поля заказа, статусы активности и ставки</Subtitle>
+    <View style={screenUi.container}>
+      <ScrollView contentContainerStyle={[screenUi.content, { paddingBottom: 32 }]} keyboardShouldPersistTaps="handled">
+        <ScreenHeader title={`✏️ Заказ #${id}`} />
 
-      <Card>
-        <Subtitle>Водитель</Subtitle>
-        {drivers.map((d) => (
+        <View style={screenUi.card}>
+          <Text style={screenUi.fieldLabel}>👤 Водитель</Text>
+          {drivers.map((d) => (
+            <MenuButton
+              key={d.id}
+              label={`${driverId === d.id ? '✅ ' : ''}${d.full_name ?? d.email}`}
+              onPress={() => setDriverId(d.id)}
+              variant={driverId === d.id ? 'default' : 'secondary'}
+            />
+          ))}
+        </View>
+
+        <View style={screenUi.card}>
+          <Text style={screenUi.fieldLabel}>🏢 Контрагент</Text>
+          {contractors.map((c) => (
+            <MenuButton
+              key={c.id}
+              label={`${contractorId === c.id ? '✅ ' : ''}${c.name}`}
+              onPress={() => setContractorId(c.id)}
+              variant={contractorId === c.id ? 'default' : 'secondary'}
+            />
+          ))}
+        </View>
+
+        <Field label="Название задачи" value={taskName} onChangeText={setTaskName} />
+        <Field label="Отправитель" value={sender} onChangeText={setSender} />
+        <Field label="Получатель" value={receiver} onChangeText={setReceiver} />
+        <Field label="Плановый объём" value={plannedVolume} onChangeText={setPlannedVolume} keyboardType="decimal-pad" />
+        <Field label="🧱 Материал" value={material} onChangeText={setMaterial} />
+        <Field label="Количество" value={quantity} onChangeText={setQuantity} keyboardType="decimal-pad" />
+        <Field label="Ед. измерения" value={unit} onChangeText={setUnit} />
+        <Field label="Ставка водителя" value={driverRate} onChangeText={setDriverRate} keyboardType="decimal-pad" />
+        <Field label="Ставка компании" value={companyRate} onChangeText={setCompanyRate} keyboardType="decimal-pad" />
+        <Field label="Плечо, км" value={distanceKm} onChangeText={setDistanceKm} keyboardType="decimal-pad" />
+        <Field label="Описание" value={description} onChangeText={setDescription} />
+        <Field label="Примечание" value={notes} onChangeText={setNotes} />
+        <Field label="📍 Погрузка" value={loadAddress} onChangeText={setLoadAddress} />
+        <Field label="📍 Разгрузка" value={unloadAddress} onChangeText={setUnloadAddress} />
+        <Field label="Сумма заказа" value={amount} onChangeText={setAmount} keyboardType="decimal-pad" />
+
+        <View style={screenUi.card}>
+          <Text style={screenUi.fieldLabel}>Активность задачи</Text>
           <MenuButton
-            key={d.id}
-            label={`${driverId === d.id ? '✅ ' : ''}${d.full_name ?? d.email}`}
-            onPress={() => setDriverId(d.id)}
-            variant={driverId === d.id ? 'default' : 'secondary'}
+            label={isActive ? '✅ Активный заказ' : 'Активный заказ'}
+            onPress={() => setIsActive(true)}
+            variant={isActive ? 'default' : 'secondary'}
           />
-        ))}
-      </Card>
-
-      <Card>
-        <Subtitle>Контрагент</Subtitle>
-        {contractors.map((c) => (
           <MenuButton
-            key={c.id}
-            label={`${contractorId === c.id ? '✅ ' : ''}${c.name}`}
-            onPress={() => setContractorId(c.id)}
-            variant={contractorId === c.id ? 'default' : 'secondary'}
+            label={!isActive ? '✅ В архиве (неактивен)' : 'В архиве (неактивен)'}
+            onPress={() => setIsActive(false)}
+            variant={!isActive ? 'default' : 'secondary'}
           />
-        ))}
-      </Card>
+        </View>
 
-      <Field label="Название задачи" value={taskName} onChangeText={setTaskName} />
-      <Field label="Отправитель" value={sender} onChangeText={setSender} />
-      <Field label="Получатель" value={receiver} onChangeText={setReceiver} />
-      <Field label="Плановый объём" value={plannedVolume} onChangeText={setPlannedVolume} keyboardType="decimal-pad" />
-      <Field label="Материал" value={material} onChangeText={setMaterial} />
-      <Field label="Количество" value={quantity} onChangeText={setQuantity} keyboardType="decimal-pad" />
-      <Field label="Ед. измерения" value={unit} onChangeText={setUnit} />
-      <Field label="Ставка водителя" value={driverRate} onChangeText={setDriverRate} keyboardType="decimal-pad" />
-      <Field label="Ставка компании" value={companyRate} onChangeText={setCompanyRate} keyboardType="decimal-pad" />
-      <Field label="Плечо, км" value={distanceKm} onChangeText={setDistanceKm} keyboardType="decimal-pad" />
-      <Field label="Описание" value={description} onChangeText={setDescription} />
-      <Field label="Примечание" value={notes} onChangeText={setNotes} />
-      <Field label="Погрузка" value={loadAddress} onChangeText={setLoadAddress} />
-      <Field label="Разгрузка" value={unloadAddress} onChangeText={setUnloadAddress} />
-      <Field label="Сумма заказа" value={amount} onChangeText={setAmount} keyboardType="decimal-pad" />
-
-      <Card>
-        <Subtitle>Активность задачи</Subtitle>
-        <MenuButton
-          label={isActive ? '✅ Активный заказ' : 'Активный заказ'}
-          onPress={() => setIsActive(true)}
-          variant={isActive ? 'default' : 'secondary'}
-        />
-        <MenuButton
-          label={!isActive ? '✅ В архиве (неактивен)' : 'В архиве (неактивен)'}
-          onPress={() => setIsActive(false)}
-          variant={!isActive ? 'default' : 'secondary'}
-        />
-      </Card>
-
-      <PrimaryButton label="Сохранить изменения" onPress={onSave} loading={saving} />
-      <MenuButton label="← Назад" onPress={() => navigation.goBack()} variant="secondary" />
-    </ScrollView>
+        <PrimaryButton label="💾 Сохранить изменения" onPress={onSave} loading={saving} />
+      </ScrollView>
+    </View>
   );
 }

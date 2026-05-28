@@ -1,21 +1,15 @@
 import { useCallback, useMemo, useState } from 'react';
-import { Alert, FlatList, RefreshControl, View } from 'react-native';
+import { Alert, FlatList, Pressable, RefreshControl, Text, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import {
-  Card,
-  EmptyText,
-  ErrorText,
-  Field,
-  LoadingScreen,
-  MenuButton,
-  PrimaryButton,
-  Subtitle,
-  Title,
-} from '../components/ui';
+import { FilterChipRow } from '../components/FilterChipRow';
+import { FormBottomModal } from '../components/FormBottomModal';
+import { ScreenHeader } from '../components/ScreenHeader';
+import { ErrorText, Field, LoadingScreen, MenuButton } from '../components/ui';
 import { apiErrorMessage } from '../api/client';
 import { createFinance, getDriverBalance, listFinances } from '../api/finances';
 import { listOrders } from '../api/orders';
 import { listDrivers } from '../api/drivers';
+import { screenUi } from '../styles/screenUi';
 import { withFallback } from '../utils/safeRequest';
 import type { Driver, DriverBalance, FinanceRecord, Order } from '../types';
 
@@ -34,6 +28,7 @@ export function AdminFinancesScreen() {
   const [selectedDriverId, setSelectedDriverId] = useState<number | null>(null);
   const [balance, setBalance] = useState<DriverBalance | null>(null);
   const [form, setForm] = useState(initialForm);
+  const [formVisible, setFormVisible] = useState(false);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -79,6 +74,14 @@ export function AdminFinancesScreen() {
     setRefreshing(false);
   };
 
+  const driverChips = useMemo(
+    () => [
+      { id: 'all', label: '👥 Все' },
+      ...drivers.map((d) => ({ id: String(d.id), label: d.full_name ?? d.email })),
+    ],
+    [drivers]
+  );
+
   const onCreate = async () => {
     const driverId = Number(form.driver_id);
     const amount = Number(form.amount);
@@ -102,6 +105,7 @@ export function AdminFinancesScreen() {
         order_id: orderId,
       });
       setForm(initialForm);
+      setFormVisible(false);
       await load();
       Alert.alert('Успех', 'Операция добавлена');
     } catch (e) {
@@ -111,127 +115,150 @@ export function AdminFinancesScreen() {
     }
   };
 
-  if (loading && records.length === 0) return <LoadingScreen />;
+  if (loading && records.length === 0) return <LoadingScreen label="Загрузка финансов…" />;
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#f4f6f8' }}>
+    <View style={screenUi.container}>
       <FlatList
         data={records}
         keyExtractor={(item) => String(item.id)}
-        contentContainerStyle={{ padding: 16, paddingBottom: 32 }}
+        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 24 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         ListHeaderComponent={
-          <View>
-            <Title>Финансы</Title>
-            <Subtitle>Операции водителей: доходы и расходы</Subtitle>
-            <ErrorText message={error} />
-
-            <Card>
-              <Subtitle>Фильтр по водителю</Subtitle>
-              <MenuButton
-                label={selectedDriverId ? 'Показать всех водителей' : 'Фильтр: все водители'}
-                onPress={() => setSelectedDriverId(null)}
-                variant="secondary"
-              />
-              {drivers.map((d) => (
-                <MenuButton
-                  key={d.id}
-                  label={`${selectedDriverId === d.id ? '✅ ' : ''}${d.full_name ?? d.email}`}
-                  onPress={() => setSelectedDriverId(d.id)}
-                  variant={selectedDriverId === d.id ? 'default' : 'secondary'}
-                />
-              ))}
-              <MenuButton label="Применить фильтр" onPress={load} variant="secondary" />
-              {selectedDriver ? (
-                <Subtitle>
-                  {selectedDriver.full_name}
-                  {selectedDriver.car_number ? ` (${selectedDriver.car_number})` : ''}
-                </Subtitle>
-              ) : null}
-              {balance ? (
-                <>
-                  <Subtitle>Доход: {balance.income} ₽</Subtitle>
-                  <Subtitle>Расход: {balance.expense} ₽</Subtitle>
-                  <Title>Баланс: {balance.balance} ₽</Title>
-                </>
-              ) : null}
-            </Card>
-
-            <Card>
-              <Title>Новая операция</Title>
-              <Subtitle>Водитель</Subtitle>
-              {drivers.map((d) => (
-                <MenuButton
-                  key={d.id}
-                  label={`${form.driver_id === d.id ? '✅ ' : ''}${d.full_name ?? d.email}`}
-                  onPress={() => setForm((prev) => ({ ...prev, driver_id: d.id }))}
-                  variant={form.driver_id === d.id ? 'default' : 'secondary'}
-                />
-              ))}
-              <Field
-                label="Сумма"
-                value={form.amount}
-                onChangeText={(value) => setForm((prev) => ({ ...prev, amount: value }))}
-                keyboardType="decimal-pad"
-              />
-              <Subtitle>Связанный заказ (необязательно)</Subtitle>
-              <MenuButton
-                label={form.order_id ? 'Сбросить связь с заказом' : 'Без привязки к заказу'}
-                onPress={() => setForm((prev) => ({ ...prev, order_id: 0 }))}
-                variant="secondary"
-              />
-              {orders
-                .filter((o) => !form.driver_id || o.driver_id === form.driver_id)
-                .slice(0, 10)
-                .map((o) => (
-                  <MenuButton
-                    key={o.id}
-                    label={`${form.order_id === o.id ? '✅ ' : ''}Заказ #${o.id} · ${o.contractor_name ?? 'Без контрагента'}`}
-                    onPress={() => setForm((prev) => ({ ...prev, order_id: o.id }))}
-                    variant={form.order_id === o.id ? 'default' : 'secondary'}
-                  />
-                ))}
-              <Field
-                label="Описание"
-                value={form.description}
-                onChangeText={(value) => setForm((prev) => ({ ...prev, description: value }))}
-              />
-              <View style={{ flexDirection: 'row', gap: 10 }}>
-                <View style={{ flex: 1 }}>
-                  <MenuButton
-                    label={form.type === 'income' ? '✅ Доход' : 'Доход'}
-                    onPress={() => setForm((prev) => ({ ...prev, type: 'income' }))}
-                    variant={form.type === 'income' ? 'default' : 'secondary'}
-                  />
+          <View style={screenUi.content}>
+            <ScreenHeader title="💰 Финансы" actionLabel="+ Операция" onAction={() => setFormVisible(true)} />
+            <Text style={screenUi.filterLabel}>Фильтр по водителю:</Text>
+            <FilterChipRow
+              items={driverChips}
+              activeId={selectedDriverId == null ? 'all' : String(selectedDriverId)}
+              onSelect={(id) => setSelectedDriverId(id === 'all' ? null : Number(id))}
+            />
+            <MenuButton label="🔄 Обновить" onPress={load} variant="secondary" />
+            {selectedDriver && balance ? (
+              <View style={screenUi.summaryBar}>
+                <View style={screenUi.sumItem}>
+                  <Text style={screenUi.sumLabel}>Доход</Text>
+                  <Text style={[screenUi.sumValue, { color: '#16a34a' }]}>{balance.income} ₽</Text>
                 </View>
-                <View style={{ flex: 1 }}>
-                  <MenuButton
-                    label={form.type === 'expense' ? '✅ Расход' : 'Расход'}
-                    onPress={() => setForm((prev) => ({ ...prev, type: 'expense' }))}
-                    variant={form.type === 'expense' ? 'default' : 'secondary'}
-                  />
+                <View style={screenUi.sumDivider} />
+                <View style={screenUi.sumItem}>
+                  <Text style={screenUi.sumLabel}>Расход</Text>
+                  <Text style={[screenUi.sumValue, { color: '#ef4444' }]}>{balance.expense} ₽</Text>
+                </View>
+                <View style={screenUi.sumDivider} />
+                <View style={screenUi.sumItem}>
+                  <Text style={screenUi.sumLabel}>Баланс</Text>
+                  <Text style={[screenUi.sumValue, { color: '#2563eb' }]}>{balance.balance} ₽</Text>
                 </View>
               </View>
-              <PrimaryButton label="Добавить" onPress={onCreate} loading={saving} />
-            </Card>
+            ) : null}
+            {selectedDriver ? (
+              <Text style={{ fontSize: 13, color: '#6b7280', marginBottom: 8 }}>
+                👤 {selectedDriver.full_name}
+                {selectedDriver.car_number ? ` (${selectedDriver.car_number})` : ''}
+              </Text>
+            ) : null}
+            <ErrorText message={error} />
           </View>
         }
         renderItem={({ item }) => (
-          <Card>
-            <Subtitle>
-              #{item.id} · {item.type === 'income' ? 'Доход' : 'Расход'} · {item.amount} ₽
-            </Subtitle>
-            <Title>
-              {item.driver_name}
-              {item.driver_car_number ? ` (${item.driver_car_number})` : ''}
-            </Title>
-            <Subtitle>Дата: {item.created_at}</Subtitle>
-            {item.order_id ? <Subtitle>Заказ: #{item.order_id}</Subtitle> : null}
-            {item.description ? <Subtitle>{item.description}</Subtitle> : null}
-          </Card>
+          <Pressable style={screenUi.card}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Text style={{ fontSize: 16, fontWeight: '600', color: '#111827' }}>
+                {item.driver_name}
+                {item.driver_car_number ? ` (${item.driver_car_number})` : ''}
+              </Text>
+              <Text
+                style={{
+                  fontSize: 17,
+                  fontWeight: '700',
+                  color: item.type === 'income' ? '#16a34a' : '#ef4444',
+                }}
+              >
+                {item.type === 'income' ? '+' : '−'}{item.amount} ₽
+              </Text>
+            </View>
+            <Text style={{ fontSize: 12, color: '#6b7280', marginTop: 4 }}>
+              #{item.id} · {item.type === 'income' ? '💵 Доход' : '💸 Расход'} · {item.created_at}
+            </Text>
+            {item.order_id ? (
+              <Text style={{ fontSize: 13, color: '#4b5563', marginTop: 2 }}>📦 Заказ #{item.order_id}</Text>
+            ) : null}
+            {item.description ? (
+              <Text style={{ fontSize: 13, color: '#4b5563', marginTop: 2, fontStyle: 'italic' }}>
+                {item.description}
+              </Text>
+            ) : null}
+          </Pressable>
         )}
-        ListEmptyComponent={<EmptyText text="Финансовых операций пока нет" />}
+        ListEmptyComponent={<Text style={screenUi.emptyText}>Финансовых операций пока нет</Text>}
       />
+
+      <FormBottomModal
+        visible={formVisible}
+        title="➕ Новая операция"
+        saveLabel="Добавить"
+        saving={saving}
+        onSave={onCreate}
+        onClose={() => {
+          setFormVisible(false);
+          setForm(initialForm);
+        }}
+      >
+        <Text style={screenUi.fieldLabel}>Водитель</Text>
+        {drivers.map((d) => (
+          <MenuButton
+            key={d.id}
+            label={`${form.driver_id === d.id ? '✅ ' : ''}${d.full_name ?? d.email}`}
+            onPress={() => setForm((prev) => ({ ...prev, driver_id: d.id }))}
+            variant={form.driver_id === d.id ? 'default' : 'secondary'}
+          />
+        ))}
+        <Field
+          label="Сумма"
+          value={form.amount}
+          onChangeText={(value) => setForm((prev) => ({ ...prev, amount: value }))}
+          keyboardType="decimal-pad"
+        />
+        <Text style={screenUi.fieldLabel}>Связанный заказ (необязательно)</Text>
+        <MenuButton
+          label={form.order_id ? 'Сбросить связь с заказом' : 'Без привязки к заказу'}
+          onPress={() => setForm((prev) => ({ ...prev, order_id: 0 }))}
+          variant="secondary"
+        />
+        {orders
+          .filter((o) => !form.driver_id || o.driver_id === form.driver_id)
+          .slice(0, 10)
+          .map((o) => (
+            <MenuButton
+              key={o.id}
+              label={`${form.order_id === o.id ? '✅ ' : ''}Заказ #${o.id} · ${o.contractor_name ?? '—'}`}
+              onPress={() => setForm((prev) => ({ ...prev, order_id: o.id }))}
+              variant={form.order_id === o.id ? 'default' : 'secondary'}
+            />
+          ))}
+        <Field
+          label="Описание"
+          value={form.description}
+          onChangeText={(value) => setForm((prev) => ({ ...prev, description: value }))}
+        />
+        <View style={{ flexDirection: 'row', gap: 8 }}>
+          <View style={{ flex: 1 }}>
+            <MenuButton
+              label={form.type === 'income' ? '✅ 💵 Доход' : '💵 Доход'}
+              onPress={() => setForm((prev) => ({ ...prev, type: 'income' }))}
+              variant={form.type === 'income' ? 'default' : 'secondary'}
+            />
+          </View>
+          <View style={{ flex: 1 }}>
+            <MenuButton
+              label={form.type === 'expense' ? '✅ 💸 Расход' : '💸 Расход'}
+              onPress={() => setForm((prev) => ({ ...prev, type: 'expense' }))}
+              variant={form.type === 'expense' ? 'default' : 'secondary'}
+            />
+          </View>
+        </View>
+      </FormBottomModal>
     </View>
   );
 }

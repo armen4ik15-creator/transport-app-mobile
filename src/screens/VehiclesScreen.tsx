@@ -1,16 +1,22 @@
 import { useCallback, useState } from 'react';
-import { Alert, FlatList, RefreshControl, View } from 'react-native';
+import { Alert, FlatList, Pressable, RefreshControl, Text, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import { Card, EmptyText, ErrorText, Field, LoadingScreen, MenuButton, PrimaryButton, Subtitle, Title } from '../components/ui';
+import { FormBottomModal } from '../components/FormBottomModal';
+import { ScreenHeader } from '../components/ScreenHeader';
+import { SearchBar } from '../components/SearchBar';
+import { ErrorText, Field, LoadingScreen } from '../components/ui';
 import { apiErrorMessage } from '../api/client';
 import { createVehicle, deleteVehicle, listVehicles } from '../api/vehicles';
 import { useAuth } from '../auth/AuthContext';
+import { screenUi } from '../styles/screenUi';
 import type { Vehicle } from '../types';
 
 export function VehiclesScreen() {
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [formVisible, setFormVisible] = useState(false);
   const [plate, setPlate] = useState('');
   const [model, setModel] = useState('');
   const [capacity, setCapacity] = useState('');
@@ -41,6 +47,11 @@ export function VehiclesScreen() {
     setRefreshing(false);
   };
 
+  const filtered = vehicles.filter((v) => {
+    const q = searchQuery.trim().toLowerCase();
+    return !q || v.plate_number.toLowerCase().includes(q) || v.model?.toLowerCase().includes(q);
+  });
+
   const onCreate = async () => {
     if (!isAdmin) return;
     if (!plate.trim()) {
@@ -58,6 +69,7 @@ export function VehiclesScreen() {
       setPlate('');
       setModel('');
       setCapacity('');
+      setFormVisible(false);
       await load();
     } catch (e) {
       Alert.alert('Ошибка', apiErrorMessage(e, 'Не удалось добавить автомобиль'));
@@ -85,45 +97,65 @@ export function VehiclesScreen() {
     ]);
   };
 
-  if (loading && vehicles.length === 0) return <LoadingScreen />;
+  if (loading && vehicles.length === 0) return <LoadingScreen label="Загрузка автомобилей…" />;
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#f4f6f8' }}>
+    <View style={screenUi.container}>
       <FlatList
-        data={vehicles}
+        data={filtered}
         keyExtractor={(item) => String(item.id)}
-        contentContainerStyle={{ padding: 16, paddingBottom: 32 }}
+        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 24 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         ListHeaderComponent={
-          <View>
-            <Title>Автомобили</Title>
-            <Subtitle>Справочник автопарка</Subtitle>
+          <View style={screenUi.content}>
+            <ScreenHeader
+              title="🚛 Автомобили"
+              actionLabel={isAdmin ? '+ Добавить' : undefined}
+              onAction={isAdmin ? () => setFormVisible(true) : undefined}
+            />
+            <SearchBar value={searchQuery} onChangeText={setSearchQuery} placeholder="Поиск по номеру…" />
             <ErrorText message={error} />
-            {isAdmin ? (
-              <Card>
-                <Title>Добавить автомобиль</Title>
-                <Field label="Госномер" value={plate} onChangeText={setPlate} />
-                <Field label="Модель" value={model} onChangeText={setModel} />
-                <Field label="Грузоподъёмность" value={capacity} onChangeText={setCapacity} keyboardType="decimal-pad" />
-                <PrimaryButton label="Сохранить" onPress={onCreate} loading={saving} />
-              </Card>
-            ) : null}
           </View>
         }
         renderItem={({ item }) => (
-          <Card>
-            <Title>{item.plate_number}</Title>
-            <Subtitle>
-              {item.model ?? 'Модель не указана'}
-              {item.capacity != null ? ` · ${item.capacity}` : ''}
-            </Subtitle>
-            {isAdmin ? (
-              <MenuButton label="Удалить" onPress={() => onDelete(item)} variant="danger" />
-            ) : null}
-          </Card>
+          <Pressable style={screenUi.card} onLongPress={() => isAdmin && onDelete(item)}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 16, fontWeight: '600', color: '#111827' }}>{item.plate_number}</Text>
+                <Text style={{ fontSize: 13, color: '#6b7280', marginTop: 2 }}>
+                  {item.model ?? 'Модель не указана'}
+                  {item.capacity != null ? ` · ⚖️ ${item.capacity}` : ''}
+                </Text>
+              </View>
+              {isAdmin ? (
+                <Pressable onPress={() => onDelete(item)} hitSlop={8}>
+                  <Text style={{ color: '#ef4444', fontSize: 16 }}>🗑</Text>
+                </Pressable>
+              ) : null}
+            </View>
+          </Pressable>
         )}
-        ListEmptyComponent={<EmptyText text="Автомобилей пока нет" />}
+        ListEmptyComponent={<Text style={screenUi.emptyText}>Автомобилей пока нет</Text>}
       />
+
+      {isAdmin ? (
+        <FormBottomModal
+          visible={formVisible}
+          title="➕ Новый автомобиль"
+          saving={saving}
+          onSave={onCreate}
+          onClose={() => {
+            setFormVisible(false);
+            setPlate('');
+            setModel('');
+            setCapacity('');
+          }}
+        >
+          <Field label="Госномер" value={plate} onChangeText={setPlate} />
+          <Field label="Модель" value={model} onChangeText={setModel} />
+          <Field label="Грузоподъёмность" value={capacity} onChangeText={setCapacity} keyboardType="decimal-pad" />
+        </FormBottomModal>
+      ) : null}
     </View>
   );
 }

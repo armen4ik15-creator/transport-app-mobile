@@ -1,23 +1,17 @@
-import { useCallback, useState } from 'react';
-import { Alert, RefreshControl, ScrollView, View } from 'react-native';
+import { useCallback, useMemo, useState } from 'react';
+import { Alert, RefreshControl, ScrollView, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
-import {
-  Card,
-  ErrorText,
-  Field,
-  LoadingScreen,
-  MenuButton,
-  PrimaryButton,
-  Subtitle,
-  Title,
-} from '../components/ui';
+import { FilterChipRow } from '../components/FilterChipRow';
+import { ScreenHeader } from '../components/ScreenHeader';
+import { ErrorText, Field, LoadingScreen, MenuButton, PrimaryButton } from '../components/ui';
 import { getEarningsSummary } from '../api/earnings';
 import { apiErrorMessage } from '../api/client';
 import { listDrivers } from '../api/drivers';
 import type { Driver, EarningsSummary } from '../types';
 import type { RootStackParamList } from '../navigation/RootNavigator';
 import { useAuth } from '../auth/AuthContext';
+import { screenUi } from '../styles/screenUi';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Earnings'>;
 
@@ -103,60 +97,83 @@ export function EarningsScreen({ navigation }: Props) {
     setRefreshing(false);
   };
 
-  if (loading) return <LoadingScreen />;
+  const driverChips = useMemo(
+    () => [
+      { id: 'all', label: '👥 Все' },
+      ...drivers.map((d) => ({ id: String(d.id), label: d.full_name ?? d.email })),
+    ],
+    [drivers]
+  );
+
+  const statCards = [
+    { label: 'Рейсов', value: String(summary.total_trips), color: '#2563eb' },
+    { label: 'Объём', value: summary.total_volume.toFixed(2), color: '#7c3aed' },
+    { label: 'Оценочный доход', value: `${summary.estimated_income.toFixed(2)} ₽`, color: '#16a34a' },
+    { label: 'Факт. доход', value: `${summary.actual_income.toFixed(2)} ₽`, color: '#16a34a' },
+    { label: 'Факт. расход', value: `${summary.actual_expense.toFixed(2)} ₽`, color: '#ef4444' },
+    { label: 'Факт. баланс', value: `${summary.actual_balance.toFixed(2)} ₽`, color: '#2563eb' },
+  ];
+
+  if (loading) return <LoadingScreen label="Загрузка аналитики…" />;
 
   return (
     <ScrollView
-      style={{ flex: 1, backgroundColor: '#f4f6f8' }}
-      contentContainerStyle={{ padding: 16, paddingBottom: 24 }}
+      style={screenUi.container}
+      contentContainerStyle={[screenUi.content, { paddingBottom: 32 }]}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
     >
-      <Title>Заработок и рейсы</Title>
-      <Subtitle>
+      <ScreenHeader title="🧮 Заработок и рейсы" />
+      <Text style={{ fontSize: 13, color: '#6b7280', marginBottom: 12 }}>
         {user?.role === 'admin'
           ? 'Оценка заработка по рейсам и фактические финансы'
           : `${driver?.full_name ?? user?.email}: личная статистика рейсов`}
-      </Subtitle>
+      </Text>
       <ErrorText message={error} />
 
-      <Card>
+      <View style={screenUi.card}>
         <Field label="Дата от (YYYY-MM-DD)" value={from} onChangeText={setFrom} />
         <Field label="Дата до (YYYY-MM-DD)" value={to} onChangeText={setTo} />
-        <MenuButton label="Сегодня" onPress={setToday} variant="secondary" />
-        <MenuButton label="Вахта 1 (1-15)" onPress={setFirstShift} variant="secondary" />
-        <MenuButton label="Вахта 2 (16-конец)" onPress={setSecondShift} variant="secondary" />
+        <View style={{ flexDirection: 'row', gap: 8 }}>
+          <View style={{ flex: 1 }}>
+            <MenuButton label="📅 Сегодня" onPress={setToday} variant="secondary" />
+          </View>
+          <View style={{ flex: 1 }}>
+            <MenuButton label="1-15" onPress={setFirstShift} variant="secondary" />
+          </View>
+          <View style={{ flex: 1 }}>
+            <MenuButton label="16-конец" onPress={setSecondShift} variant="secondary" />
+          </View>
+        </View>
         {user?.role === 'admin' ? (
           <>
-            <Subtitle>Фильтр по водителю</Subtitle>
-            <MenuButton
-              label={driverId ? 'Показать всех водителей' : 'Все водители'}
-              onPress={() => setDriverId(null)}
-              variant="secondary"
+            <Text style={screenUi.filterLabel}>Водитель:</Text>
+            <FilterChipRow
+              items={driverChips}
+              activeId={driverId == null ? 'all' : String(driverId)}
+              onSelect={(id) => setDriverId(id === 'all' ? null : Number(id))}
             />
-            {drivers.map((driverItem) => (
-              <MenuButton
-                key={driverItem.id}
-                label={`${driverId === driverItem.id ? '✅ ' : ''}${driverItem.full_name ?? driverItem.email}`}
-                onPress={() => setDriverId(driverItem.id)}
-                variant={driverId === driverItem.id ? 'default' : 'secondary'}
-              />
-            ))}
           </>
         ) : null}
-        <PrimaryButton label="Обновить аналитику" onPress={() => void load()} />
-      </Card>
+        <PrimaryButton label="🔄 Обновить аналитику" onPress={() => void load()} />
+      </View>
 
-      <Card>
-        <Subtitle>Рейсов: {summary.total_trips}</Subtitle>
-        <Subtitle>Объём: {summary.total_volume.toFixed(2)}</Subtitle>
-        <Subtitle>Оценочный доход по ставке: {summary.estimated_income.toFixed(2)}</Subtitle>
-        <Subtitle>Фактический доход: {summary.actual_income.toFixed(2)}</Subtitle>
-        <Subtitle>Фактический расход: {summary.actual_expense.toFixed(2)}</Subtitle>
-        <Title>Фактический баланс: {summary.actual_balance.toFixed(2)}</Title>
-      </Card>
-
-      <View style={{ marginTop: 8 }}>
-        <MenuButton label="← Назад" onPress={() => navigation.goBack()} variant="secondary" />
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+        {statCards.map((card) => (
+          <View
+            key={card.label}
+            style={{
+              width: '48%',
+              backgroundColor: '#ffffff',
+              borderRadius: 12,
+              borderWidth: 1,
+              borderColor: '#e5e7eb',
+              padding: 12,
+            }}
+          >
+            <Text style={screenUi.sumLabel}>{card.label}</Text>
+            <Text style={[screenUi.sumValue, { color: card.color }]}>{card.value}</Text>
+          </View>
+        ))}
       </View>
     </ScrollView>
   );

@@ -1,19 +1,13 @@
-import { useCallback, useEffect, useState } from 'react';
-import { FlatList, Image, RefreshControl, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { FlatList, Image, RefreshControl, Text, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import {
-  Card,
-  EmptyText,
-  ErrorText,
-  Field,
-  LoadingScreen,
-  MenuButton,
-  Subtitle,
-  Title,
-} from '../components/ui';
+import { FilterChipRow } from '../components/FilterChipRow';
+import { ScreenHeader } from '../components/ScreenHeader';
+import { ErrorText, Field, LoadingScreen, MenuButton } from '../components/ui';
 import { apiErrorMessage, getServerHost } from '../api/client';
 import { listTrips } from '../api/trips';
 import { listDrivers } from '../api/drivers';
+import { screenUi } from '../styles/screenUi';
 import { withFallback } from '../utils/safeRequest';
 import { TRIP_STAGE_LABEL, type Driver, type TripRecord } from '../types';
 
@@ -67,70 +61,65 @@ export function TripPhotosScreen() {
     setRefreshing(false);
   };
 
-  if (loading && trips.length === 0) return <LoadingScreen />;
+  const driverChips = useMemo(
+    () => [
+      { id: 'all', label: '👥 Все' },
+      ...drivers.map((d) => ({ id: String(d.id), label: d.full_name ?? d.email })),
+    ],
+    [drivers]
+  );
+
+  if (loading && trips.length === 0) return <LoadingScreen label="Загрузка фото…" />;
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#f4f6f8' }}>
+    <View style={screenUi.container}>
       <FlatList
         data={trips}
         keyExtractor={(item) => String(item.id)}
-        contentContainerStyle={{ padding: 16, paddingBottom: 24 }}
+        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 24 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         ListHeaderComponent={
-          <View>
-            <Title>Фото ТТН</Title>
-            <Subtitle>Фотографии из рейсов с фильтрацией по периоду</Subtitle>
+          <View style={screenUi.content}>
+            <ScreenHeader title="📷 Фото ТТН" />
+            <Field label="Дата от (YYYY-MM-DD)" value={from} onChangeText={setFrom} placeholder="2026-01-01" />
+            <Field label="Дата до (YYYY-MM-DD)" value={to} onChangeText={setTo} placeholder="2026-12-31" />
+            <Text style={screenUi.filterLabel}>Водитель:</Text>
+            <FilterChipRow
+              items={driverChips}
+              activeId={driverId == null ? 'all' : String(driverId)}
+              onSelect={(id) => setDriverId(id === 'all' ? null : Number(id))}
+            />
+            <MenuButton label="🔍 Применить фильтр" onPress={load} variant="secondary" />
+            <View style={screenUi.summaryBar}>
+              <View style={screenUi.sumItem}>
+                <Text style={screenUi.sumLabel}>Фото</Text>
+                <Text style={[screenUi.sumValue, { color: '#2563eb' }]}>{trips.length}</Text>
+              </View>
+            </View>
             <ErrorText message={error} />
-            <Card>
-              <Field
-                label="Дата от (YYYY-MM-DD)"
-                value={from}
-                onChangeText={setFrom}
-                placeholder="2026-01-01"
-              />
-              <Field
-                label="Дата до (YYYY-MM-DD)"
-                value={to}
-                onChangeText={setTo}
-                placeholder="2026-12-31"
-              />
-              <Subtitle>Фильтр по водителю</Subtitle>
-              <MenuButton
-                label={driverId ? 'Показать всех водителей' : 'Все водители'}
-                onPress={() => setDriverId(null)}
-                variant="secondary"
-              />
-              {drivers.map((driver) => (
-                <MenuButton
-                  key={driver.id}
-                  label={`${driverId === driver.id ? '✅ ' : ''}${driver.full_name ?? driver.email}`}
-                  onPress={() => setDriverId(driver.id)}
-                  variant={driverId === driver.id ? 'default' : 'secondary'}
-                />
-              ))}
-              <MenuButton label="Применить фильтр" onPress={load} variant="secondary" />
-            </Card>
           </View>
         }
         renderItem={({ item }) => (
-          <Card>
-            <Subtitle>
+          <View style={screenUi.card}>
+            <Text style={{ fontSize: 14, fontWeight: '600', color: '#111827' }}>
               Рейс #{item.id} · Заказ #{item.order_id} · {TRIP_STAGE_LABEL[item.stage]}
-            </Subtitle>
-            <Subtitle>
-              {item.driver_name}
-              {item.driver_car_number ? ` (${item.driver_car_number})` : ''}
-            </Subtitle>
-            <Subtitle>{item.created_at}</Subtitle>
-            {item.ttn_number ? <Subtitle>ТТН: {item.ttn_number}</Subtitle> : null}
+            </Text>
+            <Text style={{ fontSize: 13, color: '#6b7280', marginTop: 4 }}>
+              👤 {item.driver_name}
+              {item.driver_car_number ? ` · 🚚 ${item.driver_car_number}` : ''}
+            </Text>
+            <Text style={{ fontSize: 12, color: '#9ca3af', marginTop: 2 }}>{item.created_at}</Text>
+            {item.ttn_number ? (
+              <Text style={{ fontSize: 13, color: '#4b5563', marginTop: 4 }}>📄 ТТН: {item.ttn_number}</Text>
+            ) : null}
             <Image
               source={{ uri: `${fileHost}${item.photo_path}` }}
               style={{ width: '100%', height: 220, borderRadius: 8, marginTop: 8 }}
               resizeMode="cover"
             />
-          </Card>
+          </View>
         )}
-        ListEmptyComponent={<EmptyText text="Фото ТТН не найдены" />}
+        ListEmptyComponent={<Text style={screenUi.emptyText}>Фото ТТН не найдены</Text>}
       />
     </View>
   );

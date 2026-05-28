@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Alert } from 'react-native';
+import { Alert, ScrollView, Text, View } from 'react-native';
 import axios from 'axios';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Card, ErrorText, Field, PrimaryButton, Screen, Subtitle, Title } from '../components/ui';
+import { ErrorText, Field, PrimaryButton } from '../components/ui';
 import {
   buildApiUrl,
   getServerUrl,
@@ -13,6 +13,7 @@ import {
 } from '../api/client';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { RootStackParamList } from '../navigation/RootNavigator';
+import { screenUi } from '../styles/screenUi';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ServerSetup'>;
 type ComponentProps = Props & { onConfigured?: () => void };
@@ -81,28 +82,31 @@ export function ServerSetupScreen({ route, onConfigured }: ComponentProps) {
   };
 
   return (
-    <Screen>
-      <Title>Настройка сервера</Title>
-      <Subtitle>{reasonText}</Subtitle>
-      <Card>
-        <Field
-          label="Адрес сервера (IP или домен)"
-          value={ip}
-          onChangeText={setIp}
-          autoCapitalize="none"
-          autoCorrect={false}
-          placeholder="armen4ik15-creator-transport-app-server-43b9.twc1.net"
-        />
-        <Field
-          label="Порт"
-          value={port}
-          onChangeText={setPort}
-          keyboardType="number-pad"
-          placeholder="443"
-        />
-        <ErrorText message={error} />
-        <PrimaryButton label="Подключиться" onPress={onConnect} loading={busy} />
-      </Card>
-    </Screen>
+    <View style={screenUi.container}>
+      <ScrollView
+        contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', padding: 16, paddingBottom: 32 }}
+        keyboardShouldPersistTaps="handled"
+      >
+        <View style={[screenUi.card, { padding: 24 }]}>
+          <Text style={{ fontSize: 24, fontWeight: '700', color: '#111827', textAlign: 'center', marginBottom: 4 }}>
+            ⚙️ Настройка сервера
+          </Text>
+          <Text style={{ fontSize: 14, color: '#6b7280', textAlign: 'center', marginBottom: 20 }}>
+            {reasonText}
+          </Text>
+          <Field
+            label="Адрес сервера (IP или домен)"
+            value={ip}
+            onChangeText={setIp}
+            autoCapitalize="none"
+            autoCorrect={false}
+            placeholder="armen4ik15-creator-transport-app-server-43b9.twc1.net"
+          />
+          <Field label="Порт" value={port} onChangeText={setPort} keyboardType="number-pad" placeholder="443" />
+          <ErrorText message={error} />
+          <PrimaryButton label="🔗 Подключиться" onPress={onConnect} loading={busy} />
+        </View>
+      </ScrollView>
+    </View>
   );
 }

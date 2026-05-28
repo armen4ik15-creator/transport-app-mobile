@@ -1,23 +1,17 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Alert, Image, ScrollView, View } from 'react-native';
+import { Alert, Image, ScrollView, Text, View } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
-import {
-  Card,
-  ErrorText,
-  LoadingScreen,
-  MenuButton,
-  PrimaryButton,
-  Subtitle,
-  Title,
-} from '../components/ui';
+import { ScreenHeader } from '../components/ScreenHeader';
+import { ErrorText, LoadingScreen, MenuButton, PrimaryButton } from '../components/ui';
 import { getOrder, updateOrderStatus, uploadOrderPhoto } from '../api/orders';
 import { apiErrorMessage, getServerHost } from '../api/client';
 import { STATUS_LABEL, TRIP_STAGE_LABEL, type OrderStatus, type OrderWithPhotos } from '../types';
 import type { RootStackParamList } from '../navigation/RootNavigator';
 import { useAuth } from '../auth/AuthContext';
 import { createOrderTemplateFromOrder } from '../api/orderTemplates';
+import { screenUi } from '../styles/screenUi';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'OrderDetail'>;
 
@@ -97,129 +91,142 @@ export function OrderDetailScreen({ route, navigation }: Props) {
     }
   };
 
-  if (loading) return <LoadingScreen />;
+  if (loading) return <LoadingScreen label="Загрузка заказа…" />;
   if (!order) {
     return (
-      <View style={{ flex: 1, padding: 16, backgroundColor: '#f4f6f8' }}>
+      <View style={[screenUi.container, screenUi.content]}>
+        <ScreenHeader title="📦 Заказ" />
         <ErrorText message={error ?? 'Заказ не найден'} />
-        <MenuButton label="← Назад" onPress={() => navigation.goBack()} variant="secondary" />
       </View>
     );
   }
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: '#f4f6f8' }} contentContainerStyle={{ padding: 16, paddingBottom: 32 }}>
-      <Title>Заказ #{order.id}</Title>
-      <Subtitle>Статус: {STATUS_LABEL[order.status]}</Subtitle>
-      {user?.role === 'admin' ? (
-        <Card>
-          <MenuButton label="✏️ Редактировать заказ" onPress={() => navigation.navigate('OrderEdit', { id: order.id })} />
-          <MenuButton
-            label="💾 Сохранить как шаблон"
-            onPress={async () => {
-              try {
-                await createOrderTemplateFromOrder(
-                  order.id,
-                  `Заказ #${order.id} (${new Date().toISOString().slice(0, 10)})`
-                );
-                Alert.alert('Готово', 'Шаблон сохранён');
-              } catch (e) {
-                Alert.alert('Ошибка', apiErrorMessage(e, 'Не удалось сохранить шаблон'));
-              }
-            }}
-            variant="secondary"
+    <View style={screenUi.container}>
+      <ScrollView contentContainerStyle={[screenUi.content, { paddingBottom: 32 }]}>
+        <ScreenHeader title={`📦 Заказ #${order.id}`} />
+
+        <View
+          style={{
+            backgroundColor: order.is_active ? '#eff6ff' : '#fef3c7',
+            borderRadius: 8,
+            padding: 10,
+            marginBottom: 12,
+            borderWidth: 1,
+            borderColor: order.is_active ? '#2563eb' : '#fcd34d',
+          }}
+        >
+          <Text style={{ fontSize: 14, fontWeight: '600', color: order.is_active ? '#2563eb' : '#92400e' }}>
+            {STATUS_LABEL[order.status]} · {order.is_active ? '✅ Активен' : '📦 Архив'}
+          </Text>
+        </View>
+
+        {user?.role === 'admin' ? (
+          <View style={screenUi.card}>
+            <MenuButton label="✏️ Редактировать заказ" onPress={() => navigation.navigate('OrderEdit', { id: order.id })} />
+            <MenuButton
+              label="💾 Сохранить как шаблон"
+              onPress={async () => {
+                try {
+                  await createOrderTemplateFromOrder(
+                    order.id,
+                    `Заказ #${order.id} (${new Date().toISOString().slice(0, 10)})`
+                  );
+                  Alert.alert('Готово', 'Шаблон сохранён');
+                } catch (e) {
+                  Alert.alert('Ошибка', apiErrorMessage(e, 'Не удалось сохранить шаблон'));
+                }
+              }}
+              variant="secondary"
+            />
+          </View>
+        ) : null}
+
+        <View style={screenUi.card}>
+          <Text style={{ fontSize: 18, fontWeight: '700', color: '#111827' }}>{order.contractor_name ?? '—'}</Text>
+          {order.task_name ? (
+            <Text style={{ fontSize: 14, color: '#4b5563', marginTop: 4 }}>📋 {order.task_name}</Text>
+          ) : null}
+          <Text style={{ fontSize: 14, color: '#4b5563', marginTop: 8 }}>
+            👤 {order.driver_name ?? '—'}
+            {order.driver_car_number ? ` · 🚚 ${order.driver_car_number}` : ''}
+          </Text>
+          {order.material ? (
+            <Text style={{ fontSize: 14, color: '#4b5563', marginTop: 4 }}>🧱 {order.material}</Text>
+          ) : null}
+          {order.quantity != null ? (
+            <Text style={{ fontSize: 14, color: '#4b5563', marginTop: 2 }}>⚖️ {order.quantity} {order.unit ?? ''}</Text>
+          ) : null}
+          {order.driver_rate != null ? (
+            <Text style={{ fontSize: 14, color: '#4b5563', marginTop: 2 }}>💰 Ставка: {order.driver_rate} ₽</Text>
+          ) : null}
+          {order.load_address ? (
+            <Text style={{ fontSize: 13, color: '#6b7280', marginTop: 6 }}>📍 {order.load_address} → {order.unload_address ?? '—'}</Text>
+          ) : null}
+          {order.notes ? (
+            <Text style={{ fontSize: 13, color: '#6b7280', marginTop: 4, fontStyle: 'italic' }}>📝 {order.notes}</Text>
+          ) : null}
+        </View>
+
+        <View style={screenUi.card}>
+          <PrimaryButton
+            label={`🧾 Рейсы и ТТН (${order.trips.length})`}
+            onPress={() => navigation.navigate('TripCreate', { orderId: order.id })}
           />
-        </Card>
-      ) : null}
+          <MenuButton label="📄 Путевые листы" onPress={() => navigation.navigate('Waybills')} variant="secondary" />
+          <MenuButton label="🧮 Счета" onPress={() => navigation.navigate('Invoices')} variant="secondary" />
+        </View>
 
-      <Card>
-        <Subtitle>Контрагент</Subtitle>
-        <Title>{order.contractor_name ?? '—'}</Title>
-        {order.task_name ? <Subtitle>Задача: {order.task_name}</Subtitle> : null}
-        {order.sender ? <Subtitle>Отправитель: {order.sender}</Subtitle> : null}
-        {order.receiver ? <Subtitle>Получатель: {order.receiver}</Subtitle> : null}
-        {order.total_planned_volume != null ? <Subtitle>Плановый объём: {order.total_planned_volume}</Subtitle> : null}
-        <Subtitle>Водитель</Subtitle>
-        <Title>
-          {order.driver_name ?? '—'}
-          {order.driver_car_number ? ` (${order.driver_car_number})` : ''}
-        </Title>
-        {order.material ? <Subtitle>Материал: {order.material}</Subtitle> : null}
-        {order.quantity != null ? <Subtitle>Количество: {order.quantity}</Subtitle> : null}
-        {order.unit ? <Subtitle>Ед. изм.: {order.unit}</Subtitle> : null}
-        {order.driver_rate != null ? <Subtitle>Ставка водителя: {order.driver_rate}</Subtitle> : null}
-        {order.company_rate != null ? <Subtitle>Ставка компании: {order.company_rate}</Subtitle> : null}
-        {order.distance_km != null ? <Subtitle>Плечо, км: {order.distance_km}</Subtitle> : null}
-        <Subtitle>Активен: {order.is_active ? 'Да' : 'Нет'}</Subtitle>
-        {order.notes ? <Subtitle>Примечание: {order.notes}</Subtitle> : null}
-        {order.load_address ? <Subtitle>Погрузка: {order.load_address}</Subtitle> : null}
-        {order.unload_address ? <Subtitle>Разгрузка: {order.unload_address}</Subtitle> : null}
-        {order.description ? <Subtitle>{order.description}</Subtitle> : null}
-      </Card>
+        {order.trips.map((trip) => (
+          <View key={trip.id} style={screenUi.card}>
+            <Text style={{ fontSize: 14, fontWeight: '600', color: '#111827' }}>
+              Рейс #{trip.id} · {TRIP_STAGE_LABEL[trip.stage]}
+            </Text>
+            <Text style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>{trip.created_at}</Text>
+            {trip.ttn_number ? (
+              <Text style={{ fontSize: 13, color: '#4b5563', marginTop: 4 }}>📄 ТТН: {trip.ttn_number}</Text>
+            ) : null}
+            {trip.volume != null ? (
+              <Text style={{ fontSize: 13, color: '#4b5563', marginTop: 2 }}>⚖️ {trip.volume}</Text>
+            ) : null}
+            {trip.photo_path ? (
+              <Image
+                source={{ uri: `${fileHost}${trip.photo_path}` }}
+                style={{ width: '100%', height: 180, borderRadius: 8, marginTop: 8 }}
+                resizeMode="cover"
+              />
+            ) : null}
+          </View>
+        ))}
 
-      <Card>
-        <PrimaryButton
-          label={`🧾 Рейсы и ТТН (${order.trips.length})`}
-          onPress={() => navigation.navigate('TripCreate', { orderId: order.id })}
-        />
-        <MenuButton
-          label="📄 Путевые листы"
-          onPress={() => navigation.navigate('Waybills')}
-          variant="secondary"
-        />
-        <MenuButton
-          label="🧮 Счета"
-          onPress={() => navigation.navigate('Invoices')}
-          variant="secondary"
-        />
-      </Card>
+        <Text style={screenUi.fieldLabel}>Сменить статус</Text>
+        {STATUSES.map((s) => (
+          <MenuButton
+            key={s}
+            label={`${order.status === s ? '✅ ' : ''}${STATUS_LABEL[s]}`}
+            onPress={() => onSetStatus(s)}
+            variant={order.status === s ? 'default' : 'secondary'}
+          />
+        ))}
 
-      {order.trips.map((trip) => (
-        <Card key={trip.id}>
-          <Subtitle>
-            Рейс #{trip.id} · {TRIP_STAGE_LABEL[trip.stage]} · {trip.created_at}
-          </Subtitle>
-          {trip.ttn_number ? <Subtitle>ТТН: {trip.ttn_number}</Subtitle> : null}
-          {trip.volume != null ? <Subtitle>Объём: {trip.volume}</Subtitle> : null}
-          {trip.note ? <Subtitle>Комментарий: {trip.note}</Subtitle> : null}
-          {trip.photo_path ? (
+        <Text style={[screenUi.fieldLabel, { marginTop: 12 }]}>📷 Фото ({order.photos.length})</Text>
+        <View style={screenUi.card}>
+          <PrimaryButton label="📷 Снять фото" onPress={() => onAttachPhoto('camera')} loading={busy} />
+          <MenuButton label="🖼 Из галереи" onPress={() => onAttachPhoto('library')} variant="secondary" />
+        </View>
+        {order.photos.map((p) => (
+          <View key={p.id} style={screenUi.card}>
+            <Text style={{ fontSize: 12, color: '#6b7280' }}>{p.uploaded_at}</Text>
             <Image
-              source={{ uri: `${fileHost}${trip.photo_path}` }}
-              style={{ width: '100%', height: 180, borderRadius: 8, marginTop: 8 }}
+              source={{ uri: `${fileHost}${p.file_path}` }}
+              style={{ width: '100%', height: 220, borderRadius: 8, marginTop: 8 }}
               resizeMode="cover"
             />
-          ) : null}
-        </Card>
-      ))}
+          </View>
+        ))}
 
-      <Subtitle>Сменить статус</Subtitle>
-      {STATUSES.map((s) => (
-        <MenuButton
-          key={s}
-          label={`${order.status === s ? '✅ ' : ''}${STATUS_LABEL[s]}`}
-          onPress={() => onSetStatus(s)}
-          variant={order.status === s ? 'default' : 'secondary'}
-        />
-      ))}
-
-      <Subtitle>Фото ({order.photos.length})</Subtitle>
-      <Card>
-        <PrimaryButton label="📷 Снять фото" onPress={() => onAttachPhoto('camera')} loading={busy} />
-        <MenuButton label="🖼 Из галереи" onPress={() => onAttachPhoto('library')} variant="secondary" />
-      </Card>
-      {order.photos.map((p) => (
-        <Card key={p.id}>
-          <Subtitle>{p.uploaded_at}</Subtitle>
-          <Image
-            source={{ uri: `${fileHost}${p.file_path}` }}
-            style={{ width: '100%', height: 220, borderRadius: 8, marginTop: 8 }}
-            resizeMode="cover"
-          />
-        </Card>
-      ))}
-
-      <ErrorText message={error} />
-      <MenuButton label="← Назад" onPress={() => navigation.goBack()} variant="secondary" />
-    </ScrollView>
+        <ErrorText message={error} />
+      </ScrollView>
+    </View>
   );
 }

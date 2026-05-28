@@ -1,7 +1,7 @@
-import { Alert, ScrollView } from 'react-native';
+import { Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { Card, MenuButton, Subtitle, Title } from '../components/ui';
+import { HubMenuScreen } from '../components/HubMenuScreen';
 import { useAuth } from '../auth/AuthContext';
 import type { RootStackParamList } from '../navigation/types';
 
@@ -17,44 +17,50 @@ export function AdminMoreScreen() {
   };
 
   return (
-    <ScrollView
-      style={{ flex: 1, backgroundColor: '#f4f6f8' }}
-      contentContainerStyle={{ padding: 16, paddingBottom: 24 }}
-    >
-      <Title>Компания</Title>
-      <Subtitle>Справочники, документы и настройки</Subtitle>
-
-      <Card>
-        <Subtitle>Заказы и логистика</Subtitle>
-        <MenuButton label="🗂 Шаблоны заказов" onPress={() => navigation.navigate('OrderTemplates')} />
-        <MenuButton label="🖼 Фото ТТН" onPress={() => navigation.navigate('TripPhotos')} variant="secondary" />
-      </Card>
-
-      <Card>
-        <Subtitle>Справочники</Subtitle>
-        <MenuButton label="🚛 Автомобили" onPress={() => navigation.navigate('Vehicles')} />
-        <MenuButton label="🧱 Материалы" onPress={() => navigation.navigate('Materials')} variant="secondary" />
-      </Card>
-
-      <Card>
-        <Subtitle>Документы и отчёты</Subtitle>
-        <MenuButton label="📑 Документы" onPress={() => navigation.navigate('Documents')} />
-        <MenuButton label="🧾 Путевые листы" onPress={() => navigation.navigate('Waybills')} variant="secondary" />
-        <MenuButton label="🧮 Счета" onPress={() => navigation.navigate('Invoices')} variant="secondary" />
-        <MenuButton label="📄 Шаблоны документов" onPress={() => navigation.navigate('Templates')} variant="secondary" />
-        <MenuButton label="📊 Отчёты" onPress={() => navigation.navigate('Reports')} variant="secondary" />
-        <MenuButton label="📝 Журнал действий" onPress={() => navigation.navigate('ActivityLog')} variant="secondary" />
-        <MenuButton label="🔔 Уведомления" onPress={() => navigation.navigate('Notifications')} variant="secondary" />
-      </Card>
-
-      <Card>
-        <MenuButton
-          label="⚙️ Настройки сервера"
-          onPress={() => navigation.navigate('ServerSetup', { reason: 'Измените адрес сервера при необходимости' })}
-          variant="secondary"
-        />
-        <MenuButton label="Выйти" onPress={onLogout} variant="danger" />
-      </Card>
-    </ScrollView>
+    <HubMenuScreen
+      title="Компания"
+      subtitle="Справочники, документы и настройки"
+      sections={[
+        {
+          title: 'Заказы и логистика',
+          items: [
+            { label: '🗂 Шаблоны заказов', onPress: () => navigation.navigate('OrderTemplates') },
+            { label: '🖼 Фото ТТН', onPress: () => navigation.navigate('TripPhotos') },
+          ],
+        },
+        {
+          title: 'Справочники',
+          items: [
+            { label: '🚛 Автомобили', onPress: () => navigation.navigate('Vehicles') },
+            { label: '🧱 Материалы', onPress: () => navigation.navigate('Materials') },
+          ],
+        },
+        {
+          title: 'Документы и отчёты',
+          items: [
+            { label: '📑 Документы', onPress: () => navigation.navigate('Documents') },
+            { label: '🧾 Путевые листы', onPress: () => navigation.navigate('Waybills') },
+            { label: '🧮 Счета', onPress: () => navigation.navigate('Invoices') },
+            { label: '📄 Шаблоны документов', onPress: () => navigation.navigate('Templates') },
+            { label: '📊 Отчёты', onPress: () => navigation.navigate('Reports') },
+            { label: '📝 Журнал действий', onPress: () => navigation.navigate('ActivityLog') },
+            { label: '🔔 Уведомления', onPress: () => navigation.navigate('Notifications') },
+          ],
+        },
+        {
+          title: 'Настройки',
+          items: [
+            {
+              label: '⚙️ Настройки сервера',
+              onPress: () =>
+                navigation.navigate('ServerSetup', {
+                  reason: 'Измените адрес сервера при необходимости',
+                }),
+            },
+            { label: 'Выйти', onPress: onLogout, variant: 'danger' },
+          ],
+        },
+      ]}
+    />
   );
 }

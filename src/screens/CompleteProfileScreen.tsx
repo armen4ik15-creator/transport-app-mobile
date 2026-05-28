@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { Alert } from 'react-native';
-import { Field, PrimaryButton, Screen, Subtitle, Title } from '../components/ui';
+import { Alert, ScrollView, Text, View } from 'react-native';
+import { Field, PrimaryButton } from '../components/ui';
 import { apiErrorMessage } from '../api/client';
 import { updateMyDriverProfile } from '../api/drivers';
 import { useAuth } from '../auth/AuthContext';
+import { screenUi } from '../styles/screenUi';
 
 export function CompleteProfileScreen() {
   const { user, driver, refresh } = useAuth();
@@ -40,16 +41,27 @@ export function CompleteProfileScreen() {
   };
 
   return (
-    <Screen>
-      <Title>Заполните профиль водителя</Title>
-      <Subtitle>Это нужно для корректной работы заказов, рейсов и отчётов.</Subtitle>
-      <Field label="ФИО *" value={fullName} onChangeText={setFullName} />
-      <Field label="Телефон" value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
-      <Field label="Госномер *" value={carNumber} onChangeText={setCarNumber} />
-      <Field label="Номер прав" value={licenseNumber} onChangeText={setLicenseNumber} />
-      <Field label="Срок прав (YYYY-MM-DD)" value={licenseExpiry} onChangeText={setLicenseExpiry} />
-      <Field label="Срок медосмотра (YYYY-MM-DD)" value={medicalExpiry} onChangeText={setMedicalExpiry} />
-      <PrimaryButton label="Сохранить профиль" onPress={onSave} loading={saving} />
-    </Screen>
+    <View style={screenUi.container}>
+      <ScrollView
+        contentContainerStyle={{ flexGrow: 1, padding: 16, paddingBottom: 32 }}
+        keyboardShouldPersistTaps="handled"
+      >
+        <View style={[screenUi.card, { padding: 24 }]}>
+          <Text style={{ fontSize: 24, fontWeight: '700', color: '#111827', textAlign: 'center', marginBottom: 4 }}>
+            👤 Профиль водителя
+          </Text>
+          <Text style={{ fontSize: 14, color: '#6b7280', textAlign: 'center', marginBottom: 20 }}>
+            Это нужно для корректной работы заказов, рейсов и отчётов.
+          </Text>
+          <Field label="ФИО *" value={fullName} onChangeText={setFullName} />
+          <Field label="Телефон" value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
+          <Field label="Госномер *" value={carNumber} onChangeText={setCarNumber} />
+          <Field label="Номер прав" value={licenseNumber} onChangeText={setLicenseNumber} />
+          <Field label="Срок прав (YYYY-MM-DD)" value={licenseExpiry} onChangeText={setLicenseExpiry} />
+          <Field label="Срок медосмотра (YYYY-MM-DD)" value={medicalExpiry} onChangeText={setMedicalExpiry} />
+          <PrimaryButton label="💾 Сохранить профиль" onPress={onSave} loading={saving} />
+        </View>
+      </ScrollView>
+    </View>
   );
 }

@@ -1,24 +1,12 @@
 import { useCallback, useState } from 'react';
-import { Alert, FlatList, RefreshControl, View } from 'react-native';
+import { Alert, FlatList, Pressable, RefreshControl, Text, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import {
-  Card,
-  EmptyText,
-  ErrorText,
-  Field,
-  LoadingScreen,
-  MenuButton,
-  PrimaryButton,
-  Subtitle,
-  Title,
-} from '../components/ui';
+import { FormBottomModal } from '../components/FormBottomModal';
+import { ScreenHeader } from '../components/ScreenHeader';
+import { ErrorText, Field, LoadingScreen, MenuButton } from '../components/ui';
 import { apiErrorMessage } from '../api/client';
-import {
-  createTemplate,
-  deleteTemplate,
-  listTemplates,
-  updateTemplate,
-} from '../api/templates';
+import { createTemplate, deleteTemplate, listTemplates, updateTemplate } from '../api/templates';
+import { screenUi } from '../styles/screenUi';
 import type { DocumentTemplate, DocumentType } from '../types';
 
 const initialForm = {
@@ -29,14 +17,15 @@ const initialForm = {
 };
 
 function templateTypeLabel(type: DocumentType): string {
-  if (type === 'waybill') return 'Путевой лист';
-  if (type === 'invoice') return 'Счёт';
-  return 'Акт';
+  if (type === 'waybill') return '📄 Путевой лист';
+  if (type === 'invoice') return '🧮 Счёт';
+  return '📋 Акт';
 }
 
 export function TemplatesScreen() {
   const [templates, setTemplates] = useState<DocumentTemplate[]>([]);
   const [form, setForm] = useState(initialForm);
+  const [formVisible, setFormVisible] = useState(false);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -71,12 +60,9 @@ export function TemplatesScreen() {
     }
     setSaving(true);
     try {
-      await createTemplate({
-        name: form.name.trim(),
-        type: form.type,
-        content: form.content,
-      });
+      await createTemplate({ name: form.name.trim(), type: form.type, content: form.content });
       setForm(initialForm);
+      setFormVisible(false);
       await load();
       Alert.alert('Успех', 'Шаблон создан');
     } catch (e) {
@@ -104,6 +90,7 @@ export function TemplatesScreen() {
         content: form.content.trim() || undefined,
       });
       setForm(initialForm);
+      setFormVisible(false);
       await load();
       Alert.alert('Успех', 'Шаблон обновлён');
     } catch (e) {
@@ -131,80 +118,75 @@ export function TemplatesScreen() {
     ]);
   };
 
-  if (loading && templates.length === 0) return <LoadingScreen />;
+  if (loading && templates.length === 0) return <LoadingScreen label="Загрузка шаблонов…" />;
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#f4f6f8' }}>
+    <View style={screenUi.container}>
       <FlatList
         data={templates}
         keyExtractor={(item) => String(item.id)}
-        contentContainerStyle={{ padding: 16, paddingBottom: 32 }}
+        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 24 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         ListHeaderComponent={
-          <View>
-            <Title>Шаблоны документов</Title>
-            <Subtitle>Создание и редактирование шаблонов</Subtitle>
+          <View style={screenUi.content}>
+            <ScreenHeader title="📋 Шаблоны документов" actionLabel="+ Создать" onAction={() => setFormVisible(true)} />
             <ErrorText message={error} />
-            <Card>
-              <Field
-                label="Template ID (для обновления)"
-                value={form.id}
-                onChangeText={(value) => setForm((prev) => ({ ...prev, id: value }))}
-                keyboardType="number-pad"
-              />
-              <Field
-                label="Название"
-                value={form.name}
-                onChangeText={(value) => setForm((prev) => ({ ...prev, name: value }))}
-              />
-              <Field
-                label="Контент (HTML или текст)"
-                value={form.content}
-                onChangeText={(value) => setForm((prev) => ({ ...prev, content: value }))}
-                multiline
-                numberOfLines={5}
-                textAlignVertical="top"
-                style={{ minHeight: 110 }}
-              />
-              <View style={{ flexDirection: 'row', gap: 10 }}>
-                <View style={{ flex: 1 }}>
-                  <MenuButton
-                    label={form.type === 'waybill' ? '✅ Путевой лист' : 'Путевой лист'}
-                    onPress={() => setForm((prev) => ({ ...prev, type: 'waybill' }))}
-                    variant={form.type === 'waybill' ? 'default' : 'secondary'}
-                  />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <MenuButton
-                    label={form.type === 'invoice' ? '✅ Счёт' : 'Счёт'}
-                    onPress={() => setForm((prev) => ({ ...prev, type: 'invoice' }))}
-                    variant={form.type === 'invoice' ? 'default' : 'secondary'}
-                  />
-                </View>
-              </View>
-              <MenuButton
-                label={form.type === 'act' ? '✅ Акт' : 'Акт'}
-                onPress={() => setForm((prev) => ({ ...prev, type: 'act' }))}
-                variant={form.type === 'act' ? 'default' : 'secondary'}
-              />
-              <PrimaryButton label="Создать" onPress={onCreate} loading={saving} />
-              <MenuButton label="Обновить по ID" onPress={onUpdate} variant="secondary" />
-            </Card>
           </View>
         }
         renderItem={({ item }) => (
-          <Card>
-            <Subtitle>
-              #{item.id} · {templateTypeLabel(item.type)}
-            </Subtitle>
-            <Title>{item.name}</Title>
-            <Subtitle>{item.created_at}</Subtitle>
-            <Subtitle>{item.content}</Subtitle>
-            <MenuButton label="Удалить" onPress={() => onDelete(item)} variant="danger" />
-          </Card>
+          <Pressable style={screenUi.card} onLongPress={() => onDelete(item)}>
+            <Text style={{ fontSize: 16, fontWeight: '600', color: '#111827' }}>{item.name}</Text>
+            <Text style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>
+              #{item.id} · {templateTypeLabel(item.type)} · {item.created_at}
+            </Text>
+            <Text style={{ fontSize: 13, color: '#4b5563', marginTop: 6 }} numberOfLines={2}>
+              {item.content}
+            </Text>
+            <Pressable onPress={() => onDelete(item)} style={{ marginTop: 8 }}>
+              <Text style={{ color: '#ef4444', fontSize: 13 }}>🗑 Удалить</Text>
+            </Pressable>
+          </Pressable>
         )}
-        ListEmptyComponent={<EmptyText text="Шаблонов пока нет" />}
+        ListEmptyComponent={<Text style={screenUi.emptyText}>Шаблонов пока нет</Text>}
       />
+
+      <FormBottomModal
+        visible={formVisible}
+        title="➕ Шаблон документа"
+        saveLabel="Создать"
+        saving={saving}
+        onSave={onCreate}
+        onClose={() => {
+          setFormVisible(false);
+          setForm(initialForm);
+        }}
+      >
+        <Field
+          label="Template ID (для обновления)"
+          value={form.id}
+          onChangeText={(value) => setForm((prev) => ({ ...prev, id: value }))}
+          keyboardType="number-pad"
+        />
+        <Field label="Название" value={form.name} onChangeText={(value) => setForm((prev) => ({ ...prev, name: value }))} />
+        <Field
+          label="Контент (HTML или текст)"
+          value={form.content}
+          onChangeText={(value) => setForm((prev) => ({ ...prev, content: value }))}
+          multiline
+          numberOfLines={5}
+          textAlignVertical="top"
+          style={{ minHeight: 110 }}
+        />
+        {(['waybill', 'invoice', 'act'] as DocumentType[]).map((t) => (
+          <MenuButton
+            key={t}
+            label={form.type === t ? `✅ ${templateTypeLabel(t)}` : templateTypeLabel(t)}
+            onPress={() => setForm((prev) => ({ ...prev, type: t }))}
+            variant={form.type === t ? 'default' : 'secondary'}
+          />
+        ))}
+        <MenuButton label="🔄 Обновить по ID" onPress={onUpdate} variant="secondary" />
+      </FormBottomModal>
     </View>
   );
 }

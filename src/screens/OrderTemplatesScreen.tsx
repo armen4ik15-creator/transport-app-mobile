@@ -1,26 +1,15 @@
 import { useCallback, useState } from 'react';
-import { Alert, FlatList, RefreshControl, View } from 'react-native';
+import { Alert, FlatList, Pressable, RefreshControl, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
-import {
-  Card,
-  EmptyText,
-  ErrorText,
-  Field,
-  LoadingScreen,
-  MenuButton,
-  PrimaryButton,
-  Subtitle,
-  Title,
-} from '../components/ui';
+import { FormBottomModal } from '../components/FormBottomModal';
+import { ScreenHeader } from '../components/ScreenHeader';
+import { ErrorText, Field, LoadingScreen, MenuButton } from '../components/ui';
 import { apiErrorMessage } from '../api/client';
-import {
-  createOrderTemplate,
-  deleteOrderTemplate,
-  listOrderTemplates,
-} from '../api/orderTemplates';
+import { createOrderTemplate, deleteOrderTemplate, listOrderTemplates } from '../api/orderTemplates';
 import type { OrderTemplate } from '../types';
 import type { RootStackParamList } from '../navigation/RootNavigator';
+import { screenUi } from '../styles/screenUi';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'OrderTemplates'>;
 
@@ -30,6 +19,7 @@ export function OrderTemplatesScreen({ navigation }: Props) {
   const [refreshing, setRefreshing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [formVisible, setFormVisible] = useState(false);
   const [name, setName] = useState('');
   const [material, setMaterial] = useState('');
   const [unit, setUnit] = useState('м3');
@@ -64,6 +54,20 @@ export function OrderTemplatesScreen({ navigation }: Props) {
     setRefreshing(false);
   };
 
+  const resetForm = () => {
+    setName('');
+    setMaterial('');
+    setUnit('м3');
+    setQuantity('');
+    setDriverRate('');
+    setCompanyRate('');
+    setDistanceKm('');
+    setNotes('');
+    setDescription('');
+    setLoadAddress('');
+    setUnloadAddress('');
+  };
+
   const onCreate = async () => {
     if (!name.trim()) {
       Alert.alert('Ошибка', 'Введите название шаблона');
@@ -89,17 +93,8 @@ export function OrderTemplatesScreen({ navigation }: Props) {
         load_address: loadAddress.trim() || undefined,
         unload_address: unloadAddress.trim() || undefined,
       });
-      setName('');
-      setMaterial('');
-      setUnit('м3');
-      setQuantity('');
-      setDriverRate('');
-      setCompanyRate('');
-      setDistanceKm('');
-      setNotes('');
-      setDescription('');
-      setLoadAddress('');
-      setUnloadAddress('');
+      resetForm();
+      setFormVisible(false);
       await load();
       Alert.alert('Готово', 'Шаблон заказа создан');
     } catch (e) {
@@ -127,54 +122,73 @@ export function OrderTemplatesScreen({ navigation }: Props) {
     ]);
   };
 
-  if (loading && templates.length === 0) return <LoadingScreen />;
+  if (loading && templates.length === 0) return <LoadingScreen label="Загрузка шаблонов…" />;
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#f4f6f8' }}>
+    <View style={screenUi.container}>
       <FlatList
         data={templates}
         keyExtractor={(item) => String(item.id)}
-        contentContainerStyle={{ padding: 16, paddingBottom: 32 }}
+        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 24 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         ListHeaderComponent={
-          <View>
-            <Title>Шаблоны заказов</Title>
-            <Subtitle>Создайте шаблон, затем выберите его при создании заказа</Subtitle>
+          <View style={screenUi.content}>
+            <ScreenHeader title="📦 Шаблоны заказов" actionLabel="+ Создать" onAction={() => setFormVisible(true)} />
             <ErrorText message={error} />
-            <Card>
-              <Field label="Название шаблона" value={name} onChangeText={setName} />
-              <Field label="Материал" value={material} onChangeText={setMaterial} />
-              <Field label="Ед. измерения" value={unit} onChangeText={setUnit} />
-              <Field label="Количество" value={quantity} onChangeText={setQuantity} keyboardType="decimal-pad" />
-              <Field label="Ставка водителя" value={driverRate} onChangeText={setDriverRate} keyboardType="decimal-pad" />
-              <Field label="Ставка компании" value={companyRate} onChangeText={setCompanyRate} keyboardType="decimal-pad" />
-              <Field label="Плечо, км" value={distanceKm} onChangeText={setDistanceKm} keyboardType="decimal-pad" />
-              <Field label="Описание" value={description} onChangeText={setDescription} />
-              <Field label="Адрес погрузки" value={loadAddress} onChangeText={setLoadAddress} />
-              <Field label="Адрес разгрузки" value={unloadAddress} onChangeText={setUnloadAddress} />
-              <Field label="Примечание" value={notes} onChangeText={setNotes} />
-              <PrimaryButton label="Создать шаблон" onPress={onCreate} loading={saving} />
-            </Card>
           </View>
         }
         renderItem={({ item }) => (
-          <Card>
-            <Subtitle>#{item.id}</Subtitle>
-            <Title>{item.name}</Title>
-            {item.material ? <Subtitle>Материал: {item.material}</Subtitle> : null}
-            {item.default_quantity != null ? <Subtitle>Количество: {item.default_quantity}</Subtitle> : null}
-            {item.driver_rate != null ? <Subtitle>Ставка водителя: {item.driver_rate}</Subtitle> : null}
-            {item.company_rate != null ? <Subtitle>Ставка компании: {item.company_rate}</Subtitle> : null}
-            {item.distance_km != null ? <Subtitle>Плечо, км: {item.distance_km}</Subtitle> : null}
-            <MenuButton
-              label="Создать заказ по этому шаблону"
-              onPress={() => navigation.navigate('OrderCreate', { templateId: item.id })}
-            />
-            <MenuButton label="Удалить шаблон" onPress={() => onDelete(item)} variant="danger" />
-          </Card>
+          <View style={screenUi.card}>
+            <Text style={{ fontSize: 16, fontWeight: '600', color: '#111827' }}>{item.name}</Text>
+            <Text style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>#{item.id}</Text>
+            {item.material ? (
+              <Text style={{ fontSize: 13, color: '#4b5563', marginTop: 4 }}>🧱 {item.material}</Text>
+            ) : null}
+            {item.driver_rate != null ? (
+              <Text style={{ fontSize: 13, color: '#4b5563', marginTop: 2 }}>💰 {item.driver_rate} ₽</Text>
+            ) : null}
+            <View style={{ flexDirection: 'row', gap: 8, marginTop: 10, borderTopWidth: 1, borderTopColor: '#f3f4f6', paddingTop: 10 }}>
+              <Pressable
+                onPress={() => navigation.navigate('OrderCreate', { templateId: item.id })}
+                style={{ flex: 1, backgroundColor: '#2563eb', paddingVertical: 8, borderRadius: 7, alignItems: 'center' }}
+              >
+                <Text style={{ color: '#fff', fontSize: 12, fontWeight: '600' }}>Создать заказ</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => onDelete(item)}
+                style={{ flex: 1, backgroundColor: '#ef4444', paddingVertical: 8, borderRadius: 7, alignItems: 'center' }}
+              >
+                <Text style={{ color: '#fff', fontSize: 12, fontWeight: '600' }}>🗑</Text>
+              </Pressable>
+            </View>
+          </View>
         )}
-        ListEmptyComponent={<EmptyText text="Шаблонов заказов пока нет" />}
+        ListEmptyComponent={<Text style={screenUi.emptyText}>Шаблонов заказов пока нет</Text>}
       />
+
+      <FormBottomModal
+        visible={formVisible}
+        title="➕ Шаблон заказа"
+        saveLabel="Создать шаблон"
+        saving={saving}
+        onSave={onCreate}
+        onClose={() => {
+          setFormVisible(false);
+          resetForm();
+        }}
+      >
+        <Field label="Название шаблона" value={name} onChangeText={setName} />
+        <Field label="Материал" value={material} onChangeText={setMaterial} />
+        <Field label="Ед. измерения" value={unit} onChangeText={setUnit} />
+        <Field label="Количество" value={quantity} onChangeText={setQuantity} keyboardType="decimal-pad" />
+        <Field label="Ставка водителя" value={driverRate} onChangeText={setDriverRate} keyboardType="decimal-pad" />
+        <Field label="Ставка компании" value={companyRate} onChangeText={setCompanyRate} keyboardType="decimal-pad" />
+        <Field label="Плечо, км" value={distanceKm} onChangeText={setDistanceKm} keyboardType="decimal-pad" />
+        <Field label="Описание" value={description} onChangeText={setDescription} />
+        <Field label="Адрес погрузки" value={loadAddress} onChangeText={setLoadAddress} />
+        <Field label="Адрес разгрузки" value={unloadAddress} onChangeText={setUnloadAddress} />
+        <Field label="Примечание" value={notes} onChangeText={setNotes} />
+      </FormBottomModal>
     </View>
   );
 }

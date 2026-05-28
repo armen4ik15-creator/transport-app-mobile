@@ -1,17 +1,21 @@
 import { useCallback, useState } from 'react';
-import { Alert, FlatList, RefreshControl, View } from 'react-native';
+import { Alert, FlatList, Pressable, RefreshControl, Text, View } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { useFocusEffect } from '@react-navigation/native';
-import { Card, EmptyText, ErrorText, Field, LoadingScreen, MenuButton, PrimaryButton, Subtitle, Title } from '../components/ui';
+import { FormBottomModal } from '../components/FormBottomModal';
+import { ScreenHeader } from '../components/ScreenHeader';
+import { ErrorText, Field, LoadingScreen, MenuButton } from '../components/ui';
 import { apiErrorMessage } from '../api/client';
 import { createInvoice, deleteInvoice, listInvoices } from '../api/invoices';
 import { listOrders } from '../api/orders';
+import { screenUi } from '../styles/screenUi';
 import { withFallback } from '../utils/safeRequest';
 import type { Invoice, Order } from '../types';
 
 export function InvoicesScreen() {
   const [rows, setRows] = useState<Invoice[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
+  const [formVisible, setFormVisible] = useState(false);
   const [orderId, setOrderId] = useState<number | null>(null);
   const [number, setNumber] = useState('');
   const [date, setDate] = useState('');
@@ -60,6 +64,14 @@ export function InvoicesScreen() {
     setFileUri(result.assets[0].uri);
   };
 
+  const resetForm = () => {
+    setOrderId(null);
+    setNumber('');
+    setDate('');
+    setAmount('');
+    setFileUri('');
+  };
+
   const onCreate = async () => {
     if (!orderId || !number.trim()) {
       Alert.alert('Ошибка', 'Выберите заказ и введите номер счета');
@@ -75,10 +87,8 @@ export function InvoicesScreen() {
         amount: parsedAmount != null && Number.isFinite(parsedAmount) ? parsedAmount : null,
         fileUri: fileUri || null,
       });
-      setNumber('');
-      setDate('');
-      setAmount('');
-      setFileUri('');
+      resetForm();
+      setFormVisible(false);
       await load();
     } catch (e) {
       Alert.alert('Ошибка', apiErrorMessage(e, 'Не удалось создать счет'));
@@ -105,51 +115,69 @@ export function InvoicesScreen() {
     ]);
   };
 
-  if (loading && rows.length === 0) return <LoadingScreen />;
+  if (loading && rows.length === 0) return <LoadingScreen label="Загрузка счетов…" />;
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#f4f6f8' }}>
+    <View style={screenUi.container}>
       <FlatList
         data={rows}
         keyExtractor={(item) => String(item.id)}
-        contentContainerStyle={{ padding: 16, paddingBottom: 32 }}
+        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 24 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         ListHeaderComponent={
-          <View>
-            <Title>Счета</Title>
-            <Subtitle>Реестр счетов по заказам</Subtitle>
+          <View style={screenUi.content}>
+            <ScreenHeader title="🧮 Счета" actionLabel="+ Создать" onAction={() => setFormVisible(true)} />
             <ErrorText message={error} />
-            <Card>
-              <Title>Новый счет</Title>
-              <Subtitle>Выберите заказ</Subtitle>
-              {orders.slice(0, 15).map((item) => (
-                <MenuButton
-                  key={item.id}
-                  label={`${orderId === item.id ? '✅ ' : ''}Заказ #${item.id}`}
-                  onPress={() => setOrderId(item.id)}
-                  variant={orderId === item.id ? 'default' : 'secondary'}
-                />
-              ))}
-              <Field label="Номер счета" value={number} onChangeText={setNumber} />
-              <Field label="Дата (YYYY-MM-DD)" value={date} onChangeText={setDate} />
-              <Field label="Сумма" value={amount} onChangeText={setAmount} keyboardType="decimal-pad" />
-              <MenuButton label={fileUri ? 'Файл выбран' : 'Прикрепить файл'} onPress={pickFile} variant="secondary" />
-              <PrimaryButton label="Сохранить" onPress={onCreate} loading={saving} />
-            </Card>
           </View>
         }
         renderItem={({ item }) => (
-          <Card>
-            <Title>#{item.id} · {item.number}</Title>
-            <Subtitle>Заказ #{item.order_id} · {item.date}</Subtitle>
-            {item.amount != null ? <Subtitle>Сумма: {item.amount} ₽</Subtitle> : null}
-            {item.contractor_name ? <Subtitle>Контрагент: {item.contractor_name}</Subtitle> : null}
-            {item.file_path ? <Subtitle>Файл: {item.file_path}</Subtitle> : null}
-            <MenuButton label="Удалить" onPress={() => onDelete(item.id)} variant="danger" />
-          </Card>
+          <Pressable style={screenUi.card} onLongPress={() => onDelete(item.id)}>
+            <Text style={{ fontSize: 16, fontWeight: '600', color: '#111827' }}>
+              #{item.id} · {item.number}
+            </Text>
+            <Text style={{ fontSize: 13, color: '#6b7280', marginTop: 2 }}>
+              Заказ #{item.order_id} · {item.date}
+            </Text>
+            {item.amount != null ? (
+              <Text style={{ fontSize: 15, fontWeight: '700', color: '#2563eb', marginTop: 4 }}>
+                💰 {item.amount} ₽
+              </Text>
+            ) : null}
+            {item.contractor_name ? (
+              <Text style={{ fontSize: 13, color: '#4b5563', marginTop: 2 }}>🏢 {item.contractor_name}</Text>
+            ) : null}
+            <Pressable onPress={() => onDelete(item.id)} style={{ marginTop: 8 }}>
+              <Text style={{ color: '#ef4444', fontSize: 13 }}>🗑 Удалить</Text>
+            </Pressable>
+          </Pressable>
         )}
-        ListEmptyComponent={<EmptyText text="Счетов пока нет" />}
+        ListEmptyComponent={<Text style={screenUi.emptyText}>Счетов пока нет</Text>}
       />
+
+      <FormBottomModal
+        visible={formVisible}
+        title="➕ Новый счёт"
+        saving={saving}
+        onSave={onCreate}
+        onClose={() => {
+          setFormVisible(false);
+          resetForm();
+        }}
+      >
+        <Text style={screenUi.fieldLabel}>Выберите заказ</Text>
+        {orders.slice(0, 15).map((item) => (
+          <MenuButton
+            key={item.id}
+            label={`${orderId === item.id ? '✅ ' : ''}Заказ #${item.id}`}
+            onPress={() => setOrderId(item.id)}
+            variant={orderId === item.id ? 'default' : 'secondary'}
+          />
+        ))}
+        <Field label="Номер счета" value={number} onChangeText={setNumber} />
+        <Field label="Дата (YYYY-MM-DD)" value={date} onChangeText={setDate} />
+        <Field label="Сумма" value={amount} onChangeText={setAmount} keyboardType="decimal-pad" />
+        <MenuButton label={fileUri ? '✅ Файл выбран' : '📎 Прикрепить файл'} onPress={pickFile} variant="secondary" />
+      </FormBottomModal>
     </View>
   );
 }
