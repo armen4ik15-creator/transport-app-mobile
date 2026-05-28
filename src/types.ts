@@ -71,6 +71,22 @@ export interface OrderPhoto {
   uploaded_at: string;
 }
 
+export type TtnPhotoSource = 'order' | 'trip';
+
+export interface TtnPhotoRecord {
+  id: number;
+  order_id: number;
+  file_path: string;
+  uploaded_by: number | null;
+  uploaded_at: string;
+  driver_name: string | null;
+  order_date: string | null;
+  contractor_name: string | null;
+  material: string | null;
+  driver_id: number | null;
+  source: TtnPhotoSource;
+}
+
 export interface OrderWithPhotos extends Order {
   photos: OrderPhoto[];
   trips: TripRecord[];

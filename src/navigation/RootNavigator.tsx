@@ -23,6 +23,7 @@ import { SalaryScreen } from '../screens/SalaryScreen';
 import { ContractorDebtScreen } from '../screens/ContractorDebtScreen';
 import { ExpensesScreen } from '../screens/ExpensesScreen';
 import { TripPhotosScreen } from '../screens/TripPhotosScreen';
+import { AllPhotosScreen } from '../screens/AllPhotosScreen';
 import { MaterialsScreen } from '../screens/MaterialsScreen';
 import { VehiclesScreen } from '../screens/VehiclesScreen';
 import { WaybillsScreen } from '../screens/WaybillsScreen';
@@ -152,6 +153,7 @@ export function RootNavigator() {
             <Stack.Screen name="Salary" component={SalaryScreen} options={{ title: 'Зарплаты водителей' }} />
             <Stack.Screen name="ContractorDebt" component={ContractorDebtScreen} options={{ title: 'Долги контрагентов' }} />
             <Stack.Screen name="TripPhotos" component={TripPhotosScreen} options={{ title: 'Фото ТТН' }} />
+            <Stack.Screen name="AllPhotos" component={AllPhotosScreen} options={{ title: 'Фотографии ТТН' }} />
             <Stack.Screen name="TripCreate" component={TripCreateScreen} options={{ title: 'Рейсы и ТТН' }} />
             <Stack.Screen name="ServerSetup" options={{ title: 'Настройки сервера' }}>
               {(props) => <ServerSetupScreen {...props} onConfigured={onServerConfigured} />}

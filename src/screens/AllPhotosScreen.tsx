@@ -1,0 +1,341 @@
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  Dimensions,
+  FlatList,
+  Image,
+  Modal,
+  Pressable,
+  RefreshControl,
+  Text,
+  View,
+} from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { FilterChipRow } from '../components/FilterChipRow';
+import { ScreenHeader } from '../components/ScreenHeader';
+import { ErrorText, Field, LoadingScreen, MenuButton } from '../components/ui';
+import { getAllPhotos, type GetAllPhotosParams } from '../api/photos';
+import { apiErrorMessage, getServerHost } from '../api/client';
+import { listDrivers } from '../api/drivers';
+import { listOrders } from '../api/orders';
+import type { RootStackParamList } from '../navigation/types';
+import { screenUi } from '../styles/screenUi';
+import { withFallback } from '../utils/safeRequest';
+import type { Driver, Order, TtnPhotoRecord } from '../types';
+
+const PAGE_SIZE = 40;
+const GRID_GAP = 8;
+const HORIZONTAL_PADDING = 16;
+
+function formatPhotoDate(value: string | null): string {
+  if (!value) return '—';
+  return value.slice(0, 10);
+}
+
+function photoKey(photo: TtnPhotoRecord): string {
+  return `${photo.source}-${photo.id}`;
+}
+
+export function AllPhotosScreen() {
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const [photos, setPhotos] = useState<TtnPhotoRecord[]>([]);
+  const [drivers, setDrivers] = useState<Driver[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [driverId, setDriverId] = useState<number | null>(null);
+  const [orderId, setOrderId] = useState<number | null>(null);
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
+  const [appliedFilters, setAppliedFilters] = useState<GetAllPhotosParams>({});
+  const [fileHost, setFileHost] = useState('http://localhost:3000');
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [previewPhoto, setPreviewPhoto] = useState<TtnPhotoRecord | null>(null);
+
+  const itemWidth = useMemo(() => {
+    const screenWidth = Dimensions.get('window').width;
+    return (screenWidth - HORIZONTAL_PADDING * 2 - GRID_GAP) / 2;
+  }, []);
+
+  useEffect(() => {
+    getServerHost().then(setFileHost).catch(() => setFileHost('http://localhost:3000'));
+  }, []);
+
+  const loadMeta = useCallback(async () => {
+    const [driverData, orderData] = await Promise.all([
+      withFallback(() => listDrivers(), []),
+      withFallback(() => listOrders(), []),
+    ]);
+    setDrivers(driverData);
+    setOrders(orderData);
+  }, []);
+
+  const fetchPhotos = useCallback(async (filters: GetAllPhotosParams, offset: number, append: boolean) => {
+    try {
+      setError(null);
+      const batch = await getAllPhotos({
+        ...filters,
+        limit: PAGE_SIZE,
+        offset,
+      });
+      setPhotos((prev) => (append ? [...prev, ...batch] : batch));
+      setHasMore(batch.length === PAGE_SIZE);
+    } catch (e) {
+      const message = apiErrorMessage(e, 'Не удалось загрузить фотографии');
+      setError(message);
+      if (!append) {
+        Alert.alert('Ошибка', message);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      await loadMeta();
+      if (!cancelled) {
+        await fetchPhotos({}, 0, false);
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [fetchPhotos, loadMeta]);
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    setHasMore(true);
+    await Promise.all([loadMeta(), fetchPhotos(appliedFilters, 0, false)]);
+    setRefreshing(false);
+  };
+
+  const onApplyFilters = async () => {
+    const nextFilters: GetAllPhotosParams = {
+      driver_id: driverId ?? undefined,
+      order_id: orderId ?? undefined,
+      date_from: dateFrom.trim() || undefined,
+      date_to: dateTo.trim() || undefined,
+    };
+    setAppliedFilters(nextFilters);
+    setLoading(true);
+    setHasMore(true);
+    await fetchPhotos(nextFilters, 0, false);
+    setLoading(false);
+  };
+
+  const onLoadMore = async () => {
+    if (loadingMore || loading || !hasMore || photos.length === 0) return;
+    setLoadingMore(true);
+    await fetchPhotos(appliedFilters, photos.length, true);
+    setLoadingMore(false);
+  };
+
+  const driverChips = useMemo(
+    () => [
+      { id: 'all', label: '👥 Все' },
+      ...drivers.map((driver) => ({
+        id: String(driver.id),
+        label: driver.full_name ?? driver.email,
+      })),
+    ],
+    [drivers]
+  );
+
+  const orderOptions = useMemo(() => {
+    return orders.filter((order) => {
+      if (driverId != null && order.driver_id !== driverId) return false;
+      return true;
+    });
+  }, [driverId, orders]);
+
+  const pickOrder = () => {
+    Alert.alert('Заказ', undefined, [
+      {
+        text: 'Все заказы',
+        onPress: () => setOrderId(null),
+      },
+      ...orderOptions.slice(0, 20).map((order) => ({
+        text: `#${order.id} · ${order.contractor_name ?? order.task_name ?? 'Заказ'}`,
+        onPress: () => setOrderId(order.id),
+      })),
+      { text: 'Отмена', style: 'cancel' as const },
+    ]);
+  };
+
+  const orderFilterLabel = useMemo(() => {
+    if (orderId == null) return 'Все заказы';
+    const order = orders.find((item) => item.id === orderId);
+    if (!order) return `Заказ #${orderId}`;
+    return `#${order.id} · ${order.contractor_name ?? order.task_name ?? 'Заказ'}`;
+  }, [orderId, orders]);
+
+  if (loading && photos.length === 0) {
+    return <LoadingScreen label="Загрузка фотографий…" />;
+  }
+
+  return (
+    <View style={screenUi.container}>
+      <FlatList
+        data={photos}
+        keyExtractor={photoKey}
+        numColumns={2}
+        columnWrapperStyle={{ gap: GRID_GAP, marginBottom: GRID_GAP }}
+        contentContainerStyle={{
+          paddingHorizontal: HORIZONTAL_PADDING,
+          paddingBottom: 24,
+          flexGrow: 1,
+        }}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        onEndReached={onLoadMore}
+        onEndReachedThreshold={0.4}
+        ListHeaderComponent={
+          <View style={[screenUi.content, { paddingHorizontal: 0 }]}>
+            <ScreenHeader
+              title="Фотографии ТТН"
+              showBack
+              onBack={() => navigation.goBack()}
+              showPageTitle={false}
+            />
+
+            <Text style={screenUi.filterLabel}>Водитель:</Text>
+            <FilterChipRow
+              items={driverChips}
+              activeId={driverId == null ? 'all' : String(driverId)}
+              onSelect={(id) => setDriverId(id === 'all' ? null : Number(id))}
+            />
+
+            <Text style={screenUi.filterLabel}>Заказ:</Text>
+            <Pressable
+              onPress={pickOrder}
+              style={{
+                borderWidth: 1,
+                borderColor: '#bfdbfe',
+                backgroundColor: '#ffffff',
+                borderRadius: 10,
+                paddingHorizontal: 12,
+                paddingVertical: 12,
+                marginBottom: 10,
+              }}
+            >
+              <Text style={{ fontSize: 14, color: '#111827' }}>📦 {orderFilterLabel}</Text>
+            </Pressable>
+
+            <Field
+              label="Дата С (ГГГГ-ММ-ДД)"
+              value={dateFrom}
+              onChangeText={setDateFrom}
+              placeholder="2026-01-01"
+            />
+            <Field
+              label="Дата ПО (ГГГГ-ММ-ДД)"
+              value={dateTo}
+              onChangeText={setDateTo}
+              placeholder="2026-12-31"
+            />
+
+            <MenuButton label="🔍 Применить фильтр" onPress={onApplyFilters} variant="secondary" />
+
+            <View style={screenUi.summaryBar}>
+              <View style={screenUi.sumItem}>
+                <Text style={screenUi.sumLabel}>Найдено</Text>
+                <Text style={[screenUi.sumValue, { color: '#2563eb' }]}>{photos.length}</Text>
+              </View>
+            </View>
+
+            <ErrorText message={error} />
+          </View>
+        }
+        renderItem={({ item }) => (
+          <Pressable
+            onPress={() => setPreviewPhoto(item)}
+            style={{
+              width: itemWidth,
+              backgroundColor: '#ffffff',
+              borderRadius: 10,
+              borderWidth: 1,
+              borderColor: '#e5e7eb',
+              overflow: 'hidden',
+            }}
+          >
+            <Image
+              source={{ uri: `${fileHost}${item.file_path}` }}
+              style={{ width: '100%', height: itemWidth * 0.75 }}
+              resizeMode="cover"
+            />
+            <View style={{ padding: 8 }}>
+              <Text style={{ fontSize: 11, color: '#6b7280' }}>
+                {formatPhotoDate(item.uploaded_at)}
+              </Text>
+              <Text numberOfLines={1} style={{ fontSize: 12, fontWeight: '600', color: '#111827' }}>
+                {item.driver_name ?? '—'}
+              </Text>
+              <Text numberOfLines={1} style={{ fontSize: 11, color: '#4b5563', marginTop: 2 }}>
+                Заказ #{item.order_id}
+              </Text>
+            </View>
+          </Pressable>
+        )}
+        ListEmptyComponent={
+          loading ? (
+            <ActivityIndicator style={{ marginTop: 40 }} color="#2563eb" />
+          ) : (
+            <Text style={screenUi.emptyText}>Фотографии ТТН не найдены</Text>
+          )
+        }
+        ListFooterComponent={
+          loadingMore ? <ActivityIndicator style={{ marginVertical: 16 }} color="#2563eb" /> : null
+        }
+      />
+
+      <Modal visible={previewPhoto != null} transparent animationType="fade">
+        <View
+          style={{
+            flex: 1,
+            backgroundColor: 'rgba(0,0,0,0.92)',
+            justifyContent: 'center',
+          }}
+        >
+          <Pressable
+            onPress={() => setPreviewPhoto(null)}
+            style={{ position: 'absolute', top: 48, right: 20, zIndex: 2, padding: 8 }}
+          >
+            <Text style={{ color: '#ffffff', fontSize: 28 }}>✕</Text>
+          </Pressable>
+
+          {previewPhoto ? (
+            <>
+              <Image
+                source={{ uri: `${fileHost}${previewPhoto.file_path}` }}
+                style={{ width: '100%', height: '70%' }}
+                resizeMode="contain"
+              />
+              <View style={{ padding: 20 }}>
+                <Text style={{ color: '#ffffff', fontSize: 16, fontWeight: '600' }}>
+                  Заказ #{previewPhoto.order_id}
+                </Text>
+                <Text style={{ color: '#d1d5db', marginTop: 4 }}>
+                  {previewPhoto.driver_name ?? '—'} · {formatPhotoDate(previewPhoto.uploaded_at)}
+                </Text>
+                {previewPhoto.contractor_name ? (
+                  <Text style={{ color: '#d1d5db', marginTop: 4 }}>
+                    {previewPhoto.contractor_name}
+                    {previewPhoto.material ? ` · ${previewPhoto.material}` : ''}
+                  </Text>
+                ) : null}
+                <Text style={{ color: '#9ca3af', marginTop: 4, fontSize: 12 }}>
+                  {previewPhoto.source === 'trip' ? 'Фото рейса' : 'Фото заказа'}
+                </Text>
+              </View>
+            </>
+          ) : null}
+        </View>
+      </Modal>
+    </View>
+  );
+}

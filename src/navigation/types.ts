@@ -54,5 +54,6 @@ export type RootStackParamList = {
   Reports: undefined;
   TripCreate: { orderId: number };
   TripPhotos: undefined;
+  AllPhotos: undefined;
   ServerSetup: { reason?: string } | undefined;
 };

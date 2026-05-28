@@ -25,7 +25,7 @@ export function AdminMoreScreen() {
           title: 'Заказы и логистика',
           items: [
             { label: '🗂 Шаблоны заказов', onPress: () => navigation.navigate('OrderTemplates') },
-            { label: '🖼 Фото ТТН', onPress: () => navigation.navigate('TripPhotos') },
+            { label: '🖼 Фото ТТН', onPress: () => navigation.navigate('AllPhotos') },
           ],
         },
         {
