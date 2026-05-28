@@ -14,6 +14,7 @@ import {
 import { apiErrorMessage, getServerHost } from '../api/client';
 import { listTrips } from '../api/trips';
 import { listDrivers } from '../api/drivers';
+import { withFallback } from '../utils/safeRequest';
 import { TRIP_STAGE_LABEL, type Driver, type TripRecord } from '../types';
 
 export function TripPhotosScreen() {
@@ -35,12 +36,16 @@ export function TripPhotosScreen() {
     try {
       setError(null);
       const [tripData, driverData] = await Promise.all([
-        listTrips({
-          driver_id: driverId ?? undefined,
-          from: from.trim() || undefined,
-          to: to.trim() || undefined,
-        }),
-        listDrivers(),
+        withFallback(
+          () =>
+            listTrips({
+              driver_id: driverId ?? undefined,
+              from: from.trim() || undefined,
+              to: to.trim() || undefined,
+            }),
+          []
+        ),
+        withFallback(() => listDrivers(), []),
       ]);
       setDrivers(driverData);
       setTrips(tripData.filter((trip) => Boolean(trip.photo_path)));

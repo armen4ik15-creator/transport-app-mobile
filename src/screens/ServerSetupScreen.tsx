@@ -1,16 +1,17 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Alert } from 'react-native';
 import axios from 'axios';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Card, ErrorText, Field, PrimaryButton, Screen, Subtitle, Title } from '../components/ui';
 import {
   buildApiUrl,
-  TOKEN_KEY,
   getServerUrl,
   setServerUrl,
+  clearServerUrl,
   SERVER_URL_KEY,
+  TOKEN_KEY,
 } from '../api/client';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { RootStackParamList } from '../navigation/RootNavigator';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ServerSetup'>;
@@ -20,8 +21,7 @@ function parseSavedAddress(url: string): { ip: string; port: string } {
   const withoutApi = url.replace(/\/api\/?$/, '');
   const match = withoutApi.match(/^https?:\/\/([^:/]+)(?::(\d+))?$/i);
   if (!match) return { ip: '', port: '443' };
-  const protocol = withoutApi.startsWith('https://') ? 'https' : 'http';
-  return { ip: match[1], port: match[2] || (protocol === 'https' ? '443' : '80') };
+  return { ip: match[1], port: match[2] || '443' };
 }
 
 export function ServerSetupScreen({ route, onConfigured }: ComponentProps) {
@@ -72,6 +72,7 @@ export function ServerSetupScreen({ route, onConfigured }: ComponentProps) {
       onConfigured?.();
       Alert.alert('Подключение успешно', `Сервер сохранён в ${SERVER_URL_KEY}`);
     } catch {
+      await clearServerUrl();
       setError('Не удалось подключиться к серверу');
       Alert.alert('Ошибка', 'Не удалось подключиться к серверу');
     } finally {

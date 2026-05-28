@@ -17,6 +17,7 @@ import { createOrder, createOrdersBulk } from '../api/orders';
 import { createOrderTemplate, listOrderTemplates } from '../api/orderTemplates';
 import { apiErrorMessage } from '../api/client';
 import { listMaterials } from '../api/materials';
+import { withFallback } from '../utils/safeRequest';
 import type { Contractor, Driver, Material, OrderTemplate } from '../types';
 import type { RootStackParamList } from '../navigation/RootNavigator';
 
@@ -55,10 +56,10 @@ export function OrderCreateScreen({ navigation, route }: Props) {
   const load = useCallback(async () => {
     try {
       const [ds, cs, ts, ms] = await Promise.all([
-        listDrivers(),
-        listContractors(),
-        listOrderTemplates(),
-        listMaterials(),
+        withFallback(() => listDrivers(), []),
+        withFallback(() => listContractors(), []),
+        withFallback(() => listOrderTemplates(), []),
+        withFallback(() => listMaterials(), []),
       ]);
       setDrivers(ds);
       setContractors(cs);

@@ -6,6 +6,7 @@ import { Card, EmptyText, ErrorText, Field, LoadingScreen, MenuButton, PrimaryBu
 import { apiErrorMessage } from '../api/client';
 import { createInvoice, deleteInvoice, listInvoices } from '../api/invoices';
 import { listOrders } from '../api/orders';
+import { withFallback } from '../utils/safeRequest';
 import type { Invoice, Order } from '../types';
 
 export function InvoicesScreen() {
@@ -24,7 +25,10 @@ export function InvoicesScreen() {
   const load = useCallback(async () => {
     try {
       setError(null);
-      const [invoices, ordersData] = await Promise.all([listInvoices(), listOrders()]);
+      const [invoices, ordersData] = await Promise.all([
+        withFallback(() => listInvoices(), []),
+        withFallback(() => listOrders(), []),
+      ]);
       setRows(invoices);
       setOrders(ordersData);
     } catch (e) {

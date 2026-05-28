@@ -6,6 +6,7 @@ import { apiErrorMessage } from '../api/client';
 import { listDrivers } from '../api/drivers';
 import { listExpenses } from '../api/expenses';
 import { listTrips } from '../api/trips';
+import { withFallback } from '../utils/safeRequest';
 import type { Driver, ExpenseRecord, TripRecord } from '../types';
 
 interface FinanceRow {
@@ -34,9 +35,9 @@ export function FinanceReportScreen() {
         to: to.trim() || undefined,
       };
       const [driversData, tripsData, expensesData] = await Promise.all([
-        listDrivers(),
-        listTrips(params),
-        listExpenses(params),
+        withFallback(() => listDrivers(), []),
+        withFallback(() => listTrips(params), []),
+        withFallback(() => listExpenses(params), []),
       ]);
       setDrivers(driversData);
       setTrips(tripsData);

@@ -1,19 +1,19 @@
-import { useCallback, useMemo, useState } from 'react';
-import { Alert, RefreshControl, ScrollView, View } from 'react-native';
-import { useFocusEffect } from '@react-navigation/native';
-import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Alert, Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Card, ErrorText, LoadingScreen, MenuButton, Subtitle, Title } from '../components/ui';
 import { useAuth } from '../auth/AuthContext';
-import type { RootStackParamList } from '../navigation/RootNavigator';
+import type { RootStackParamList } from '../navigation/types';
 import { listOrders } from '../api/orders';
 import { listDrivers } from '../api/drivers';
 import { getContractorDebtSummary } from '../api/contractorPayments';
 import { listNotifications } from '../api/notifications';
 import { apiErrorMessage } from '../api/client';
+import { withFallback } from '../utils/safeRequest';
 
-type Props = NativeStackScreenProps<RootStackParamList, 'AdminHome'>;
-
-export function AdminHomeScreen({ navigation }: Props) {
+export function AdminHomeScreen() {
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { user, signOut } = useAuth();
   const [activeOrders, setActiveOrders] = useState(0);
   const [driversOnline, setDriversOnline] = useState(0);
@@ -27,10 +27,10 @@ export function AdminHomeScreen({ navigation }: Props) {
     try {
       setError(null);
       const [orders, drivers, debts, notifications] = await Promise.all([
-        listOrders(),
-        listDrivers(),
-        getContractorDebtSummary(),
-        listNotifications(),
+        withFallback(() => listOrders(), []),
+        withFallback(() => listDrivers(), []),
+        withFallback(() => getContractorDebtSummary(), []),
+        withFallback(() => listNotifications(), []),
       ]);
       setActiveOrders(orders.filter((o) => Boolean(o.is_active)).length);
       setDriversOnline(drivers.filter((d) => Boolean(d.is_active)).length);
@@ -41,12 +41,10 @@ export function AdminHomeScreen({ navigation }: Props) {
     }
   }, []);
 
-  useFocusEffect(
-    useCallback(() => {
-      setLoading(true);
-      loadDashboard().finally(() => setLoading(false));
-    }, [loadDashboard])
-  );
+  useEffect(() => {
+    setLoading(true);
+    loadDashboard().finally(() => setLoading(false));
+  }, [loadDashboard]);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -76,11 +74,40 @@ export function AdminHomeScreen({ navigation }: Props) {
   return (
     <ScrollView
       style={{ flex: 1, backgroundColor: '#f4f6f8' }}
-      contentContainerStyle={{ padding: 16, paddingBottom: 32 }}
+      contentContainerStyle={{ padding: 16, paddingBottom: 24 }}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
     >
-      <Title>Меню администратора</Title>
-      <Subtitle>{user?.email}</Subtitle>
+      <Title>Главная</Title>
+
+      <View
+        style={{
+          backgroundColor: '#0d3d7a',
+          borderRadius: 16,
+          padding: 16,
+          marginBottom: 12,
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+        }}
+      >
+        <View style={{ flex: 1, paddingRight: 12 }}>
+          <Text style={{ color: '#dbeafe', fontSize: 13, marginBottom: 4 }}>Добро пожаловать!</Text>
+          <Text style={{ color: '#ffffff', fontSize: 15, fontWeight: '700' }}>{user?.email}</Text>
+          <Text style={{ color: '#bfdbfe', fontSize: 13, marginTop: 4 }}>Администратор</Text>
+        </View>
+        <Pressable
+          onPress={onLogout}
+          style={{
+            backgroundColor: '#c01c28',
+            borderRadius: 10,
+            paddingHorizontal: 14,
+            paddingVertical: 10,
+          }}
+        >
+          <Text style={{ color: '#fff', fontWeight: '700' }}>Выйти</Text>
+        </Pressable>
+      </View>
+
       <ErrorText message={error} />
 
       <Card>
@@ -108,12 +135,18 @@ export function AdminHomeScreen({ navigation }: Props) {
       <Card>
         <Subtitle>Быстрые действия</Subtitle>
         <MenuButton label="➕ Создать заказ" onPress={() => navigation.navigate('OrderCreate')} />
-        <MenuButton label="👤 Добавить водителя" onPress={() => navigation.navigate('Drivers')} />
-        <MenuButton label="📋 Все заказы" onPress={() => navigation.navigate('Orders')} variant="secondary" />
-        <MenuButton label="🔔 Открыть уведомления" onPress={() => navigation.navigate('Notifications')} variant="secondary" />
+        <MenuButton label="🔔 Уведомления" onPress={() => navigation.navigate('Notifications')} variant="secondary" />
       </Card>
 
-      <MenuButton label="Выйти" onPress={onLogout} variant="danger" />
+      <Card>
+        <Subtitle>Разделы</Subtitle>
+        <MenuButton label="📦 Заказы — назначить задачи" onPress={() => navigation.replace('Orders')} />
+        <MenuButton label="👤 Водители — список и машины" onPress={() => navigation.replace('Drivers')} variant="secondary" />
+        <MenuButton label="💰 Контрагенты — заказчики" onPress={() => navigation.replace('Contractors')} variant="secondary" />
+        <MenuButton label="💸 Расходы — топливо, ремонт" onPress={() => navigation.replace('Expenses')} variant="secondary" />
+        <MenuButton label="📑 Реестр — все рейсы" onPress={() => navigation.replace('RegistryReport')} variant="secondary" />
+        <MenuButton label="💼 Все финансы — отчёты, зарплата" onPress={() => navigation.replace('FinancesHub')} variant="secondary" />
+      </Card>
     </ScrollView>
   );
 }

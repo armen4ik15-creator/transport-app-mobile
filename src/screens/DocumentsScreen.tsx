@@ -15,11 +15,13 @@ import {
 } from '../components/ui';
 import { apiErrorMessage } from '../api/client';
 import { deleteDocument, listDocuments, uploadDocument } from '../api/documents';
+import { listOrders } from '../api/orders';
+import { withFallback } from '../utils/safeRequest';
 import { useAuth } from '../auth/AuthContext';
-import type { DocumentRecord, DocumentType } from '../types';
+import type { DocumentRecord, DocumentType, Order } from '../types';
 
 const initialForm = {
-  order_id: '',
+  order_id: 0,
   type: 'waybill' as DocumentType,
   fileUri: '',
 };
@@ -38,11 +40,17 @@ export function DocumentsScreen() {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState(initialForm);
+  const [orders, setOrders] = useState<Order[]>([]);
 
   const load = useCallback(async () => {
     try {
       setError(null);
-      setDocuments(await listDocuments());
+      const [docsData, ordersData] = await Promise.all([
+        withFallback(() => listDocuments(), []),
+        withFallback(() => listOrders(), []),
+      ]);
+      setDocuments(docsData);
+      setOrders(ordersData);
     } catch (e) {
       setError(apiErrorMessage(e, 'Не удалось загрузить документы'));
     }
@@ -82,7 +90,7 @@ export function DocumentsScreen() {
   const onUpload = async () => {
     const orderId = Number(form.order_id);
     if (!Number.isFinite(orderId) || orderId <= 0) {
-      Alert.alert('Ошибка', 'Укажите корректный order_id');
+      Alert.alert('Ошибка', 'Выберите заказ');
       return;
     }
     if (!form.fileUri) {
@@ -145,11 +153,22 @@ export function DocumentsScreen() {
             <Card>
               <Title>Загрузить документ</Title>
               <Field
-                label="Order ID"
-                value={form.order_id}
-                onChangeText={(value) => setForm((prev) => ({ ...prev, order_id: value }))}
+                label="Поиск заказа по номеру (необязательно)"
+                value={String(form.order_id || '')}
+                onChangeText={(value) => {
+                  const parsed = Number(value);
+                  setForm((prev) => ({ ...prev, order_id: Number.isFinite(parsed) ? parsed : 0 }));
+                }}
                 keyboardType="number-pad"
               />
+              {orders.slice(0, 12).map((order) => (
+                <MenuButton
+                  key={order.id}
+                  label={`${form.order_id === order.id ? '✅ ' : ''}Заказ #${order.id} · ${order.contractor_name ?? 'Без контрагента'}`}
+                  onPress={() => setForm((prev) => ({ ...prev, order_id: order.id }))}
+                  variant={form.order_id === order.id ? 'default' : 'secondary'}
+                />
+              ))}
               <View style={{ flexDirection: 'row', gap: 10 }}>
                 <View style={{ flex: 1 }}>
                   <MenuButton

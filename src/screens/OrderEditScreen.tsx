@@ -6,6 +6,7 @@ import { apiErrorMessage } from '../api/client';
 import { listContractors } from '../api/contractors';
 import { listDrivers } from '../api/drivers';
 import { getOrder, updateOrder } from '../api/orders';
+import { withFallback } from '../utils/safeRequest';
 import type { Contractor, Driver } from '../types';
 import type { RootStackParamList } from '../navigation/RootNavigator';
 
@@ -38,11 +39,12 @@ export function OrderEditScreen({ route, navigation }: Props) {
   const [isActive, setIsActive] = useState(true);
 
   const load = useCallback(async () => {
-    const [order, driversData, contractorsData] = await Promise.all([
-      getOrder(id),
-      listDrivers(),
-      listContractors(),
-    ]);
+    try {
+      const [order, driversData, contractorsData] = await Promise.all([
+        getOrder(id),
+        withFallback(() => listDrivers(), []),
+        withFallback(() => listContractors(), []),
+      ]);
     setDrivers(driversData);
     setContractors(contractorsData);
     setDriverId(order.driver_id ?? null);
@@ -63,6 +65,9 @@ export function OrderEditScreen({ route, navigation }: Props) {
     setUnloadAddress(order.unload_address ?? '');
     setAmount(order.amount != null ? String(order.amount) : '');
     setIsActive(Boolean(order.is_active));
+    } catch (e) {
+      Alert.alert('Ошибка', apiErrorMessage(e, 'Не удалось загрузить заказ'));
+    }
   }, [id]);
 
   useEffect(() => {

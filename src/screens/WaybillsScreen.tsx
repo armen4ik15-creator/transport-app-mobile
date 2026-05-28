@@ -6,6 +6,7 @@ import { Card, EmptyText, ErrorText, Field, LoadingScreen, MenuButton, PrimaryBu
 import { apiErrorMessage } from '../api/client';
 import { listOrders } from '../api/orders';
 import { createWaybill, deleteWaybill, listWaybills } from '../api/waybills';
+import { withFallback } from '../utils/safeRequest';
 import type { Order, Waybill } from '../types';
 
 export function WaybillsScreen() {
@@ -23,7 +24,10 @@ export function WaybillsScreen() {
   const load = useCallback(async () => {
     try {
       setError(null);
-      const [waybills, ordersData] = await Promise.all([listWaybills(), listOrders()]);
+      const [waybills, ordersData] = await Promise.all([
+        withFallback(() => listWaybills(), []),
+        withFallback(() => listOrders(), []),
+      ]);
       setRows(waybills);
       setOrders(ordersData);
     } catch (e) {

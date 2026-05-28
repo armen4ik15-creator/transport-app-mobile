@@ -5,7 +5,7 @@ import { Card, MenuButton, Subtitle, Title } from '../components/ui';
 import { useAuth } from '../auth/AuthContext';
 import type { RootStackParamList } from '../navigation/types';
 
-export function AdminMoreScreen() {
+export function DriverMoreScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { signOut } = useAuth();
 
@@ -21,29 +21,15 @@ export function AdminMoreScreen() {
       style={{ flex: 1, backgroundColor: '#f4f6f8' }}
       contentContainerStyle={{ padding: 16, paddingBottom: 24 }}
     >
-      <Title>Компания</Title>
-      <Subtitle>Справочники, документы и настройки</Subtitle>
+      <Title>Ещё</Title>
+      <Subtitle>Документы и настройки</Subtitle>
 
       <Card>
-        <Subtitle>Заказы и логистика</Subtitle>
-        <MenuButton label="🗂 Шаблоны заказов" onPress={() => navigation.navigate('OrderTemplates')} />
-        <MenuButton label="🖼 Фото ТТН" onPress={() => navigation.navigate('TripPhotos')} variant="secondary" />
-      </Card>
-
-      <Card>
-        <Subtitle>Справочники</Subtitle>
-        <MenuButton label="🚛 Автомобили" onPress={() => navigation.navigate('Vehicles')} />
-        <MenuButton label="🧱 Материалы" onPress={() => navigation.navigate('Materials')} variant="secondary" />
-      </Card>
-
-      <Card>
-        <Subtitle>Документы и отчёты</Subtitle>
-        <MenuButton label="📑 Документы" onPress={() => navigation.navigate('Documents')} />
-        <MenuButton label="🧾 Путевые листы" onPress={() => navigation.navigate('Waybills')} variant="secondary" />
+        <MenuButton label="🧾 Путевые листы" onPress={() => navigation.navigate('Waybills')} />
         <MenuButton label="🧮 Счета" onPress={() => navigation.navigate('Invoices')} variant="secondary" />
-        <MenuButton label="📄 Шаблоны документов" onPress={() => navigation.navigate('Templates')} variant="secondary" />
+        <MenuButton label="📑 Документы" onPress={() => navigation.navigate('Documents')} variant="secondary" />
         <MenuButton label="📊 Отчёты" onPress={() => navigation.navigate('Reports')} variant="secondary" />
-        <MenuButton label="📝 Журнал действий" onPress={() => navigation.navigate('ActivityLog')} variant="secondary" />
+        <MenuButton label="📝 Мои действия" onPress={() => navigation.navigate('ActivityLog')} variant="secondary" />
         <MenuButton label="🔔 Уведомления" onPress={() => navigation.navigate('Notifications')} variant="secondary" />
       </Card>
 

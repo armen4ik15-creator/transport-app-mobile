@@ -21,6 +21,7 @@ import {
   getSalarySummary,
   listSalaryPayments,
 } from '../api/salary';
+import { withFallback } from '../utils/safeRequest';
 import type {
   Driver,
   DriverDebtSummary,
@@ -72,14 +73,14 @@ export function SalaryScreen() {
     try {
       setError(null);
       const [driversData, recordsData] = await Promise.all([
-        listDrivers(),
-        listSalaryPayments(selectedDriverId ?? undefined),
+        withFallback(() => listDrivers(), []),
+        withFallback(() => listSalaryPayments(selectedDriverId ?? undefined), []),
       ]);
       setDrivers(driversData);
       setRecords(recordsData);
-      setDebts(await getSalaryDebts());
+      setDebts(await withFallback(() => getSalaryDebts(), []));
       if (selectedDriverId) {
-        setSummary(await getSalarySummary(selectedDriverId));
+        setSummary(await withFallback(() => getSalarySummary(selectedDriverId), initialSummary));
       } else {
         setSummary(initialSummary);
       }

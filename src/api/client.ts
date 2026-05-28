@@ -16,15 +16,14 @@ export function setServerIssueHandler(handler: (() => Promise<void> | void) | nu
   serverIssueHandler = handler;
 }
 
-function getDefaultProtocol(port?: string): 'http' | 'https' {
-  return port === '443' ? 'https' : 'http';
+function normalizePort(port: string | null | undefined): string | null {
+  if (!port) return null;
+  const clean = String(port).trim();
+  return /^\d+$/.test(clean) ? clean : null;
 }
 
-function normalizePort(port?: string): string | null {
-  if (!port) return null;
-  const clean = port.trim();
-  if (!clean) return null;
-  return /^\d+$/.test(clean) ? clean : null;
+function getDefaultProtocol(port?: string): 'http' | 'https' {
+  return port === '443' ? 'https' : 'http';
 }
 
 export function buildApiUrl(hostOrUrl: string, inputPort?: string): string {
@@ -32,16 +31,14 @@ export function buildApiUrl(hostOrUrl: string, inputPort?: string): string {
   if (!hostValue) return FALLBACK_API_URL;
 
   const explicitPort = normalizePort(inputPort);
-  const withoutApi = hostValue.replace(/\/api\/?$/i, '').replace(/\/+$/, '');
+  const withoutApi = hostValue.replace(/\/(api)?\/?$/i, '');
   const hasProtocol = /^https?:\/\//i.test(withoutApi);
-
   const protocol = hasProtocol
     ? (withoutApi.split('://')[0].toLowerCase() as 'http' | 'https')
     : getDefaultProtocol(explicitPort ?? undefined);
 
   const withoutProtocol = withoutApi.replace(/^https?:\/\//i, '');
-  const hostWithPathRemoved = withoutProtocol.split('/')[0];
-  const hostMatch = hostWithPathRemoved.match(/^([^:]+)(?::(\d+))?$/);
+  const hostMatch = withoutProtocol.match(/^([^:/]+)(?::(\d+))?$/);
   if (!hostMatch) return FALLBACK_API_URL;
 
   const host = hostMatch[1];
@@ -64,6 +61,7 @@ export async function getServerUrl(): Promise<string | null> {
 export async function setServerUrl(url: string): Promise<string> {
   const normalized = normalizeApiUrl(url);
   await AsyncStorage.setItem(SERVER_URL_KEY, normalized);
+  await AsyncStorage.removeItem(TOKEN_KEY);
   return normalized;
 }
 
@@ -124,6 +122,9 @@ export function apiErrorMessage(err: unknown, fallback = 'Ошибка'): string
   if (axios.isAxiosError(err)) {
     const axErr = err as AxiosError<{ error?: string }>;
     if (axErr.response?.data?.error) return axErr.response.data.error;
+    if (axErr.response?.status === 404) {
+      return 'Раздел недоступен на сервере (404). Обновите сервер до последней версии.';
+    }
     if (axErr.code === 'ECONNABORTED') return 'Превышено время ожидания';
     if (axErr.message === 'Network Error') {
       return 'Нет связи с сервером. Проверьте настройки адреса сервера.';

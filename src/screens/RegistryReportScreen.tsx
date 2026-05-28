@@ -1,10 +1,10 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { FlatList, RefreshControl, View } from 'react-native';
-import { useFocusEffect } from '@react-navigation/native';
 import { Card, EmptyText, ErrorText, Field, LoadingScreen, MenuButton, Subtitle, Title } from '../components/ui';
 import { apiErrorMessage } from '../api/client';
 import { listDrivers } from '../api/drivers';
 import { listTrips } from '../api/trips';
+import { withFallback } from '../utils/safeRequest';
 import type { Driver, TripRecord } from '../types';
 
 export function RegistryReportScreen() {
@@ -21,12 +21,16 @@ export function RegistryReportScreen() {
     try {
       setError(null);
       const [driversData, tripsData] = await Promise.all([
-        listDrivers(),
-        listTrips({
-          driver_id: driverId ?? undefined,
-          from: from.trim() || undefined,
-          to: to.trim() || undefined,
-        }),
+        withFallback(() => listDrivers(), []),
+        withFallback(
+          () =>
+            listTrips({
+              driver_id: driverId ?? undefined,
+              from: from.trim() || undefined,
+              to: to.trim() || undefined,
+            }),
+          []
+        ),
       ]);
       setDrivers(driversData);
       setRows(tripsData.filter((item) => item.stage === 'unloading'));
@@ -35,12 +39,10 @@ export function RegistryReportScreen() {
     }
   }, [driverId, from, to]);
 
-  useFocusEffect(
-    useCallback(() => {
-      setLoading(true);
-      load().finally(() => setLoading(false));
-    }, [load])
-  );
+  useEffect(() => {
+    setLoading(true);
+    load().finally(() => setLoading(false));
+  }, [load]);
 
   const onRefresh = async () => {
     setRefreshing(true);

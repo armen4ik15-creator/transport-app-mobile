@@ -1,7 +1,5 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Alert, FlatList, RefreshControl, View } from 'react-native';
-import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { useFocusEffect } from '@react-navigation/native';
 import {
   Card,
   EmptyText,
@@ -16,11 +14,8 @@ import {
 import { createDriver, deleteDriver, listDrivers } from '../api/drivers';
 import { apiErrorMessage } from '../api/client';
 import type { Driver } from '../types';
-import type { RootStackParamList } from '../navigation/RootNavigator';
 
-type Props = NativeStackScreenProps<RootStackParamList, 'Drivers'>;
-
-export function DriversScreen({ navigation }: Props) {
+export function DriversScreen() {
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -48,12 +43,10 @@ export function DriversScreen({ navigation }: Props) {
     }
   }, []);
 
-  useFocusEffect(
-    useCallback(() => {
-      setLoading(true);
-      load().finally(() => setLoading(false));
-    }, [load])
-  );
+  useEffect(() => {
+    setLoading(true);
+    load().finally(() => setLoading(false));
+  }, [load]);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -167,9 +160,6 @@ export function DriversScreen({ navigation }: Props) {
         )}
         ListEmptyComponent={<EmptyText text="Водителей пока нет" />}
       />
-      <View style={{ padding: 16 }}>
-        <MenuButton label="← Меню" onPress={() => navigation.goBack()} variant="secondary" />
-      </View>
     </View>
   );
 }

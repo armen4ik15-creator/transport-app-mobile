@@ -11,6 +11,7 @@ import {
 } from '../components/ui';
 import { apiErrorMessage } from '../api/client';
 import { listFinances, getDriverBalance } from '../api/finances';
+import { withFallback } from '../utils/safeRequest';
 import { useAuth } from '../auth/AuthContext';
 import type { DriverBalance, FinanceRecord } from '../types';
 
@@ -36,8 +37,8 @@ export function DriverFinancesScreen() {
     try {
       setError(null);
       const [recordsData, balanceData] = await Promise.all([
-        listFinances(),
-        getDriverBalance(driver.id),
+        withFallback(() => listFinances(), []),
+        withFallback(() => getDriverBalance(driver.id), null),
       ]);
       setRecords(recordsData);
       setBalance(balanceData);

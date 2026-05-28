@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert, FlatList, RefreshControl, View } from 'react-native';
-import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { useFocusEffect } from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import {
   Card,
   EmptyText,
@@ -15,12 +15,12 @@ import { listOrders } from '../api/orders';
 import { apiErrorMessage } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
 import { STATUS_LABEL, type Order } from '../types';
-import type { RootStackParamList } from '../navigation/RootNavigator';
+import type { RootStackParamList } from '../navigation/types';
 
-type Props = NativeStackScreenProps<RootStackParamList, 'DriverOrders'>;
 const PAGE_SIZE = 20;
 
-export function DriverOrdersScreen({ navigation }: Props) {
+export function DriverOrdersScreen() {
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { user, driver } = useAuth();
   const [orders, setOrders] = useState<Order[]>([]);
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
@@ -39,12 +39,10 @@ export function DriverOrdersScreen({ navigation }: Props) {
     }
   }, []);
 
-  useFocusEffect(
-    useCallback(() => {
-      setLoading(true);
-      load().finally(() => setLoading(false));
-    }, [load])
-  );
+  useEffect(() => {
+    setLoading(true);
+    load().finally(() => setLoading(false));
+  }, [load]);
 
   const onRefresh = async () => {
     setRefreshing(true);

@@ -20,6 +20,7 @@ import {
   getContractorDebtSummary,
   listContractorPayments,
 } from '../api/contractorPayments';
+import { withFallback } from '../utils/safeRequest';
 import type { Contractor, ContractorDebtSummary, ContractorPaymentRecord } from '../types';
 
 const initialForm = {
@@ -48,9 +49,9 @@ export function ContractorDebtScreen() {
     try {
       setError(null);
       const [contractorsData, summaryData, paymentsData] = await Promise.all([
-        listContractors(),
-        getContractorDebtSummary(),
-        listContractorPayments(selectedContractorId ?? undefined),
+        withFallback(() => listContractors(), []),
+        withFallback(() => getContractorDebtSummary(), []),
+        withFallback(() => listContractorPayments(selectedContractorId ?? undefined), []),
       ]);
       setContractors(contractorsData);
       setSummary(summaryData);

@@ -16,6 +16,7 @@ import { apiErrorMessage } from '../api/client';
 import { createFinance, getDriverBalance, listFinances } from '../api/finances';
 import { listOrders } from '../api/orders';
 import { listDrivers } from '../api/drivers';
+import { withFallback } from '../utils/safeRequest';
 import type { Driver, DriverBalance, FinanceRecord, Order } from '../types';
 
 const initialForm = {
@@ -47,15 +48,15 @@ export function AdminFinancesScreen() {
     try {
       setError(null);
       const [driversData, financesData, ordersData] = await Promise.all([
-        listDrivers(),
-        listFinances(selectedDriverId ?? undefined),
-        listOrders(),
+        withFallback(() => listDrivers(), []),
+        withFallback(() => listFinances(selectedDriverId ?? undefined), []),
+        withFallback(() => listOrders(), []),
       ]);
       setDrivers(driversData);
       setRecords(financesData);
       setOrders(ordersData);
       if (selectedDriverId) {
-        const b = await getDriverBalance(selectedDriverId);
+        const b = await withFallback(() => getDriverBalance(selectedDriverId), null);
         setBalance(b);
       } else {
         setBalance(null);
