@@ -1,20 +1,63 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert, FlatList, Pressable, RefreshControl, Text, View } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { FilterDropdown } from '../components/FilterDropdown';
 import { FormBottomModal } from '../components/FormBottomModal';
+import { EmptyStateButton, FinanceSummaryBar } from '../components/ListScreenParts';
 import { ScreenHeader } from '../components/ScreenHeader';
-import { SearchBar } from '../components/SearchBar';
 import { ErrorText, Field, LoadingScreen } from '../components/ui';
+import { getContractorDebtSummary } from '../api/contractorPayments';
 import { createContractor, deleteContractor, listContractors } from '../api/contractors';
 import { apiErrorMessage } from '../api/client';
+import type { RootStackParamList } from '../navigation/types';
 import { screenUi } from '../styles/screenUi';
-import type { Contractor } from '../types';
+import { withFallback } from '../utils/safeRequest';
+import type { Contractor, ContractorDebtSummary } from '../types';
+
+type PeriodFilter = 'all' | 'month' | 'quarter' | 'year';
+type TypeFilter = 'all' | 'company' | 'individual' | 'gov';
+
+const PERIOD_LABELS: Record<PeriodFilter, string> = {
+  all: 'Все время',
+  month: 'Этот месяц',
+  quarter: 'Этот квартал',
+  year: 'Этот год',
+};
+
+const TYPE_LABELS: Record<TypeFilter, string> = {
+  all: 'Все',
+  company: 'Компании',
+  individual: 'Физлица',
+  gov: 'Госорганы',
+};
+
+function isInPeriod(createdAt: string, period: PeriodFilter): boolean {
+  if (period === 'all') return true;
+  const created = new Date(createdAt);
+  const now = new Date();
+  if (Number.isNaN(created.getTime())) return true;
+
+  if (period === 'month') {
+    return created.getFullYear() === now.getFullYear() && created.getMonth() === now.getMonth();
+  }
+  if (period === 'quarter') {
+    const qNow = Math.floor(now.getMonth() / 3);
+    const qCreated = Math.floor(created.getMonth() / 3);
+    return created.getFullYear() === now.getFullYear() && qCreated === qNow;
+  }
+  return created.getFullYear() === now.getFullYear();
+}
 
 export function ContractorsScreen() {
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [contractors, setContractors] = useState<Contractor[]>([]);
+  const [debtSummary, setDebtSummary] = useState<ContractorDebtSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [periodFilter, setPeriodFilter] = useState<PeriodFilter>('all');
+  const [typeFilter, setTypeFilter] = useState<TypeFilter>('all');
   const [formVisible, setFormVisible] = useState(false);
   const [name, setName] = useState('');
   const [type, setType] = useState('company');
@@ -25,7 +68,12 @@ export function ContractorsScreen() {
   const load = useCallback(async () => {
     try {
       setError(null);
-      setContractors(await listContractors());
+      const [contractorData, summaryData] = await Promise.all([
+        listContractors(),
+        withFallback(() => getContractorDebtSummary(), []),
+      ]);
+      setContractors(contractorData);
+      setDebtSummary(summaryData);
     } catch (e) {
       const msg = apiErrorMessage(e, 'Не удалось загрузить');
       setError(msg);
@@ -45,15 +93,24 @@ export function ContractorsScreen() {
   };
 
   const filtered = useMemo(() => {
-    const q = searchQuery.trim().toLowerCase();
-    if (!q) return contractors;
-    return contractors.filter(
-      (c) =>
-        c.name.toLowerCase().includes(q) ||
-        c.phone?.toLowerCase().includes(q) ||
-        c.address?.toLowerCase().includes(q)
+    return contractors.filter((contractor) => {
+      if (typeFilter !== 'all' && contractor.type !== typeFilter) return false;
+      return isInPeriod(contractor.created_at, periodFilter);
+    });
+  }, [contractors, periodFilter, typeFilter]);
+
+  const financeTotals = useMemo(() => {
+    const visibleIds = new Set(filtered.map((item) => item.id));
+    const rows = debtSummary.filter((row) => visibleIds.has(row.contractor_id));
+    return rows.reduce(
+      (acc, row) => ({
+        revenue: acc.revenue + row.accrued,
+        paid: acc.paid + row.paid,
+        debt: acc.debt + row.debt,
+      }),
+      { revenue: 0, paid: 0, debt: 0 }
     );
-  }, [contractors, searchQuery]);
+  }, [debtSummary, filtered]);
 
   const resetForm = () => {
     setName('');
@@ -103,35 +160,59 @@ export function ContractorsScreen() {
     ]);
   };
 
-  if (loading && contractors.length === 0) return <LoadingScreen label="Загрузка контрагентов…" />;
+  const pickPeriod = () => {
+    Alert.alert('Период', undefined, [
+      ...(Object.entries(PERIOD_LABELS) as [PeriodFilter, string][]).map(([id, label]) => ({
+        text: label,
+        onPress: () => setPeriodFilter(id),
+      })),
+      { text: 'Отмена', style: 'cancel' as const },
+    ]);
+  };
+
+  const pickType = () => {
+    Alert.alert('Тип контрагента', undefined, [
+      ...(Object.entries(TYPE_LABELS) as [TypeFilter, string][]).map(([id, label]) => ({
+        text: label,
+        onPress: () => setTypeFilter(id),
+      })),
+      { text: 'Отмена', style: 'cancel' as const },
+    ]);
+  };
+
+  if (loading && contractors.length === 0) {
+    return <LoadingScreen label="Загрузка контрагентов…" />;
+  }
 
   return (
     <View style={screenUi.container}>
       <FlatList
         data={filtered}
         keyExtractor={(c) => String(c.id)}
-        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 24 }}
+        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 24, flexGrow: 1 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         ListHeaderComponent={
           <View style={screenUi.content}>
             <ScreenHeader
-              title="💰 Контрагенты"
-              showBack={false}
-              actionLabel="+ Добавить"
+              title="Контрагенты"
+              showBack
+              onBack={() => navigation.replace('AdminHome')}
+              actionLabel="+"
               onAction={() => setFormVisible(true)}
             />
-            <SearchBar value={searchQuery} onChangeText={setSearchQuery} placeholder="Поиск по названию…" />
-            <View style={screenUi.summaryBar}>
-              <View style={screenUi.sumItem}>
-                <Text style={screenUi.sumLabel}>Всего</Text>
-                <Text style={[screenUi.sumValue, { color: '#2563eb' }]}>{contractors.length}</Text>
-              </View>
-              <View style={screenUi.sumDivider} />
-              <View style={screenUi.sumItem}>
-                <Text style={screenUi.sumLabel}>Показано</Text>
-                <Text style={[screenUi.sumValue, { color: '#16a34a' }]}>{filtered.length}</Text>
-              </View>
+            <View style={{ flexDirection: 'row', gap: 8, marginBottom: 12 }}>
+              <FilterDropdown
+                icon="📅"
+                label={PERIOD_LABELS[periodFilter]}
+                onPress={pickPeriod}
+              />
+              <FilterDropdown icon="👤" label={TYPE_LABELS[typeFilter]} onPress={pickType} />
             </View>
+            <FinanceSummaryBar
+              revenue={financeTotals.revenue}
+              paid={financeTotals.paid}
+              debt={financeTotals.debt}
+            />
             <ErrorText message={error} />
           </View>
         }
@@ -157,7 +238,11 @@ export function ContractorsScreen() {
           </Pressable>
         )}
         ListEmptyComponent={
-          <Text style={screenUi.emptyText}>Контрагентов пока нет</Text>
+          <EmptyStateButton
+            message="Контрагентов нет"
+            buttonLabel="+ Добавить первого"
+            onPress={() => setFormVisible(true)}
+          />
         }
       />
 

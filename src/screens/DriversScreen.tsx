@@ -1,15 +1,28 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Alert, FlatList, Pressable, RefreshControl, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  Pressable,
+  RefreshControl,
+  Text,
+  View,
+} from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { FormBottomModal } from '../components/FormBottomModal';
+import { InfoBanner } from '../components/InfoBanner';
 import { ScreenHeader } from '../components/ScreenHeader';
 import { SearchBar } from '../components/SearchBar';
 import { ErrorText, Field, LoadingScreen } from '../components/ui';
 import { createDriver, deleteDriver, listDrivers } from '../api/drivers';
 import { apiErrorMessage } from '../api/client';
+import type { RootStackParamList } from '../navigation/types';
 import { screenUi } from '../styles/screenUi';
 import type { Driver } from '../types';
 
 export function DriversScreen() {
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -116,35 +129,32 @@ export function DriversScreen() {
     ]);
   };
 
-  if (loading && drivers.length === 0) return <LoadingScreen label="Загрузка водителей…" />;
+  if (loading && drivers.length === 0) {
+    return <LoadingScreen label="Загрузка водителей…" />;
+  }
 
   return (
     <View style={screenUi.container}>
       <FlatList
         data={filtered}
         keyExtractor={(d) => String(d.id)}
-        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 24 }}
+        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 24, flexGrow: 1 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         ListHeaderComponent={
           <View style={screenUi.content}>
             <ScreenHeader
-              title="👤 Водители"
-              showBack={false}
+              title="Водители"
+              showBack
+              onBack={() => navigation.replace('AdminHome')}
               actionLabel="+ Добавить"
               onAction={() => setFormVisible(true)}
             />
-            <SearchBar value={searchQuery} onChangeText={setSearchQuery} placeholder="Поиск по имени, email…" />
-            <View style={screenUi.summaryBar}>
-              <View style={screenUi.sumItem}>
-                <Text style={screenUi.sumLabel}>Всего</Text>
-                <Text style={[screenUi.sumValue, { color: '#2563eb' }]}>{drivers.length}</Text>
-              </View>
-              <View style={screenUi.sumDivider} />
-              <View style={screenUi.sumItem}>
-                <Text style={screenUi.sumLabel}>Показано</Text>
-                <Text style={[screenUi.sumValue, { color: '#16a34a' }]}>{filtered.length}</Text>
-              </View>
-            </View>
+            <InfoBanner text="Данные на сервере — один список для всех админов. ✏️ — номер машины." />
+            <SearchBar
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              placeholder="Поиск по имени или машине"
+            />
             <ErrorText message={error} />
           </View>
         }
@@ -171,7 +181,13 @@ export function DriversScreen() {
             </View>
           </Pressable>
         )}
-        ListEmptyComponent={<Text style={screenUi.emptyText}>Водителей пока нет</Text>}
+        ListEmptyComponent={
+          loading || refreshing ? (
+            <ActivityIndicator style={{ marginTop: 48 }} color="#2563eb" />
+          ) : (
+            <Text style={screenUi.emptyText}>Водителей пока нет</Text>
+          )
+        }
       />
 
       <FormBottomModal

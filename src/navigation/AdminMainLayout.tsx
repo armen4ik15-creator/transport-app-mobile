@@ -16,13 +16,13 @@ import type { AdminTabParamList, RootStackParamList } from './types';
 
 const ADMIN_TABS: BottomTabItem<keyof AdminTabParamList>[] = [
   { id: 'AdminHome', label: 'Главная', emoji: '🏠' },
-  { id: 'Contractors', label: 'Контрагенты', emoji: '💰' },
+  { id: 'Contractors', label: 'Контраг.', emoji: '💰' },
   { id: 'Drivers', label: 'Водители', emoji: '👤' },
   { id: 'Expenses', label: 'Расходы', emoji: '💸' },
   { id: 'Orders', label: 'Заказы', emoji: '📦' },
   { id: 'RegistryReport', label: 'Реестр', emoji: '📑' },
-  { id: 'FinancesHub', label: 'Финансы', emoji: '💼' },
-  { id: 'AdminMore', label: 'Ещё', emoji: '⚙️' },
+  { id: 'FinancesHub', label: 'Все фин.', emoji: '💼' },
+  { id: 'AdminMore', label: 'Компания', emoji: '⚙️' },
 ];
 
 const ADMIN_TAB_ROUTE = {

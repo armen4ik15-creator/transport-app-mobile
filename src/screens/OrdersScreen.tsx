@@ -11,8 +11,8 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { FilterChipRow } from '../components/FilterChipRow';
 import { OrderCreateModal } from '../components/orders/OrderCreateModal';
+import { ScreenHeader } from '../components/ScreenHeader';
 import { LoadingScreen } from '../components/ui';
 import { listDrivers } from '../api/drivers';
 import { listOrders, updateOrder } from '../api/orders';
@@ -31,7 +31,6 @@ export function OrdersScreen() {
   const [tab, setTab] = useState<OrdersTab>('active');
   const [searchQuery, setSearchQuery] = useState('');
   const [driverFilterId, setDriverFilterId] = useState<number | null>(null);
-  const [contractorFilter, setContractorFilter] = useState('');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [createVisible, setCreateVisible] = useState(false);
@@ -70,17 +69,10 @@ export function OrdersScreen() {
   );
   const tabOrders = tab === 'active' ? activeOrders : archivedOrders;
 
-  const uniqueContractors = useMemo(
-    () =>
-      [...new Set(tabOrders.map((item) => item.contractor_name).filter(Boolean))].sort() as string[],
-    [tabOrders]
-  );
-
   const filteredOrders = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
     return tabOrders.filter((item) => {
       if (driverFilterId != null && item.driver_id !== driverFilterId) return false;
-      if (contractorFilter && item.contractor_name !== contractorFilter) return false;
       if (!query) return true;
       const haystack = [
         item.task_name,
@@ -94,26 +86,27 @@ export function OrdersScreen() {
         .toLowerCase();
       return haystack.includes(query);
     });
-  }, [contractorFilter, driverFilterId, searchQuery, tabOrders]);
+  }, [driverFilterId, searchQuery, tabOrders]);
 
-  const driverChips = useMemo(
-    () => [
-      { id: 'all', label: '👥 Все' },
+  const driverFilterLabel = useMemo(() => {
+    if (driverFilterId == null) return 'Все';
+    const driver = drivers.find((item) => item.id === driverFilterId);
+    return driver?.full_name ?? driver?.email ?? 'Водитель';
+  }, [driverFilterId, drivers]);
+
+  const pickDriver = () => {
+    Alert.alert('Водитель', undefined, [
+      {
+        text: '👥 Все',
+        onPress: () => setDriverFilterId(null),
+      },
       ...drivers.map((driver) => ({
-        id: String(driver.id),
-        label: driver.full_name ?? driver.email,
+        text: driver.full_name ?? driver.email,
+        onPress: () => setDriverFilterId(driver.id),
       })),
-    ],
-    [drivers]
-  );
-
-  const contractorChips = useMemo(
-    () => [
-      { id: '', label: '🏢 Все' },
-      ...uniqueContractors.map((name) => ({ id: name, label: name })),
-    ],
-    [uniqueContractors]
-  );
+      { text: 'Отмена', style: 'cancel' as const },
+    ]);
+  };
 
   const toggleArchive = async (order: Order, makeActive: boolean) => {
     try {
@@ -132,19 +125,14 @@ export function OrdersScreen() {
   return (
     <View style={screenUi.container}>
       <View style={screenUi.content}>
-        <View style={screenUi.header}>
-          {navigation.canGoBack() ? (
-            <Pressable onPress={() => navigation.goBack()}>
-              <Text style={screenUi.back}>← Назад</Text>
-            </Pressable>
-          ) : (
-            <View style={{ width: 72 }} />
-          )}
-          <Text style={screenUi.title}>Задачи</Text>
-          <Pressable style={screenUi.addBtn} onPress={() => setCreateVisible(true)}>
-            <Text style={screenUi.addBtnText}>+ Создать</Text>
-          </Pressable>
-        </View>
+        <ScreenHeader
+          pageTitle="Заказы"
+          title="Задачи"
+          showBack
+          onBack={() => navigation.replace('AdminHome')}
+          actionLabel="+ Создать"
+          onAction={() => setCreateVisible(true)}
+        />
 
         <View style={screenUi.tabs}>
           <Pressable
@@ -165,26 +153,6 @@ export function OrdersScreen() {
           </Pressable>
         </View>
 
-        {tab === 'archive' ? (
-          <View
-            style={{
-              flexDirection: 'row',
-              alignItems: 'flex-start',
-              backgroundColor: '#fef3c7',
-              borderRadius: 8,
-              padding: 10,
-              marginBottom: 10,
-              gap: 6,
-              borderWidth: 1,
-              borderColor: '#fcd34d',
-            }}
-          >
-            <Text style={{ flex: 1, fontSize: 12, color: '#92400e', lineHeight: 17 }}>
-              Задачи из архива можно восстановить — они снова станут активными для водителя.
-            </Text>
-          </View>
-        ) : null}
-
         <View style={screenUi.searchContainer}>
           <Text style={{ fontSize: 16 }}>🔍</Text>
           <TextInput
@@ -202,22 +170,21 @@ export function OrdersScreen() {
         </View>
 
         <Text style={screenUi.filterLabel}>Водитель:</Text>
-        <FilterChipRow
-          items={driverChips}
-          activeId={driverFilterId == null ? 'all' : String(driverFilterId)}
-          onSelect={(id) => setDriverFilterId(id === 'all' ? null : Number(id))}
-        />
-
-        {uniqueContractors.length > 0 ? (
-          <>
-            <Text style={screenUi.filterLabel}>Заказчик:</Text>
-            <FilterChipRow
-              items={contractorChips}
-              activeId={contractorFilter}
-              onSelect={setContractorFilter}
-            />
-          </>
-        ) : null}
+        <Pressable
+          onPress={pickDriver}
+          style={{
+            alignSelf: 'flex-start',
+            backgroundColor: '#2563eb',
+            borderRadius: 24,
+            paddingHorizontal: 16,
+            paddingVertical: 12,
+            marginBottom: 8,
+          }}
+        >
+          <Text style={{ color: '#ffffff', fontSize: 14, fontWeight: '600' }}>
+            👥 {driverFilterLabel}
+          </Text>
+        </Pressable>
 
         <Text style={screenUi.countLabel}>
           Показано: {filteredOrders.length}{' '}
@@ -228,10 +195,10 @@ export function OrdersScreen() {
       <FlatList
         data={filteredOrders}
         keyExtractor={(item) => String(item.id)}
-        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 24 }}
+        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 24, flexGrow: 1 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         ListEmptyComponent={
-          loading ? (
+          loading || refreshing ? (
             <ActivityIndicator style={{ marginTop: 40 }} color="#2563eb" />
           ) : (
             <Text style={screenUi.emptyText}>
@@ -271,9 +238,7 @@ export function OrdersScreen() {
                     paddingVertical: 2,
                   }}
                 >
-                  <Text style={{ fontSize: 11, color: '#92400e', fontWeight: '600' }}>
-                    Архив
-                  </Text>
+                  <Text style={{ fontSize: 11, color: '#92400e', fontWeight: '600' }}>Архив</Text>
                 </View>
               ) : (
                 <Text style={{ fontSize: 12, color: '#2563eb', fontWeight: '600' }}>
@@ -291,15 +256,6 @@ export function OrdersScreen() {
             <Text style={{ fontSize: 13, color: '#4b5563', marginBottom: 8 }}>
               📍 {item.load_address ?? '—'} → {item.unload_address ?? '—'}
             </Text>
-            <View style={{ flexDirection: 'row', gap: 12, marginBottom: 8 }}>
-              <Text style={{ fontSize: 12, color: '#6b7280' }}>
-                📏 {item.distance_km ?? '—'} км
-              </Text>
-              <Text style={{ fontSize: 12, color: '#6b7280' }}>⚖️ {item.unit ?? '—'}</Text>
-              <Text style={{ fontSize: 12, color: '#6b7280' }}>
-                💰 {item.driver_rate ?? '—'} ₽/рейс
-              </Text>
-            </View>
             <Text style={{ fontSize: 12, color: '#6b7280', marginBottom: 10 }}>
               👤 Водитель: {item.driver_name ?? '—'}
               {item.driver_car_number ? ` (${item.driver_car_number})` : ''}
@@ -355,9 +311,7 @@ export function OrdersScreen() {
                   alignItems: 'center',
                 }}
               >
-                <Text style={{ color: '#ffffff', fontSize: 12, fontWeight: '600' }}>
-                  Открыть
-                </Text>
+                <Text style={{ color: '#ffffff', fontSize: 12, fontWeight: '600' }}>Открыть</Text>
               </Pressable>
               <Pressable
                 onPress={() => navigation.navigate('OrderEdit', { id: item.id })}
@@ -369,9 +323,7 @@ export function OrdersScreen() {
                   alignItems: 'center',
                 }}
               >
-                <Text style={{ color: '#ffffff', fontSize: 12, fontWeight: '600' }}>
-                  Изменить
-                </Text>
+                <Text style={{ color: '#ffffff', fontSize: 12, fontWeight: '600' }}>Изменить</Text>
               </Pressable>
             </View>
           </View>

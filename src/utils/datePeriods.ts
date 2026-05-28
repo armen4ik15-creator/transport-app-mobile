@@ -36,3 +36,31 @@ export function formatMoney(value: number): string {
     maximumFractionDigits: 0,
   }).format(value);
 }
+
+export type QuickPeriod = 'today' | '7days' | '30days' | '90days';
+
+export function getQuickPeriodBounds(period: QuickPeriod): { from: string; to: string } {
+  const now = new Date();
+  const fmt = (date: Date) => date.toISOString().slice(0, 10);
+  const today = fmt(now);
+
+  switch (period) {
+    case 'today':
+      return { from: today, to: today };
+    case '7days': {
+      const start = new Date(now);
+      start.setDate(start.getDate() - 6);
+      return { from: fmt(start), to: today };
+    }
+    case '30days': {
+      const start = new Date(now);
+      start.setDate(start.getDate() - 29);
+      return { from: fmt(start), to: today };
+    }
+    case '90days': {
+      const start = new Date(now);
+      start.setDate(start.getDate() - 89);
+      return { from: fmt(start), to: today };
+    }
+  }
+}
