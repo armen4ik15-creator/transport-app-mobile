@@ -94,6 +94,8 @@ export interface OrderWithPhotos extends Order {
 
 export type TripStage = 'loading' | 'unloading';
 
+export type TripStatus = 'loading' | 'completed';
+
 export interface TripRecord {
   id: number;
   order_id: number;
@@ -101,6 +103,7 @@ export interface TripRecord {
   driver_name?: string | null;
   driver_car_number?: string | null;
   stage: TripStage;
+  status?: TripStatus | null;
   ttn_number: string | null;
   volume: number | null;
   note: string | null;
@@ -108,6 +111,17 @@ export interface TripRecord {
   created_by: number;
   created_by_email: string;
   created_at: string;
+  completed_at?: string | null;
+  task_name?: string | null;
+  material?: string | null;
+  load_address?: string | null;
+  unload_address?: string | null;
+  driver_rate?: number | null;
+  company_rate?: number | null;
+  distance_km?: number | null;
+  unit?: string | null;
+  quantity?: number | null;
+  contractor_name?: string | null;
 }
 
 export interface EarningsSummary {
@@ -244,6 +258,11 @@ export interface ActivityLogItem {
 export const TRIP_STAGE_LABEL: Record<TripStage, string> = {
   loading: 'Погрузка',
   unloading: 'Разгрузка',
+};
+
+export const TRIP_STATUS_LABEL: Record<TripStatus, string> = {
+  loading: 'В пути (погрузка)',
+  completed: 'Завершён',
 };
 
 export type FinanceType = 'income' | 'expense';

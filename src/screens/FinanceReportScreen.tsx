@@ -9,7 +9,7 @@ import { ErrorText, LoadingScreen, MenuButton } from '../components/ui';
 import { apiErrorMessage } from '../api/client';
 import { listDrivers } from '../api/drivers';
 import { listExpenses } from '../api/expenses';
-import { listTrips } from '../api/trips';
+import { listTrips, isTripCompleted } from '../api/trips';
 import { screenUi } from '../styles/screenUi';
 import { buildExportQuery, downloadAndShareExcel } from '../utils/exportUtils';
 import { withFallback } from '../utils/safeRequest';
@@ -44,11 +44,11 @@ export function FinanceReportScreen() {
       };
       const [driversData, tripsData, expensesData] = await Promise.all([
         withFallback(() => listDrivers(), []),
-        withFallback(() => listTrips(params), []),
+        withFallback(() => listTrips({ ...params, status: 'completed' }), []),
         withFallback(() => listExpenses(params), []),
       ]);
       setDrivers(driversData);
-      setTrips(tripsData);
+      setTrips(tripsData.filter(isTripCompleted));
       setExpenses(expensesData);
     } catch (e) {
       setError(apiErrorMessage(e, 'Не удалось загрузить финансовый отчёт'));
