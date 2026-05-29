@@ -71,7 +71,7 @@ export function DriverHomeScreen() {
   const cards = useMemo(
     () => [
       { title: 'Активные заказы', value: String(activeOrders), color: '#2563eb' },
-      { title: 'Мой заработок (оценка)', value: `${Math.round(estimatedIncome)} ₽`, color: '#16a34a' },
+      { title: 'Мой заработок (рейсы)', value: `${Math.round(estimatedIncome)} ₽`, color: '#16a34a' },
       { title: 'Новые уведомления', value: String(unreadNotifications), color: '#7c3aed' },
     ],
     [activeOrders, estimatedIncome, unreadNotifications]

@@ -126,7 +126,7 @@ export function EarningsScreen({ navigation }: Props) {
   const statCards = [
     { label: 'Рейсов', value: String(summary.total_trips), color: '#2563eb' },
     { label: 'Объём', value: summary.total_volume.toFixed(2), color: '#7c3aed' },
-    { label: 'Оценочный доход', value: `${summary.estimated_income.toFixed(2)} ₽`, color: '#16a34a' },
+    { label: 'Заработок (ставка × рейсы)', value: `${summary.estimated_income.toFixed(2)} ₽`, color: '#16a34a' },
     { label: 'Факт. доход', value: `${summary.actual_income.toFixed(2)} ₽`, color: '#16a34a' },
     { label: 'Факт. расход', value: `${summary.actual_expense.toFixed(2)} ₽`, color: '#ef4444' },
     { label: 'Факт. баланс', value: `${summary.actual_balance.toFixed(2)} ₽`, color: '#2563eb' },
@@ -143,7 +143,7 @@ export function EarningsScreen({ navigation }: Props) {
       <ScreenHeader title="🧮 Заработок и рейсы" />
       <Text style={{ fontSize: 13, color: '#6b7280', marginBottom: 12 }}>
         {user?.role === 'admin'
-          ? 'Оценка заработка по рейсам и фактические финансы'
+          ? 'Сумма ставок водителя по завершённым рейсам (driver_rate из задачи)'
           : `${driver?.full_name ?? user?.email}: личная статистика рейсов`}
       </Text>
       <ErrorText message={error} />
