@@ -8,6 +8,8 @@ import {
   View,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { DateRangePicker } from '../components/DateRangePicker';
+import { ExcelExportButton } from '../components/ExcelExportButton';
 import { ExpenseFormModal, type VehicleOption } from '../components/expenses/ExpenseFormModal';
 import { FilterChipRow } from '../components/FilterChipRow';
 import { LoadingScreen } from '../components/ui';
@@ -24,6 +26,7 @@ import { listDrivers } from '../api/drivers';
 import { apiErrorMessage } from '../api/client';
 import { screenUi } from '../styles/screenUi';
 import { formatMoney, getPeriodBounds } from '../utils/datePeriods';
+import { buildExportQuery, downloadAndShareExcel } from '../utils/exportUtils';
 import { withFallback } from '../utils/safeRequest';
 import { useAuth } from '../auth/AuthContext';
 import type { ExpenseMethod, ExpenseRecord } from '../types';
@@ -39,10 +42,13 @@ export function ExpensesScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [periodFilter, setPeriodFilter] = useState<PeriodFilter>('month');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [carFilter, setCarFilter] = useState<string>('');
   const [formVisible, setFormVisible] = useState(false);
   const [editingRecord, setEditingRecord] = useState<ExpenseRecord | null>(null);
+  const [exporting, setExporting] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -81,7 +87,9 @@ export function ExpensesScreen() {
   };
 
   const displayedRecords = useMemo(() => {
-    const { from, to } = getPeriodBounds(periodFilter);
+    const periodBounds = getPeriodBounds(periodFilter);
+    const from = dateFrom.trim() || periodBounds.from;
+    const to = dateTo.trim() || periodBounds.to;
     return records.filter((item) => {
       if (from && item.exp_date < from) return false;
       if (to && item.exp_date > to) return false;
@@ -89,7 +97,29 @@ export function ExpensesScreen() {
       if (carFilter && item.car_number !== carFilter) return false;
       return true;
     });
-  }, [carFilter, periodFilter, records, typeFilter]);
+  }, [carFilter, dateFrom, dateTo, periodFilter, records, typeFilter]);
+
+  const exportBounds = useMemo(() => {
+    const periodBounds = getPeriodBounds(periodFilter);
+    return {
+      from: dateFrom.trim() || periodBounds.from,
+      to: dateTo.trim() || periodBounds.to,
+    };
+  }, [dateFrom, dateTo, periodFilter]);
+
+  const onExportExcel = async () => {
+    setExporting(true);
+    try {
+      const query = buildExportQuery({
+        date_from: exportBounds.from,
+        date_to: exportBounds.to,
+        driver_id: isAdmin ? undefined : driver?.id,
+      });
+      await downloadAndShareExcel(`/export/expenses${query}`, 'rashody.xlsx');
+    } finally {
+      setExporting(false);
+    }
+  };
 
   const totalAmount = displayedRecords.reduce((sum, item) => sum + item.amount, 0);
 
@@ -186,6 +216,12 @@ export function ExpensesScreen() {
         </View>
 
         <FilterChipRow items={periodChips} activeId={periodFilter} onSelect={setPeriodFilter} />
+        <DateRangePicker
+          from={dateFrom}
+          to={dateTo}
+          onChangeFrom={setDateFrom}
+          onChangeTo={setDateTo}
+        />
         <FilterChipRow items={typeChips} activeId={typeFilter} onSelect={setTypeFilter} />
         {isAdmin ? (
           <FilterChipRow items={carChips} activeId={carFilter} onSelect={setCarFilter} />
@@ -208,6 +244,7 @@ export function ExpensesScreen() {
         </View>
 
         <Text style={screenUi.hint}>Нажмите — редактировать · Удерживайте — удалить</Text>
+        <ExcelExportButton loading={exporting} onPress={() => void onExportExcel()} />
       </View>
 
       <FlatList

@@ -2,6 +2,8 @@ import { useCallback, useMemo, useState } from 'react';
 import { Alert, FlatList, Pressable, RefreshControl, Text, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { FilterChipRow } from '../components/FilterChipRow';
+import { DateRangePicker } from '../components/DateRangePicker';
+import { ExcelExportButton } from '../components/ExcelExportButton';
 import { FormBottomModal } from '../components/FormBottomModal';
 import { ScreenHeader } from '../components/ScreenHeader';
 import { ErrorText, Field, LoadingScreen, MenuButton } from '../components/ui';
@@ -15,6 +17,7 @@ import {
   listSalaryPayments,
 } from '../api/salary';
 import { screenUi } from '../styles/screenUi';
+import { buildExportQuery, downloadAndShareExcel } from '../utils/exportUtils';
 import { withFallback } from '../utils/safeRequest';
 import type {
   Driver,
@@ -51,12 +54,15 @@ export function SalaryScreen() {
   const [records, setRecords] = useState<DriverPaymentRecord[]>([]);
   const [debts, setDebts] = useState<DriverDebtSummary[]>([]);
   const [selectedDriverId, setSelectedDriverId] = useState<number | null>(null);
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
   const [summary, setSummary] = useState<DriverSalarySummary>(initialSummary);
   const [form, setForm] = useState(initialForm);
   const [formVisible, setFormVisible] = useState(false);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const selectedDriver = useMemo(
@@ -135,6 +141,20 @@ export function SalaryScreen() {
     }
   };
 
+  const onExportExcel = async () => {
+    setExporting(true);
+    try {
+      const query = buildExportQuery({
+        date_from: dateFrom.trim() || undefined,
+        date_to: dateTo.trim() || undefined,
+        driver_id: selectedDriverId ?? undefined,
+      });
+      await downloadAndShareExcel(`/export/salary${query}`, 'zarplata.xlsx');
+    } finally {
+      setExporting(false);
+    }
+  };
+
   const onDelete = (id: number) => {
     Alert.alert('Удалить выплату?', `Запись #${id} будет удалена`, [
       { text: 'Отмена', style: 'cancel' },
@@ -165,6 +185,12 @@ export function SalaryScreen() {
         ListHeaderComponent={
           <View style={screenUi.content}>
             <ScreenHeader title="💵 Зарплаты" actionLabel="+ Выплата" onAction={() => setFormVisible(true)} />
+            <DateRangePicker
+              from={dateFrom}
+              to={dateTo}
+              onChangeFrom={setDateFrom}
+              onChangeTo={setDateTo}
+            />
             <Text style={screenUi.filterLabel}>Водитель:</Text>
             <FilterChipRow
               items={driverChips}
@@ -196,6 +222,7 @@ export function SalaryScreen() {
                 ))}
               </View>
             ) : null}
+            <ExcelExportButton loading={exporting} onPress={() => void onExportExcel()} />
             <ErrorText message={error} />
           </View>
         }

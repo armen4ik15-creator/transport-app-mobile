@@ -2,13 +2,16 @@ import { useCallback, useMemo, useState } from 'react';
 import { Alert, RefreshControl, ScrollView, Text, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { FilterChipRow } from '../components/FilterChipRow';
+import { DateRangePicker } from '../components/DateRangePicker';
+import { ExcelExportButton } from '../components/ExcelExportButton';
 import { ScreenHeader } from '../components/ScreenHeader';
-import { ErrorText, Field, LoadingScreen, MenuButton } from '../components/ui';
+import { ErrorText, LoadingScreen, MenuButton } from '../components/ui';
 import { apiErrorMessage } from '../api/client';
 import { getReportSummary, type ReportSummary } from '../api/reports';
 import { useAuth } from '../auth/AuthContext';
 import { listDrivers } from '../api/drivers';
 import { screenUi } from '../styles/screenUi';
+import { buildExportQuery, downloadAndShareExcel } from '../utils/exportUtils';
 import type { Driver } from '../types';
 
 const emptySummary: ReportSummary = {
@@ -31,6 +34,7 @@ export function ReportsScreen() {
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -74,6 +78,20 @@ export function ReportsScreen() {
     [drivers]
   );
 
+  const onExportExcel = async () => {
+    setExporting(true);
+    try {
+      const query = buildExportQuery({
+        date_from: from.trim() || undefined,
+        date_to: to.trim() || undefined,
+        driver_id: user?.role === 'admin' ? driverId ?? undefined : undefined,
+      });
+      await downloadAndShareExcel(`/export/finances${query}`, 'otchet_finansy.xlsx');
+    } finally {
+      setExporting(false);
+    }
+  };
+
   const statCards = [
     { label: 'Заказы', value: String(summary.orders_total), color: '#2563eb' },
     { label: 'Завершено', value: String(summary.orders_completed), color: '#16a34a' },
@@ -103,8 +121,7 @@ export function ReportsScreen() {
 
       <View style={screenUi.card}>
         <Text style={screenUi.fieldLabel}>Фильтры</Text>
-        <Field label="Дата от (YYYY-MM-DD)" value={from} onChangeText={setFrom} placeholder="2026-01-01" />
-        <Field label="Дата до (YYYY-MM-DD)" value={to} onChangeText={setTo} placeholder="2026-12-31" />
+        <DateRangePicker from={from} to={to} onChangeFrom={setFrom} onChangeTo={setTo} />
         {user?.role === 'admin' ? (
           <>
             <Text style={screenUi.filterLabel}>Водитель:</Text>
@@ -116,6 +133,7 @@ export function ReportsScreen() {
           </>
         ) : null}
         <MenuButton label="🔍 Применить" onPress={load} variant="secondary" />
+        <ExcelExportButton loading={exporting} onPress={() => void onExportExcel()} />
       </View>
 
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>

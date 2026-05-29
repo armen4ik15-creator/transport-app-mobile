@@ -3,8 +3,10 @@ import { Alert, RefreshControl, ScrollView, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
 import { FilterChipRow } from '../components/FilterChipRow';
+import { DateRangePicker } from '../components/DateRangePicker';
+import { ExcelExportButton } from '../components/ExcelExportButton';
 import { ScreenHeader } from '../components/ScreenHeader';
-import { ErrorText, Field, LoadingScreen, MenuButton, PrimaryButton } from '../components/ui';
+import { ErrorText, LoadingScreen, MenuButton, PrimaryButton } from '../components/ui';
 import { getEarningsSummary } from '../api/earnings';
 import { apiErrorMessage } from '../api/client';
 import { listDrivers } from '../api/drivers';
@@ -12,6 +14,7 @@ import type { Driver, EarningsSummary } from '../types';
 import type { RootStackParamList } from '../navigation/RootNavigator';
 import { useAuth } from '../auth/AuthContext';
 import { screenUi } from '../styles/screenUi';
+import { buildExportQuery, downloadAndShareExcel } from '../utils/exportUtils';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Earnings'>;
 
@@ -33,6 +36,7 @@ export function EarningsScreen({ navigation }: Props) {
   const [summary, setSummary] = useState<EarningsSummary>(emptySummary);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const setToday = () => {
@@ -105,6 +109,20 @@ export function EarningsScreen({ navigation }: Props) {
     [drivers]
   );
 
+  const onExportExcel = async () => {
+    setExporting(true);
+    try {
+      const query = buildExportQuery({
+        date_from: from.trim() || undefined,
+        date_to: to.trim() || undefined,
+        driver_id: user?.role === 'admin' ? driverId ?? undefined : undefined,
+      });
+      await downloadAndShareExcel(`/export/earnings${query}`, 'nachisleniya.xlsx');
+    } finally {
+      setExporting(false);
+    }
+  };
+
   const statCards = [
     { label: 'Рейсов', value: String(summary.total_trips), color: '#2563eb' },
     { label: 'Объём', value: summary.total_volume.toFixed(2), color: '#7c3aed' },
@@ -131,8 +149,7 @@ export function EarningsScreen({ navigation }: Props) {
       <ErrorText message={error} />
 
       <View style={screenUi.card}>
-        <Field label="Дата от (YYYY-MM-DD)" value={from} onChangeText={setFrom} />
-        <Field label="Дата до (YYYY-MM-DD)" value={to} onChangeText={setTo} />
+        <DateRangePicker from={from} to={to} onChangeFrom={setFrom} onChangeTo={setTo} />
         <View style={{ flexDirection: 'row', gap: 8 }}>
           <View style={{ flex: 1 }}>
             <MenuButton label="📅 Сегодня" onPress={setToday} variant="secondary" />
@@ -155,6 +172,7 @@ export function EarningsScreen({ navigation }: Props) {
           </>
         ) : null}
         <PrimaryButton label="🔄 Обновить аналитику" onPress={() => void load()} />
+        <ExcelExportButton loading={exporting} onPress={() => void onExportExcel()} />
       </View>
 
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>

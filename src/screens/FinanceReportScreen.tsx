@@ -2,13 +2,16 @@ import { useCallback, useMemo, useState } from 'react';
 import { FlatList, RefreshControl, Text, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { FilterChipRow } from '../components/FilterChipRow';
+import { DateRangePicker } from '../components/DateRangePicker';
+import { ExcelExportButton } from '../components/ExcelExportButton';
 import { ScreenHeader } from '../components/ScreenHeader';
-import { ErrorText, Field, LoadingScreen, MenuButton } from '../components/ui';
+import { ErrorText, LoadingScreen, MenuButton } from '../components/ui';
 import { apiErrorMessage } from '../api/client';
 import { listDrivers } from '../api/drivers';
 import { listExpenses } from '../api/expenses';
 import { listTrips } from '../api/trips';
 import { screenUi } from '../styles/screenUi';
+import { buildExportQuery, downloadAndShareExcel } from '../utils/exportUtils';
 import { withFallback } from '../utils/safeRequest';
 import type { Driver, ExpenseRecord, TripRecord } from '../types';
 
@@ -28,6 +31,7 @@ export function FinanceReportScreen() {
   const [expenses, setExpenses] = useState<ExpenseRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -79,6 +83,20 @@ export function FinanceReportScreen() {
     [drivers]
   );
 
+  const onExportExcel = async () => {
+    setExporting(true);
+    try {
+      const query = buildExportQuery({
+        date_from: from.trim() || undefined,
+        date_to: to.trim() || undefined,
+        driver_id: driverId ?? undefined,
+      });
+      await downloadAndShareExcel(`/export/finances${query}`, 'finansy.xlsx');
+    } finally {
+      setExporting(false);
+    }
+  };
+
   const rows: FinanceRow[] = [
     { key: 'trips', title: '🚛 Рейсов', value: String(totals.tripCount), color: '#2563eb' },
     { key: 'volume', title: '⚖️ Суммарный объём', value: totals.totalVolume.toFixed(2), color: '#16a34a' },
@@ -97,8 +115,7 @@ export function FinanceReportScreen() {
         ListHeaderComponent={
           <View style={screenUi.content}>
             <ScreenHeader title="📊 Финансовый отчёт" />
-            <Field label="Дата от (YYYY-MM-DD)" value={from} onChangeText={setFrom} />
-            <Field label="Дата до (YYYY-MM-DD)" value={to} onChangeText={setTo} />
+            <DateRangePicker from={from} to={to} onChangeFrom={setFrom} onChangeTo={setTo} />
             <Text style={screenUi.filterLabel}>Водитель:</Text>
             <FilterChipRow
               items={driverChips}
@@ -106,6 +123,7 @@ export function FinanceReportScreen() {
               onSelect={(id) => setDriverId(id === 'all' ? null : Number(id))}
             />
             <MenuButton label="🔍 Применить фильтр" onPress={load} variant="secondary" />
+            <ExcelExportButton loading={exporting} onPress={() => void onExportExcel()} />
             <ErrorText message={error} />
           </View>
         }
