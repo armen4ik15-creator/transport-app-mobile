@@ -4,10 +4,12 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { HubMenuScreen } from '../components/HubMenuScreen';
 import { useAuth } from '../auth/AuthContext';
 import type { RootStackParamList } from '../navigation/types';
+import { checkAndApplyUpdate, getCurrentUpdateLabel } from '../utils/appUpdate';
 
 export function AdminMoreScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { signOut } = useAuth();
+  const updateLabel = getCurrentUpdateLabel();
 
   const onLogout = () => {
     Alert.alert('Выход', 'Выйти из аккаунта?', [
@@ -50,6 +52,10 @@ export function AdminMoreScreen() {
         {
           title: 'Настройки',
           items: [
+            {
+              label: `🔄 Проверить обновление (${updateLabel})`,
+              onPress: () => void checkAndApplyUpdate(true),
+            },
             {
               label: '⚙️ Настройки сервера',
               onPress: () =>

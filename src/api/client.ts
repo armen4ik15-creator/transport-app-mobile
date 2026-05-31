@@ -22,7 +22,8 @@ function normalizePort(port: string | null | undefined): string | null {
   return /^\d+$/.test(clean) ? clean : null;
 }
 
-function getDefaultProtocol(port?: string): 'http' | 'https' {
+function getDefaultProtocol(host: string, port?: string): 'http' | 'https' {
+  if (host.endsWith('.twc1.net')) return 'https';
   return port === '443' ? 'https' : 'http';
 }
 
@@ -33,9 +34,6 @@ export function buildApiUrl(hostOrUrl: string, inputPort?: string): string {
   const explicitPort = normalizePort(inputPort);
   const withoutApi = hostValue.replace(/\/(api)?\/?$/i, '');
   const hasProtocol = /^https?:\/\//i.test(withoutApi);
-  const protocol = hasProtocol
-    ? (withoutApi.split('://')[0].toLowerCase() as 'http' | 'https')
-    : getDefaultProtocol(explicitPort ?? undefined);
 
   const withoutProtocol = withoutApi.replace(/^https?:\/\//i, '');
   const hostMatch = withoutProtocol.match(/^([^:/]+)(?::(\d+))?$/);
@@ -45,7 +43,14 @@ export function buildApiUrl(hostOrUrl: string, inputPort?: string): string {
   const embeddedPort = hostMatch[2];
   const port = explicitPort ?? embeddedPort ?? null;
 
-  return `${protocol}://${host}${port ? `:${port}` : ''}/api`;
+  const protocol = hasProtocol
+    ? (withoutApi.split('://')[0].toLowerCase() as 'http' | 'https')
+    : getDefaultProtocol(host, explicitPort ?? embeddedPort ?? undefined);
+
+  const safeProtocol = host.endsWith('.twc1.net') ? 'https' : protocol;
+  const safePort = host.endsWith('.twc1.net') && port === '3000' ? '443' : port;
+
+  return `${safeProtocol}://${host}${safePort ? `:${safePort}` : ''}/api`;
 }
 
 function normalizeApiUrl(url: string): string {

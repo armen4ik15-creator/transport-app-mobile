@@ -64,7 +64,7 @@ export function ServerSetupScreen({ route, onConfigured }: ComponentProps) {
     const apiUrl = buildApiUrl(cleanIp, cleanPort);
 
     try {
-      const response = await axios.get(`${apiUrl}/health`, { timeout: 6000 });
+      const response = await axios.get(`${apiUrl}/health`, { timeout: 15000 });
       if (response.data?.status !== 'ok') {
         throw new Error('Некорректный ответ health');
       }
