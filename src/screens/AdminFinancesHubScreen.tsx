@@ -1,25 +1,71 @@
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { HubMenuScreen } from '../components/HubMenuScreen';
+import { HubCardMenu } from '../components/HubCardMenu';
 import type { RootStackParamList } from '../navigation/types';
 
 export function AdminFinancesHubScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
   return (
-    <HubMenuScreen
-      title="Финансы"
-      subtitle="Отчёты, зарплата, операции"
-      sections={[
+    <HubCardMenu
+      title="Все финансы"
+      subtitle="Выберите раздел"
+      items={[
         {
-          title: 'Разделы',
-          items: [
-            { label: '💰 Финансовые операции', onPress: () => navigation.navigate('AdminFinances') },
-            { label: '🧮 Заработок водителей', onPress: () => navigation.navigate('Earnings') },
-            { label: '💵 Зарплаты', onPress: () => navigation.navigate('Salary') },
-            { label: '🏦 Долги контрагентов', onPress: () => navigation.navigate('ContractorDebt') },
-            { label: '📊 Финансовый отчёт', onPress: () => navigation.navigate('FinanceReport') },
-          ],
+          icon: '📊',
+          title: 'Финансовый отчёт',
+          subtitle: 'День / неделя / месяц / квартал / год · Excel 3 листа',
+          accentColor: '#2563eb',
+          onPress: () => navigation.navigate('FinanceReport'),
+        },
+        {
+          icon: '📑',
+          title: 'Реестр перевозок',
+          subtitle: 'Разгрузки за период · Excel реестр',
+          accentColor: '#7c3aed',
+          onPress: () => navigation.replace('RegistryReport'),
+        },
+        {
+          icon: '💵',
+          title: 'Зарплата',
+          subtitle: 'Начисления, выплаты водителям',
+          accentColor: '#16a34a',
+          onPress: () => navigation.navigate('Salary'),
+        },
+        {
+          icon: '🧮',
+          title: 'Заработок водителей',
+          subtitle: 'Ставка за рейс · начисления',
+          accentColor: '#0891b2',
+          onPress: () => navigation.navigate('Earnings'),
+        },
+        {
+          icon: '💸',
+          title: 'Расходы',
+          subtitle: 'Топливо, ремонт, штрафы · Excel',
+          accentColor: '#ef4444',
+          onPress: () => navigation.replace('Expenses'),
+        },
+        {
+          icon: '🖼',
+          title: 'Фото ТТН',
+          subtitle: 'Все накладные · просмотр и сохранение',
+          accentColor: '#f59e0b',
+          onPress: () => navigation.navigate('AllPhotos'),
+        },
+        {
+          icon: '💰',
+          title: 'Финансовые операции',
+          subtitle: 'Ручные доходы и расходы',
+          accentColor: '#6366f1',
+          onPress: () => navigation.navigate('AdminFinances'),
+        },
+        {
+          icon: '🏦',
+          title: 'Долги контрагентов',
+          subtitle: 'Задолженность и оплаты',
+          accentColor: '#64748b',
+          onPress: () => navigation.navigate('ContractorDebt'),
         },
       ]}
     />

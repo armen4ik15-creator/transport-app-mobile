@@ -86,7 +86,7 @@ export function ReportsScreen() {
         date_to: to.trim() || undefined,
         driver_id: user?.role === 'admin' ? driverId ?? undefined : undefined,
       });
-      await downloadAndShareExcel(`/export/finances${query}`, 'otchet_finansy.xlsx');
+      await downloadAndShareExcel(`/export/financial-report${query}`, 'otchet_finansy.xlsx');
     } finally {
       setExporting(false);
     }

@@ -11,13 +11,16 @@ import {
   Text,
   View,
 } from 'react-native';
+import * as FileSystem from 'expo-file-system/legacy';
+import * as Sharing from 'expo-sharing';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { FilterChipRow } from '../components/FilterChipRow';
 import { ScreenHeader } from '../components/ScreenHeader';
 import { ErrorText, Field, LoadingScreen, MenuButton } from '../components/ui';
 import { getAllPhotos, type GetAllPhotosParams } from '../api/photos';
-import { apiErrorMessage, getServerHost } from '../api/client';
+import { apiErrorMessage, getServerHost, TOKEN_KEY } from '../api/client';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { listDrivers } from '../api/drivers';
 import { listOrders } from '../api/orders';
 import type { RootStackParamList } from '../navigation/types';
@@ -55,6 +58,38 @@ export function AllPhotosScreen() {
   const [hasMore, setHasMore] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [previewPhoto, setPreviewPhoto] = useState<TtnPhotoRecord | null>(null);
+  const [savingPhoto, setSavingPhoto] = useState(false);
+
+  const onSharePhoto = async () => {
+    if (!previewPhoto) return;
+    setSavingPhoto(true);
+    try {
+      const token = await AsyncStorage.getItem(TOKEN_KEY);
+      const url = `${fileHost}${previewPhoto.file_path}`;
+      const ext = previewPhoto.file_path.split('.').pop() ?? 'jpg';
+      const targetUri = `${FileSystem.cacheDirectory ?? ''}ttn_${previewPhoto.id}.${ext}`;
+      const result = await FileSystem.downloadAsync(url, targetUri, {
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      });
+      if (result.status !== 200) {
+        throw new Error(`Сервер вернул код ${result.status}`);
+      }
+      const canShare = await Sharing.isAvailableAsync();
+      if (!canShare) {
+        Alert.alert('Готово', `Файл сохранён:\n${result.uri}`);
+        return;
+      }
+      await Sharing.shareAsync(result.uri, {
+        mimeType: 'image/jpeg',
+        dialogTitle: `ТТН заказ #${previewPhoto.order_id}`,
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Не удалось сохранить фото';
+      Alert.alert('Ошибка', message);
+    } finally {
+      setSavingPhoto(false);
+    }
+  };
 
   const itemWidth = useMemo(() => {
     const screenWidth = Dimensions.get('window').width;
@@ -331,6 +366,22 @@ export function AllPhotosScreen() {
                 <Text style={{ color: '#9ca3af', marginTop: 4, fontSize: 12 }}>
                   {previewPhoto.source === 'trip' ? 'Фото рейса' : 'Фото заказа'}
                 </Text>
+                <Pressable
+                  onPress={() => void onSharePhoto()}
+                  disabled={savingPhoto}
+                  style={{
+                    marginTop: 16,
+                    backgroundColor: '#2563eb',
+                    borderRadius: 10,
+                    paddingVertical: 12,
+                    alignItems: 'center',
+                    opacity: savingPhoto ? 0.7 : 1,
+                  }}
+                >
+                  <Text style={{ color: '#ffffff', fontWeight: '700', fontSize: 15 }}>
+                    {savingPhoto ? 'Сохранение…' : '📤 Сохранить / Поделиться'}
+                  </Text>
+                </Pressable>
               </View>
             </>
           ) : null}

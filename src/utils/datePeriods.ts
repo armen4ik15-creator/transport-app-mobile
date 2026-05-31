@@ -37,6 +37,24 @@ export function formatMoney(value: number): string {
   }).format(value);
 }
 
+export type ReportPeriod = 'today' | 'week' | 'month' | 'quarter' | 'year';
+
+export function getReportPeriodBounds(period: ReportPeriod): { from: string; to: string } {
+  const bounds = getPeriodBounds(period);
+  return {
+    from: bounds.from ?? todayIso(),
+    to: bounds.to ?? todayIso(),
+  };
+}
+
+export const REPORT_PERIOD_ITEMS: { id: ReportPeriod; label: string }[] = [
+  { id: 'today', label: 'День' },
+  { id: 'week', label: 'Неделя' },
+  { id: 'month', label: 'Месяц' },
+  { id: 'quarter', label: 'Квартал' },
+  { id: 'year', label: 'Год' },
+];
+
 export type QuickPeriod = 'today' | '7days' | '30days' | '90days';
 
 export function getQuickPeriodBounds(period: QuickPeriod): { from: string; to: string } {
