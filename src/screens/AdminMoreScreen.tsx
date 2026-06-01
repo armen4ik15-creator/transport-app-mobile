@@ -20,50 +20,129 @@ export function AdminMoreScreen() {
 
   return (
     <HubMenuScreen
-      title="Компания"
-      subtitle="Справочники, документы и настройки"
+      title="🏢 Компания"
+      subtitle="Справочники, документы, отчёты и настройки"
       sections={[
         {
-          title: 'Заказы и логистика',
-          items: [
-            { label: '🗂 Шаблоны заказов', onPress: () => navigation.navigate('OrderTemplates') },
-            { label: '🖼 Фото ТТН', onPress: () => navigation.navigate('AllPhotos') },
-          ],
-        },
-        {
-          title: 'Справочники',
-          items: [
-            { label: '🚛 Автомобили', onPress: () => navigation.navigate('Vehicles') },
-            { label: '🧱 Материалы', onPress: () => navigation.navigate('Materials') },
-          ],
-        },
-        {
-          title: 'Документы и отчёты',
-          items: [
-            { label: '📑 Документы', onPress: () => navigation.navigate('Documents') },
-            { label: '🧾 Путевые листы', onPress: () => navigation.navigate('Waybills') },
-            { label: '🧮 Счета', onPress: () => navigation.navigate('Invoices') },
-            { label: '📄 Шаблоны документов', onPress: () => navigation.navigate('Templates') },
-            { label: '📊 Отчёты', onPress: () => navigation.navigate('Reports') },
-            { label: '📝 Журнал действий', onPress: () => navigation.navigate('ActivityLog') },
-            { label: '🔔 Уведомления', onPress: () => navigation.navigate('Notifications') },
-          ],
-        },
-        {
-          title: 'Настройки',
+          title: '📦 Заказы и логистика',
           items: [
             {
-              label: `🔄 Проверить обновление (${updateLabel})`,
+              icon: '🗂',
+              title: 'Шаблоны заказов',
+              subtitle: 'Готовые шаблоны для быстрого создания',
+              accentColor: '#2563eb',
+              onPress: () => navigation.navigate('OrderTemplates'),
+            },
+            {
+              icon: '🖼',
+              title: 'Фото ТТН',
+              subtitle: 'Все накладные по рейсам',
+              accentColor: '#0891b2',
+              onPress: () => navigation.navigate('AllPhotos'),
+            },
+          ],
+        },
+        {
+          title: '📚 Справочники',
+          items: [
+            {
+              icon: '🚛',
+              title: 'Автомобили',
+              subtitle: 'Госномера и грузоподъёмность',
+              accentColor: '#16a34a',
+              onPress: () => navigation.navigate('Vehicles'),
+            },
+            {
+              icon: '🧱',
+              title: 'Материалы',
+              subtitle: 'Виды грузов и материалов',
+              accentColor: '#f59e0b',
+              onPress: () => navigation.navigate('Materials'),
+            },
+          ],
+        },
+        {
+          title: '📑 Документы и отчёты',
+          items: [
+            {
+              icon: '📁',
+              title: 'Документы',
+              subtitle: 'Путевые, счета, акты',
+              accentColor: '#6366f1',
+              onPress: () => navigation.navigate('Documents'),
+            },
+            {
+              icon: '🧾',
+              title: 'Путевые листы',
+              subtitle: 'Создание и просмотр',
+              accentColor: '#7c3aed',
+              onPress: () => navigation.navigate('Waybills'),
+            },
+            {
+              icon: '🧮',
+              title: 'Счета',
+              subtitle: 'Выставление и учёт',
+              accentColor: '#0d9488',
+              onPress: () => navigation.navigate('Invoices'),
+            },
+            {
+              icon: '📄',
+              title: 'Шаблоны документов',
+              subtitle: 'Word-шаблоны для печати',
+              accentColor: '#64748b',
+              onPress: () => navigation.navigate('Templates'),
+            },
+            {
+              icon: '📊',
+              title: 'Отчёты',
+              subtitle: 'Сводка доходов и рейсов',
+              accentColor: '#2563eb',
+              onPress: () => navigation.navigate('Reports'),
+            },
+            {
+              icon: '📝',
+              title: 'Журнал действий',
+              subtitle: 'История операций в системе',
+              accentColor: '#475569',
+              onPress: () => navigation.navigate('ActivityLog'),
+            },
+            {
+              icon: '🔔',
+              title: 'Уведомления',
+              subtitle: 'Рассылка водителям',
+              accentColor: '#ea580c',
+              onPress: () => navigation.navigate('Notifications'),
+            },
+          ],
+        },
+        {
+          title: '⚙️ Настройки',
+          items: [
+            {
+              icon: '🔄',
+              title: 'Проверить обновление',
+              subtitle: `Текущая версия: ${updateLabel}`,
+              accentColor: '#0891b2',
               onPress: () => void checkAndApplyUpdate(true),
             },
             {
-              label: '⚙️ Настройки сервера',
+              icon: '🌐',
+              title: 'Настройки сервера',
+              subtitle: 'Адрес API и порт HTTPS',
+              accentColor: '#6b7280',
               onPress: () =>
                 navigation.navigate('ServerSetup', {
                   reason: 'Измените адрес сервера при необходимости',
                 }),
             },
-            { label: 'Выйти', onPress: onLogout, variant: 'danger' },
+            {
+              icon: '🚪',
+              title: 'Выйти',
+              subtitle: 'Завершить сеанс администратора',
+              accentColor: '#ef4444',
+              onPress: onLogout,
+              danger: true,
+            },
           ],
         },
       ]}

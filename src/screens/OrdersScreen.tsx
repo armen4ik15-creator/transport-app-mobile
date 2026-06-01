@@ -13,6 +13,7 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { OrderCreateModal } from '../components/orders/OrderCreateModal';
 import { ScreenHeader } from '../components/ScreenHeader';
+import { ScreenHero } from '../components/ScreenHero';
 import { LoadingScreen } from '../components/ui';
 import { listDrivers } from '../api/drivers';
 import { listOrders, updateOrder } from '../api/orders';
@@ -126,12 +127,16 @@ export function OrdersScreen() {
     <View style={screenUi.container}>
       <View style={screenUi.content}>
         <ScreenHeader
-          pageTitle="Заказы"
+          pageTitle="📦 Заказы"
           title="Задачи"
           showBack
           onBack={() => navigation.replace('AdminHome')}
           actionLabel="+ Создать"
           onAction={() => setCreateVisible(true)}
+        />
+        <ScreenHero
+          title="📦 Заказы и задачи"
+          subtitle={`Активных: ${activeOrders.length} · В архиве: ${archivedOrders.length}`}
         />
 
         <View style={screenUi.tabs}>

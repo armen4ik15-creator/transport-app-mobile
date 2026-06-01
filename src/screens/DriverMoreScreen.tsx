@@ -18,31 +18,77 @@ export function DriverMoreScreen() {
 
   return (
     <HubMenuScreen
-      title="Ещё"
-      subtitle="Документы и настройки"
+      title="📂 Ещё"
+      subtitle="Документы и настройки водителя"
       sections={[
         {
-          title: 'Документы',
+          title: '📑 Документы',
           items: [
-            { label: '🧾 Путевые листы', onPress: () => navigation.navigate('Waybills') },
-            { label: '🧮 Счета', onPress: () => navigation.navigate('Invoices') },
-            { label: '📑 Документы', onPress: () => navigation.navigate('Documents') },
-            { label: '📊 Отчёты', onPress: () => navigation.navigate('Reports') },
-            { label: '📝 Мои действия', onPress: () => navigation.navigate('ActivityLog') },
-            { label: '🔔 Уведомления', onPress: () => navigation.navigate('Notifications') },
+            {
+              icon: '🧾',
+              title: 'Путевые листы',
+              subtitle: 'Мои путевые листы',
+              accentColor: '#7c3aed',
+              onPress: () => navigation.navigate('Waybills'),
+            },
+            {
+              icon: '🧮',
+              title: 'Счета',
+              subtitle: 'Счета по рейсам',
+              accentColor: '#0d9488',
+              onPress: () => navigation.navigate('Invoices'),
+            },
+            {
+              icon: '📁',
+              title: 'Документы',
+              subtitle: 'Файлы и вложения',
+              accentColor: '#6366f1',
+              onPress: () => navigation.navigate('Documents'),
+            },
+            {
+              icon: '📊',
+              title: 'Отчёты',
+              subtitle: 'Сводка по рейсам',
+              accentColor: '#2563eb',
+              onPress: () => navigation.navigate('Reports'),
+            },
+            {
+              icon: '📝',
+              title: 'Мои действия',
+              subtitle: 'Журнал активности',
+              accentColor: '#475569',
+              onPress: () => navigation.navigate('ActivityLog'),
+            },
+            {
+              icon: '🔔',
+              title: 'Уведомления',
+              subtitle: 'Сообщения от диспетчера',
+              accentColor: '#ea580c',
+              onPress: () => navigation.navigate('Notifications'),
+            },
           ],
         },
         {
-          title: 'Настройки',
+          title: '⚙️ Настройки',
           items: [
             {
-              label: '⚙️ Настройки сервера',
+              icon: '🌐',
+              title: 'Настройки сервера',
+              subtitle: 'Адрес API',
+              accentColor: '#6b7280',
               onPress: () =>
                 navigation.navigate('ServerSetup', {
                   reason: 'Измените адрес сервера при необходимости',
                 }),
             },
-            { label: 'Выйти', onPress: onLogout, variant: 'danger' },
+            {
+              icon: '🚪',
+              title: 'Выйти',
+              subtitle: 'Завершить сеанс',
+              accentColor: '#ef4444',
+              onPress: onLogout,
+              danger: true,
+            },
           ],
         },
       ]}

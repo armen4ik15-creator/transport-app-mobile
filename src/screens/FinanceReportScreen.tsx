@@ -8,6 +8,7 @@ import { FilterChipRow } from '../components/FilterChipRow';
 import { QuickPeriodRow } from '../components/QuickPeriodRow';
 import { RegistryTypeToggle, type RegistryReportType } from '../components/RegistryTypeToggle';
 import { ScreenHeader } from '../components/ScreenHeader';
+import { ScreenHero } from '../components/ScreenHero';
 import { ErrorText, LoadingScreen } from '../components/ui';
 import { apiErrorMessage } from '../api/client';
 import { listDrivers } from '../api/drivers';
@@ -151,10 +152,11 @@ export function FinanceReportScreen() {
     <ScrollView style={screenUi.container} contentContainerStyle={{ paddingBottom: 32 }}>
       <View style={screenUi.content}>
         <ScreenHeader
-          title="Финансовый отчёт"
+          title="📊 Финансовый отчёт"
           showBack
           onBack={() => navigation.goBack()}
         />
+        <ScreenHero title="📊 Сводный отчёт" subtitle="День · неделя · месяц · Excel 3 листа" />
 
         <Text style={{ fontSize: 14, fontWeight: '600', color: '#374151', marginBottom: 8 }}>
           Быстрый выбор периода

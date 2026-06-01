@@ -2,6 +2,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { FlatList, Pressable, RefreshControl, Text, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { ScreenHeader } from '../components/ScreenHeader';
+import { ScreenHero } from '../components/ScreenHero';
 import { ErrorText, LoadingScreen } from '../components/ui';
 import { apiErrorMessage } from '../api/client';
 import { listActivity } from '../api/activity';
@@ -69,6 +70,7 @@ export function ActivityLogScreen() {
         ListHeaderComponent={
           <View style={screenUi.content}>
             <ScreenHeader title="📜 Журнал действий" />
+            <ScreenHero title="📝 История операций" subtitle="Кто и что изменил в системе" />
             <View style={screenUi.summaryBar}>
               <View style={screenUi.sumItem}>
                 <Text style={screenUi.sumLabel}>Событий</Text>

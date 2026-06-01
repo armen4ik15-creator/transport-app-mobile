@@ -3,6 +3,7 @@ import { Alert, FlatList, Pressable, RefreshControl, Text, View } from 'react-na
 import { useFocusEffect } from '@react-navigation/native';
 import { FormBottomModal } from '../components/FormBottomModal';
 import { ScreenHeader } from '../components/ScreenHeader';
+import { ScreenHero } from '../components/ScreenHero';
 import { ErrorText, Field, LoadingScreen, MenuButton } from '../components/ui';
 import { apiErrorMessage } from '../api/client';
 import { createNotification, deleteNotification, listNotifications, markNotificationRead } from '../api/notifications';
@@ -107,6 +108,10 @@ export function NotificationsScreen() {
               title="🔔 Уведомления"
               actionLabel={isAdmin ? '+ Отправить' : undefined}
               onAction={isAdmin ? () => setFormVisible(true) : undefined}
+            />
+            <ScreenHero
+              title="🔔 Центр уведомлений"
+              subtitle={isAdmin ? 'Рассылка водителям и диспетчерам' : 'Сообщения от диспетчера'}
             />
             <View style={screenUi.summaryBar}>
               <View style={screenUi.sumItem}>

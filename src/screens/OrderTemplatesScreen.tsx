@@ -4,6 +4,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
 import { FormBottomModal } from '../components/FormBottomModal';
 import { ScreenHeader } from '../components/ScreenHeader';
+import { ScreenHero } from '../components/ScreenHero';
 import { ErrorText, Field, LoadingScreen, MenuButton } from '../components/ui';
 import { apiErrorMessage } from '../api/client';
 import { createOrderTemplate, deleteOrderTemplate, listOrderTemplates } from '../api/orderTemplates';
@@ -134,6 +135,7 @@ export function OrderTemplatesScreen({ navigation }: Props) {
         ListHeaderComponent={
           <View style={screenUi.content}>
             <ScreenHeader title="📦 Шаблоны заказов" actionLabel="+ Создать" onAction={() => setFormVisible(true)} />
+            <ScreenHero title="🗂 Шаблоны заказов" subtitle="Быстрое создание типовых задач" />
             <ErrorText message={error} />
           </View>
         }

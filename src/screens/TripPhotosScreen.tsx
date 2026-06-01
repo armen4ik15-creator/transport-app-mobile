@@ -3,6 +3,7 @@ import { FlatList, Image, RefreshControl, Text, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { FilterChipRow } from '../components/FilterChipRow';
 import { ScreenHeader } from '../components/ScreenHeader';
+import { ScreenHero } from '../components/ScreenHero';
 import { ErrorText, Field, LoadingScreen, MenuButton } from '../components/ui';
 import { apiErrorMessage, getServerHost } from '../api/client';
 import { listTrips } from '../api/trips';
@@ -81,6 +82,7 @@ export function TripPhotosScreen() {
         ListHeaderComponent={
           <View style={screenUi.content}>
             <ScreenHeader title="📷 Фото ТТН" />
+            <ScreenHero title="🖼 Фото накладных" subtitle="Просмотр и сохранение ТТН" />
             <Field label="Дата от (YYYY-MM-DD)" value={from} onChangeText={setFrom} placeholder="2026-01-01" />
             <Field label="Дата до (YYYY-MM-DD)" value={to} onChangeText={setTo} placeholder="2026-12-31" />
             <Text style={screenUi.filterLabel}>Водитель:</Text>

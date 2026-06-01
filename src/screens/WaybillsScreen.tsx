@@ -4,6 +4,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { useFocusEffect } from '@react-navigation/native';
 import { FormBottomModal } from '../components/FormBottomModal';
 import { ScreenHeader } from '../components/ScreenHeader';
+import { ScreenHero } from '../components/ScreenHero';
 import { ErrorText, Field, LoadingScreen, MenuButton } from '../components/ui';
 import { apiErrorMessage } from '../api/client';
 import { listOrders } from '../api/orders';
@@ -123,6 +124,7 @@ export function WaybillsScreen() {
         ListHeaderComponent={
           <View style={screenUi.content}>
             <ScreenHeader title="📄 Путевые листы" actionLabel="+ Создать" onAction={() => setFormVisible(true)} />
+            <ScreenHero title="🧾 Путевые листы" subtitle="Создание и скачивание PDF" />
             <ErrorText message={error} />
           </View>
         }

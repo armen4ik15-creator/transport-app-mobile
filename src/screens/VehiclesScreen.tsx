@@ -3,6 +3,7 @@ import { Alert, FlatList, Pressable, RefreshControl, Text, View } from 'react-na
 import { useFocusEffect } from '@react-navigation/native';
 import { FormBottomModal } from '../components/FormBottomModal';
 import { ScreenHeader } from '../components/ScreenHeader';
+import { ScreenHero } from '../components/ScreenHero';
 import { SearchBar } from '../components/SearchBar';
 import { ErrorText, Field, LoadingScreen } from '../components/ui';
 import { apiErrorMessage } from '../api/client';
@@ -112,6 +113,10 @@ export function VehiclesScreen() {
               title="🚛 Автомобили"
               actionLabel={isAdmin ? '+ Добавить' : undefined}
               onAction={isAdmin ? () => setFormVisible(true) : undefined}
+            />
+            <ScreenHero
+              title="🚛 Парк автомобилей"
+              subtitle={`${filtered.length} в справочнике`}
             />
             <SearchBar value={searchQuery} onChangeText={setSearchQuery} placeholder="Поиск по номеру…" />
             <ErrorText message={error} />

@@ -17,6 +17,7 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { FilterChipRow } from '../components/FilterChipRow';
 import { ScreenHeader } from '../components/ScreenHeader';
+import { ScreenHero } from '../components/ScreenHero';
 import { ErrorText, Field, LoadingScreen, MenuButton } from '../components/ui';
 import { getAllPhotos, type GetAllPhotosParams } from '../api/photos';
 import { apiErrorMessage, getServerHost, TOKEN_KEY } from '../api/client';
@@ -232,11 +233,12 @@ export function AllPhotosScreen() {
         ListHeaderComponent={
           <View style={[screenUi.content, { paddingHorizontal: 0 }]}>
             <ScreenHeader
-              title="Фотографии ТТН"
+              title="🖼 Фото ТТН"
               showBack
               onBack={() => navigation.goBack()}
               showPageTitle={false}
             />
+            <ScreenHero title="🖼 Все накладные" subtitle="Фильтр по водителю и заказу · сохранение" />
 
             <Text style={screenUi.filterLabel}>Водитель:</Text>
             <FilterChipRow

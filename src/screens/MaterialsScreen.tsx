@@ -3,6 +3,7 @@ import { Alert, FlatList, Pressable, RefreshControl, Text, View } from 'react-na
 import { useFocusEffect } from '@react-navigation/native';
 import { FormBottomModal } from '../components/FormBottomModal';
 import { ScreenHeader } from '../components/ScreenHeader';
+import { ScreenHero } from '../components/ScreenHero';
 import { SearchBar } from '../components/SearchBar';
 import { ErrorText, Field, LoadingScreen } from '../components/ui';
 import { apiErrorMessage } from '../api/client';
@@ -113,6 +114,7 @@ export function MaterialsScreen() {
               actionLabel={isAdmin ? '+ Добавить' : undefined}
               onAction={isAdmin ? () => setFormVisible(true) : undefined}
             />
+            <ScreenHero title="🧱 Справочник материалов" subtitle={`${filtered.length} позиций`} />
             <SearchBar value={searchQuery} onChangeText={setSearchQuery} placeholder="Поиск материала…" />
             <ErrorText message={error} />
           </View>

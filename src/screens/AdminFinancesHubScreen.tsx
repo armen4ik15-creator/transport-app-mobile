@@ -8,7 +8,7 @@ export function AdminFinancesHubScreen() {
 
   return (
     <HubCardMenu
-      title="Все финансы"
+      title="💼 Все финансы"
       subtitle="Выберите раздел"
       items={[
         {

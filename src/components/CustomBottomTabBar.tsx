@@ -41,8 +41,10 @@ export function CustomBottomTabBar<T extends string>({
               style={{
                 minWidth: 72,
                 alignItems: 'center',
-                paddingHorizontal: 6,
-                paddingVertical: 4,
+                paddingHorizontal: 8,
+                paddingVertical: 6,
+                borderRadius: 12,
+                backgroundColor: focused ? '#eff6ff' : 'transparent',
               }}
             >
               <TabBarIcon emoji={item.emoji} focused={focused} />
@@ -50,9 +52,9 @@ export function CustomBottomTabBar<T extends string>({
                 numberOfLines={1}
                 style={{
                   fontSize: 10,
-                  fontWeight: '600',
+                  fontWeight: focused ? '700' : '600',
                   marginTop: 2,
-                  color: focused ? '#1a5fb4' : '#6b7280',
+                  color: focused ? '#1e3a5f' : '#6b7280',
                   maxWidth: 68,
                 }}
               >

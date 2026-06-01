@@ -5,7 +5,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { QuickAccessGrid, type QuickAccessItem } from '../components/QuickAccessGrid';
 import { ScreenHeader } from '../components/ScreenHeader';
 import { ScreenHero } from '../components/ScreenHero';
-import { ErrorText, LoadingScreen, MenuButton, Subtitle } from '../components/ui';
+import { ErrorText, LoadingScreen, Subtitle } from '../components/ui';
 import { useAuth } from '../auth/AuthContext';
 import type { RootStackParamList } from '../navigation/types';
 import { listOrders } from '../api/orders';
@@ -80,6 +80,8 @@ export function AdminHomeScreen() {
     { icon: '🏢', title: 'Контрагенты', color: '#f59e0b', onPress: () => navigation.replace('Contractors') },
     { icon: '📑', title: 'Реестр', color: '#7c3aed', onPress: () => navigation.replace('RegistryReport') },
     { icon: '💼', title: 'Финансы', color: '#6366f1', onPress: () => navigation.replace('FinancesHub') },
+    { icon: '🔔', title: 'Уведомления', color: '#ea580c', onPress: () => navigation.navigate('Notifications') },
+    { icon: '💸', title: 'Расходы', color: '#ef4444', onPress: () => navigation.replace('Expenses') },
   ];
 
   if (loading) return <LoadingScreen label="Загрузка дашборда…" />;
@@ -92,29 +94,25 @@ export function AdminHomeScreen() {
     >
       <ScreenHeader title="🏠 Главная" showBack={false} />
 
-      <View
+      <ScreenHero
+        title="Добро пожаловать!"
+        subtitle={`${user?.email ?? ''} · 👤 Администратор`}
+        style={{ marginBottom: 10 }}
+      />
+      <Pressable
+        onPress={onLogout}
         style={{
-          backgroundColor: '#1e3a5f',
-          borderRadius: 14,
-          padding: 18,
+          alignSelf: 'flex-end',
+          backgroundColor: '#ef4444',
+          borderRadius: 10,
+          paddingHorizontal: 16,
+          paddingVertical: 10,
           marginBottom: 14,
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'space-between',
+          marginTop: -8,
         }}
       >
-        <View style={{ flex: 1, paddingRight: 12 }}>
-          <Text style={{ color: '#cbd5e1', fontSize: 13 }}>Добро пожаловать!</Text>
-          <Text style={{ color: '#ffffff', fontSize: 16, fontWeight: '700', marginTop: 4 }}>{user?.email}</Text>
-          <Text style={{ color: '#94a3b8', fontSize: 13, marginTop: 4 }}>👤 Администратор</Text>
-        </View>
-        <Pressable
-          onPress={onLogout}
-          style={{ backgroundColor: '#ef4444', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 10 }}
-        >
-          <Text style={{ color: '#fff', fontWeight: '700' }}>Выйти</Text>
-        </Pressable>
-      </View>
+        <Text style={{ color: '#fff', fontWeight: '700' }}>Выйти</Text>
+      </Pressable>
 
       <ErrorText message={error} />
 
@@ -144,11 +142,6 @@ export function AdminHomeScreen() {
 
       <Text style={{ fontSize: 15, fontWeight: '700', color: '#111827', marginBottom: 10 }}>⚡ Быстрый доступ</Text>
       <QuickAccessGrid items={quickItems} />
-
-      <View style={[screenUi.card, { marginTop: 14 }]}>
-        <MenuButton label="🔔 Уведомления" onPress={() => navigation.navigate('Notifications')} />
-        <MenuButton label="💸 Расходы" onPress={() => navigation.replace('Expenses')} variant="secondary" />
-      </View>
     </ScrollView>
   );
 }

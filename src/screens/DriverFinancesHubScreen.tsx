@@ -8,15 +8,33 @@ export function DriverFinancesHubScreen() {
 
   return (
     <HubMenuScreen
-      title="Финансы"
+      title="💼 Мои финансы"
       subtitle="Операции, заработок и расходы"
       sections={[
         {
           title: 'Разделы',
           items: [
-            { label: '💰 Операции', onPress: () => navigation.navigate('DriverFinances') },
-            { label: '🧮 Мой заработок', onPress: () => navigation.navigate('Earnings') },
-            { label: '⛽ Мои расходы', onPress: () => navigation.navigate('Expenses') },
+            {
+              icon: '💰',
+              title: 'Операции',
+              subtitle: 'Доходы и выплаты',
+              accentColor: '#6366f1',
+              onPress: () => navigation.navigate('DriverFinances'),
+            },
+            {
+              icon: '🧮',
+              title: 'Мой заработок',
+              subtitle: 'Ставка и начисления по рейсам',
+              accentColor: '#16a34a',
+              onPress: () => navigation.navigate('Earnings'),
+            },
+            {
+              icon: '⛽',
+              title: 'Мои расходы',
+              subtitle: 'Топливо, ремонт, прочее',
+              accentColor: '#ef4444',
+              onPress: () => navigation.navigate('Expenses'),
+            },
           ],
         },
       ]}

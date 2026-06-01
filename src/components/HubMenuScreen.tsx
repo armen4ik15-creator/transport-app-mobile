@@ -1,12 +1,15 @@
 import { ScrollView, Text, View } from 'react-native';
-import { MenuButton, Subtitle } from './ui';
-import { ScreenHeader } from './ScreenHeader';
+import { HubMenuCard } from './HubMenuCard';
+import { ScreenHero } from './ScreenHero';
 import { screenUi } from '../styles/screenUi';
 
 export interface HubMenuItem {
-  label: string;
+  icon: string;
+  title: string;
+  subtitle?: string;
+  accentColor: string;
   onPress: () => void;
-  variant?: 'default' | 'secondary' | 'danger';
+  danger?: boolean;
 }
 
 export interface HubMenuSection {
@@ -27,19 +30,21 @@ export function HubMenuScreen({ title, subtitle, sections }: HubMenuScreenProps)
       contentContainerStyle={[screenUi.content, { paddingBottom: 32 }]}
       keyboardShouldPersistTaps="handled"
     >
-      <ScreenHeader title={title} showBack={false} />
-      {subtitle ? (
-        <Text style={{ fontSize: 14, color: '#6b7280', marginBottom: 12 }}>{subtitle}</Text>
-      ) : null}
+      <ScreenHero title={title} subtitle={subtitle} />
       {sections.map((section) => (
-        <View key={section.title} style={screenUi.card}>
-          <Subtitle>{section.title}</Subtitle>
+        <View key={section.title} style={{ marginBottom: 8 }}>
+          <Text style={{ fontSize: 14, fontWeight: '700', color: '#374151', marginBottom: 8, marginLeft: 2 }}>
+            {section.title}
+          </Text>
           {section.items.map((item) => (
-            <MenuButton
-              key={item.label}
-              label={item.label}
+            <HubMenuCard
+              key={`${section.title}-${item.title}`}
+              icon={item.icon}
+              title={item.title}
+              subtitle={item.subtitle}
+              accentColor={item.accentColor}
               onPress={item.onPress}
-              variant={item.variant ?? 'secondary'}
+              danger={item.danger}
             />
           ))}
         </View>

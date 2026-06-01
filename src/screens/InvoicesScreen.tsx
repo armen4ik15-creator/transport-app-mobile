@@ -4,6 +4,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { useFocusEffect } from '@react-navigation/native';
 import { FormBottomModal } from '../components/FormBottomModal';
 import { ScreenHeader } from '../components/ScreenHeader';
+import { ScreenHero } from '../components/ScreenHero';
 import { ErrorText, Field, LoadingScreen, MenuButton } from '../components/ui';
 import { apiErrorMessage } from '../api/client';
 import { createInvoice, deleteInvoice, listInvoices } from '../api/invoices';
@@ -127,6 +128,7 @@ export function InvoicesScreen() {
         ListHeaderComponent={
           <View style={screenUi.content}>
             <ScreenHeader title="🧮 Счета" actionLabel="+ Создать" onAction={() => setFormVisible(true)} />
+            <ScreenHero title="🧮 Счета на оплату" subtitle="Выставление и учёт" />
             <ErrorText message={error} />
           </View>
         }

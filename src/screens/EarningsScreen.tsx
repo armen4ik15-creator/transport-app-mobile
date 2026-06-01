@@ -6,6 +6,7 @@ import { FilterChipRow } from '../components/FilterChipRow';
 import { DateRangePicker } from '../components/DateRangePicker';
 import { ExcelExportButton } from '../components/ExcelExportButton';
 import { ScreenHeader } from '../components/ScreenHeader';
+import { ScreenHero } from '../components/ScreenHero';
 import { ErrorText, LoadingScreen, MenuButton, PrimaryButton } from '../components/ui';
 import { getEarningsSummary } from '../api/earnings';
 import { apiErrorMessage } from '../api/client';
@@ -141,6 +142,7 @@ export function EarningsScreen({ navigation }: Props) {
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
     >
       <ScreenHeader title="🧮 Заработок и рейсы" />
+      <ScreenHero title="💵 Начисления водителям" subtitle="Ставка за рейс · завершённые перевозки" />
       <Text style={{ fontSize: 13, color: '#6b7280', marginBottom: 12 }}>
         {user?.role === 'admin'
           ? 'Сумма ставок водителя по завершённым рейсам (driver_rate из задачи)'

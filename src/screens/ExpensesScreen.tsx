@@ -12,6 +12,8 @@ import { DateRangePicker } from '../components/DateRangePicker';
 import { ExcelExportButton } from '../components/ExcelExportButton';
 import { ExpenseFormModal, type VehicleOption } from '../components/expenses/ExpenseFormModal';
 import { FilterChipRow } from '../components/FilterChipRow';
+import { ScreenHeader } from '../components/ScreenHeader';
+import { ScreenHero } from '../components/ScreenHero';
 import { LoadingScreen } from '../components/ui';
 import {
   ALL_EXPENSE_TYPES,
@@ -201,19 +203,17 @@ export function ExpensesScreen() {
   return (
     <View style={screenUi.container}>
       <View style={screenUi.content}>
-        <View style={screenUi.header}>
-          {navigation.canGoBack() ? (
-            <Pressable onPress={() => navigation.goBack()}>
-              <Text style={screenUi.back}>← Назад</Text>
-            </Pressable>
-          ) : (
-            <View style={{ width: 72 }} />
-          )}
-          <Text style={screenUi.title}>Расходы</Text>
-          <Pressable style={screenUi.addBtn} onPress={openCreate}>
-            <Text style={screenUi.addBtnText}>+ Добавить</Text>
-          </Pressable>
-        </View>
+        <ScreenHeader
+          title="💸 Расходы"
+          showBack={navigation.canGoBack()}
+          onBack={() => navigation.goBack()}
+          actionLabel="+ Добавить"
+          onAction={openCreate}
+        />
+        <ScreenHero
+          title="💸 Учёт расходов"
+          subtitle={isAdmin ? 'Топливо, ремонт, штрафы · экспорт Excel' : 'Ваши расходы по рейсам'}
+        />
 
         <FilterChipRow items={periodChips} activeId={periodFilter} onSelect={setPeriodFilter} />
         <DateRangePicker

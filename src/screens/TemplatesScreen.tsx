@@ -3,6 +3,7 @@ import { Alert, FlatList, Pressable, RefreshControl, Text, View } from 'react-na
 import { useFocusEffect } from '@react-navigation/native';
 import { FormBottomModal } from '../components/FormBottomModal';
 import { ScreenHeader } from '../components/ScreenHeader';
+import { ScreenHero } from '../components/ScreenHero';
 import { ErrorText, Field, LoadingScreen, MenuButton } from '../components/ui';
 import { apiErrorMessage } from '../api/client';
 import { createTemplate, deleteTemplate, listTemplates, updateTemplate } from '../api/templates';
@@ -130,6 +131,7 @@ export function TemplatesScreen() {
         ListHeaderComponent={
           <View style={screenUi.content}>
             <ScreenHeader title="📋 Шаблоны документов" actionLabel="+ Создать" onAction={() => setFormVisible(true)} />
+            <ScreenHero title="📄 Word-шаблоны" subtitle="Печать путевых, счетов и актов" />
             <ErrorText message={error} />
           </View>
         }

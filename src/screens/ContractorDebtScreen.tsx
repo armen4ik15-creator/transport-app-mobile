@@ -6,6 +6,7 @@ import { FilterChipRow } from '../components/FilterChipRow';
 import { FormBottomModal } from '../components/FormBottomModal';
 import { ContractorFinanceRow, FinanceSummaryBar } from '../components/ListScreenParts';
 import { ScreenHeader } from '../components/ScreenHeader';
+import { ScreenHero } from '../components/ScreenHero';
 import { ErrorText, Field, LoadingScreen, MenuButton } from '../components/ui';
 import { apiErrorMessage } from '../api/client';
 import { listContractors } from '../api/contractors';
@@ -178,12 +179,14 @@ export function ContractorDebtScreen() {
               actionLabel="+ Оплата"
               onAction={() => openPaymentForm()}
             />
-
-            <Text style={{ fontSize: 13, color: '#6b7280', marginBottom: 8 }}>
-              {selectedSummary
-                ? `Баланс: ${selectedSummary.contractor_name}`
-                : 'Сводка по всем контрагентам'}
-            </Text>
+            <ScreenHero
+              title="🏦 Баланс контрагентов"
+              subtitle={
+                selectedSummary
+                  ? `${selectedSummary.contractor_name} · навезли / оплатили / долг`
+                  : 'Сводка по всем контрагентам'
+              }
+            />
 
             <FinanceSummaryBar
               revenue={displaySummary.accrued}
