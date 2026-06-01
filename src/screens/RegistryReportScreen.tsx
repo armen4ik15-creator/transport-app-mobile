@@ -1,14 +1,16 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, ScrollView, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, FlatList, Pressable, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { DateRangePicker } from '../components/DateRangePicker';
 import { ExcelExportButton } from '../components/ExcelExportButton';
 import { FilterChipRow } from '../components/FilterChipRow';
+import { FilterDropdown } from '../components/FilterDropdown';
 import { QuickPeriodRow } from '../components/QuickPeriodRow';
-import { RegistryPreviewTable } from '../components/RegistryPreviewTable';
 import { RegistryTypeToggle, type RegistryReportType } from '../components/RegistryTypeToggle';
 import { ScreenHeader } from '../components/ScreenHeader';
+import { ScreenHero } from '../components/ScreenHero';
+import { TripRegistryCard } from '../components/TripRegistryCard';
 import { ErrorText, LoadingScreen } from '../components/ui';
 import { apiErrorMessage } from '../api/client';
 import { listDrivers } from '../api/drivers';
@@ -18,12 +20,17 @@ import type { RootStackParamList } from '../navigation/types';
 import { screenUi } from '../styles/screenUi';
 import { buildExportQuery, downloadAndShareExcel } from '../utils/exportUtils';
 import {
+  formatMoney,
   getReportPeriodBounds,
   REPORT_PERIOD_ITEMS,
   type ReportPeriod,
 } from '../utils/datePeriods';
 import { withFallback } from '../utils/safeRequest';
 import type { Driver, TripRecord, Vehicle } from '../types';
+
+function tripRevenue(row: TripRecord): number {
+  return (row.volume ?? 0) * (row.company_rate ?? 0);
+}
 
 export function RegistryReportScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
@@ -95,16 +102,23 @@ export function RegistryReportScreen() {
     [drivers]
   );
 
-  const vehicleChips = useMemo(
-    () => [
-      { id: 'all', label: '🚚 Все машины' },
-      ...vehicles.map((vehicle) => ({
-        id: String(vehicle.id),
-        label: vehicle.plate_number,
+  const selectedVehicleLabel = useMemo(() => {
+    if (vehicleId == null) return 'Все машины';
+    return vehicles.find((v) => v.id === vehicleId)?.plate_number ?? 'Машина';
+  }, [vehicleId, vehicles]);
+
+  const pickVehicle = () => {
+    Alert.alert('Автомобиль', undefined, [
+      { text: 'Все машины', onPress: () => setVehicleId(null) },
+      ...vehicles.map((v) => ({
+        text: v.plate_number,
+        onPress: () => setVehicleId(v.id),
       })),
-    ],
-    [vehicles]
-  );
+      { text: 'Отмена', style: 'cancel' as const },
+    ]);
+  };
+
+  const totalRevenue = useMemo(() => rows.reduce((sum, row) => sum + tripRevenue(row), 0), [rows]);
 
   const onExport = async () => {
     if (!from.trim() || !to.trim()) {
@@ -137,72 +151,72 @@ export function RegistryReportScreen() {
   }
 
   return (
-    <ScrollView style={screenUi.container} contentContainerStyle={{ paddingBottom: 32 }}>
-      <View style={screenUi.content}>
-        <ScreenHeader title="Реестр" showBack onBack={() => navigation.replace('AdminHome')} />
-
-        <Text style={{ fontSize: 14, fontWeight: '600', color: '#374151', marginBottom: 8 }}>
-          Быстрый выбор периода
-        </Text>
-        <QuickPeriodRow
-          items={REPORT_PERIOD_ITEMS}
-          activeId={reportPeriod}
-          onSelect={setReportPeriod}
-        />
-
-        <DateRangePicker from={from} to={to} onChangeFrom={setFrom} onChangeTo={setTo} />
-        <RegistryTypeToggle value={registryType} onChange={setRegistryType} />
-
-        <Text style={screenUi.filterLabel}>Водитель:</Text>
-        <FilterChipRow
-          items={driverChips}
-          activeId={driverId == null ? 'all' : String(driverId)}
-          onSelect={(id) => setDriverId(id === 'all' ? null : Number(id))}
-        />
-
-        {registryType === 'by_vehicle' ? (
-          <>
-            <Text style={screenUi.filterLabel}>Автомобиль:</Text>
-            <FilterChipRow
-              items={vehicleChips}
-              activeId={vehicleId == null ? 'all' : String(vehicleId)}
-              onSelect={(id) => setVehicleId(id === 'all' ? null : Number(id))}
+    <View style={screenUi.container}>
+      <FlatList
+        data={rows}
+        keyExtractor={(item) => String(item.id)}
+        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 32 }}
+        ListHeaderComponent={
+          <View style={screenUi.content}>
+            <ScreenHeader title="Реестр" showBack onBack={() => navigation.replace('AdminHome')} />
+            <ScreenHero
+              title="📑 Реестр рейсов"
+              subtitle={`${rows.length} разгрузок · ${formatMoney(totalRevenue)} ₽`}
             />
-          </>
-        ) : null}
 
-        <ExcelExportButton
-          label="📥 Скачать реестр Excel (.xlsx)"
-          loading={exporting}
-          onPress={() => void onExport()}
-        />
-        <Text style={[screenUi.hint, { marginTop: 10 }]}>
-          Файл откроется в Excel, Google Таблицах или любом совместимом приложении
-        </Text>
+            <Text style={{ fontSize: 14, fontWeight: '600', color: '#374151', marginBottom: 8 }}>
+              Быстрый период
+            </Text>
+            <QuickPeriodRow items={REPORT_PERIOD_ITEMS} activeId={reportPeriod} onSelect={setReportPeriod} />
+            <DateRangePicker from={from} to={to} onChangeFrom={setFrom} onChangeTo={setTo} />
 
-        <Pressable
-          onPress={() => void load()}
-          style={{
-            marginTop: 10,
-            backgroundColor: '#eef2ff',
-            borderRadius: 10,
-            paddingVertical: 12,
-            alignItems: 'center',
-            borderWidth: 1,
-            borderColor: '#bfdbfe',
-          }}
-        >
-          <Text style={{ color: '#2563eb', fontWeight: '600' }}>🔍 Применить фильтр</Text>
-        </Pressable>
+            <Text style={screenUi.filterLabel}>Водитель:</Text>
+            <FilterChipRow
+              items={driverChips}
+              activeId={driverId == null ? 'all' : String(driverId)}
+              onSelect={(id) => setDriverId(id === 'all' ? null : Number(id))}
+            />
 
-        <ErrorText message={error} />
+            <FilterDropdown icon="🚚" label={selectedVehicleLabel} onPress={pickVehicle} />
 
-        {loading ? (
-          <ActivityIndicator style={{ marginTop: 24 }} color="#2563eb" />
-        ) : (
-          <RegistryPreviewTable rows={rows} />
-        )}
-      </View>
-    </ScrollView>
+            <RegistryTypeToggle value={registryType} onChange={setRegistryType} />
+
+            <ExcelExportButton
+              label="📊 Скачать Excel"
+              loading={exporting}
+              onPress={() => void onExport()}
+            />
+            <Text style={[screenUi.hint, { marginBottom: 8 }]}>
+              {registryType === 'by_vehicle'
+                ? 'Экспорт: реестр по выбранной машине'
+                : 'Экспорт: общий реестр перевозок'}
+            </Text>
+
+            <Pressable
+              onPress={() => void load()}
+              style={{
+                marginBottom: 12,
+                backgroundColor: '#eef2ff',
+                borderRadius: 10,
+                paddingVertical: 12,
+                alignItems: 'center',
+                borderWidth: 1,
+                borderColor: '#bfdbfe',
+              }}
+            >
+              <Text style={{ color: '#2563eb', fontWeight: '600' }}>🔍 Применить фильтр</Text>
+            </Pressable>
+
+            <ErrorText message={error} />
+
+            {loading ? <ActivityIndicator style={{ marginVertical: 16 }} color="#2563eb" /> : null}
+            {!loading && rows.length === 0 ? (
+              <Text style={screenUi.emptyText}>Нет рейсов за выбранный период</Text>
+            ) : null}
+          </View>
+        }
+        renderItem={({ item }) => <TripRegistryCard trip={item} />}
+      />
+    </View>
   );
 }
