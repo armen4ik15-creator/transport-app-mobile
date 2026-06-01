@@ -19,13 +19,6 @@ export function AdminFinancesHubScreen() {
           onPress: () => navigation.navigate('FinanceReport'),
         },
         {
-          icon: '📑',
-          title: 'Реестр перевозок',
-          subtitle: 'Разгрузки за период · Excel реестр',
-          accentColor: '#7c3aed',
-          onPress: () => navigation.replace('RegistryReport'),
-        },
-        {
           icon: '💵',
           title: 'Зарплата',
           subtitle: 'Начисления, выплаты водителям',
@@ -62,8 +55,8 @@ export function AdminFinancesHubScreen() {
         },
         {
           icon: '🏦',
-          title: 'Долги контрагентов',
-          subtitle: 'Задолженность и оплаты',
+          title: 'Оплаты контрагентов',
+          subtitle: 'Навезли · оплатили · остаток долга · история оплат',
           accentColor: '#64748b',
           onPress: () => navigation.navigate('ContractorDebt'),
         },
