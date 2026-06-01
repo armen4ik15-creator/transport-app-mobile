@@ -3,6 +3,7 @@ import { Alert, ScrollView, Text, View } from 'react-native';
 import axios from 'axios';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { ErrorText, Field, PrimaryButton } from '../components/ui';
+import { ScreenHero } from '../components/ScreenHero';
 import {
   buildApiUrl,
   getServerUrl,
@@ -87,13 +88,8 @@ export function ServerSetupScreen({ route, onConfigured }: ComponentProps) {
         contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', padding: 16, paddingBottom: 32 }}
         keyboardShouldPersistTaps="handled"
       >
-        <View style={[screenUi.card, { padding: 24 }]}>
-          <Text style={{ fontSize: 24, fontWeight: '700', color: '#111827', textAlign: 'center', marginBottom: 4 }}>
-            ⚙️ Настройка сервера
-          </Text>
-          <Text style={{ fontSize: 14, color: '#6b7280', textAlign: 'center', marginBottom: 20 }}>
-            {reasonText}
-          </Text>
+        <View style={[screenUi.card, { padding: 24, borderRadius: 16 }]}>
+          <ScreenHero title="⚙️ Настройка сервера" subtitle={reasonText} />
           <Field
             label="Адрес сервера (IP или домен)"
             value={ip}

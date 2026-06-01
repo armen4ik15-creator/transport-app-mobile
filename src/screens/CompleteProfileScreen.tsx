@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Alert, ScrollView, Text, View } from 'react-native';
 import { Field, PrimaryButton } from '../components/ui';
+import { ScreenHero } from '../components/ScreenHero';
 import { apiErrorMessage } from '../api/client';
 import { updateMyDriverProfile } from '../api/drivers';
 import { useAuth } from '../auth/AuthContext';
@@ -46,13 +47,8 @@ export function CompleteProfileScreen() {
         contentContainerStyle={{ flexGrow: 1, padding: 16, paddingBottom: 32 }}
         keyboardShouldPersistTaps="handled"
       >
-        <View style={[screenUi.card, { padding: 24 }]}>
-          <Text style={{ fontSize: 24, fontWeight: '700', color: '#111827', textAlign: 'center', marginBottom: 4 }}>
-            👤 Профиль водителя
-          </Text>
-          <Text style={{ fontSize: 14, color: '#6b7280', textAlign: 'center', marginBottom: 20 }}>
-            Это нужно для корректной работы заказов, рейсов и отчётов.
-          </Text>
+        <View style={[screenUi.card, { padding: 24, borderRadius: 16 }]}>
+          <ScreenHero title="👤 Профиль водителя" subtitle="Данные для заказов, рейсов и отчётов" />
           <Field label="ФИО *" value={fullName} onChangeText={setFullName} />
           <Field label="Телефон" value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
           <Field label="Госномер *" value={carNumber} onChangeText={setCarNumber} />

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Alert, ScrollView, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { ErrorText, Field, MenuButton, PrimaryButton } from '../components/ui';
+import { ScreenHero } from '../components/ScreenHero';
 import { useAuth } from '../auth/AuthContext';
 import { apiErrorMessage } from '../api/client';
 import type { RootStackParamList } from '../navigation/RootNavigator';
@@ -40,13 +41,8 @@ export function LoginScreen({ navigation }: Props) {
         contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', padding: 16, paddingBottom: 32 }}
         keyboardShouldPersistTaps="handled"
       >
-        <View style={[screenUi.card, { padding: 24 }]}>
-          <Text style={{ fontSize: 28, fontWeight: '700', color: '#111827', textAlign: 'center', marginBottom: 4 }}>
-            🚛 РеестрПро
-          </Text>
-          <Text style={{ fontSize: 14, color: '#6b7280', textAlign: 'center', marginBottom: 20 }}>
-            Войдите в свой аккаунт
-          </Text>
+        <View style={[screenUi.card, { padding: 24, borderRadius: 16 }]}>
+          <ScreenHero title="🚛 РеестрПро" subtitle="Войдите в свой аккаунт" />
           <Field
             label="Email"
             value={email}
