@@ -1,17 +1,22 @@
 import { useCallback, useMemo, useState } from 'react';
-import { Alert, RefreshControl, ScrollView, Text, View } from 'react-native';
-import { useFocusEffect } from '@react-navigation/native';
+import { Alert, Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { FilterChipRow } from '../components/FilterChipRow';
 import { DateRangePicker } from '../components/DateRangePicker';
 import { ExcelExportButton } from '../components/ExcelExportButton';
+import { QuickAccessGrid, type QuickAccessItem } from '../components/QuickAccessGrid';
 import { ScreenHeader } from '../components/ScreenHeader';
-import { ErrorText, LoadingScreen, MenuButton } from '../components/ui';
+import { ScreenHero } from '../components/ScreenHero';
+import { ErrorText, LoadingScreen } from '../components/ui';
 import { apiErrorMessage } from '../api/client';
 import { getReportSummary, type ReportSummary } from '../api/reports';
 import { useAuth } from '../auth/AuthContext';
 import { listDrivers } from '../api/drivers';
+import type { RootStackParamList } from '../navigation/types';
 import { screenUi } from '../styles/screenUi';
 import { buildExportQuery, downloadAndShareExcel } from '../utils/exportUtils';
+import { formatMoney, getReportPeriodBounds } from '../utils/datePeriods';
 import type { Driver } from '../types';
 
 const emptySummary: ReportSummary = {
@@ -25,11 +30,14 @@ const emptySummary: ReportSummary = {
   balance: 0,
 };
 
+const defaultMonth = getReportPeriodBounds('month');
+
 export function ReportsScreen() {
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { user } = useAuth();
   const [summary, setSummary] = useState<ReportSummary>(emptySummary);
-  const [from, setFrom] = useState('');
-  const [to, setTo] = useState('');
+  const [from, setFrom] = useState(defaultMonth.from);
+  const [to, setTo] = useState(defaultMonth.to);
   const [driverId, setDriverId] = useState<number | null>(null);
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [loading, setLoading] = useState(true);
@@ -92,16 +100,22 @@ export function ReportsScreen() {
     }
   };
 
-  const statCards = [
-    { label: 'Заказы', value: String(summary.orders_total), color: '#2563eb' },
-    { label: 'Завершено', value: String(summary.orders_completed), color: '#16a34a' },
-    { label: 'Документы', value: String(summary.documents_total), color: '#7c3aed' },
-    { label: 'Расходы (шт.)', value: String(summary.expenses_total), color: '#f59e0b' },
-    { label: 'Сумма расходов', value: `${summary.expenses_amount} ₽`, color: '#ef4444' },
-    { label: 'Доход', value: `${summary.income} ₽`, color: '#16a34a' },
-    { label: 'Расход', value: `${summary.expense} ₽`, color: '#ef4444' },
-    { label: 'Баланс', value: `${summary.balance} ₽`, color: '#2563eb' },
+  const widgetCards = [
+    { label: 'Общий доход', value: `${formatMoney(summary.income)} ₽`, color: '#16a34a', icon: '💰' },
+    { label: 'Расход', value: `${formatMoney(summary.expense)} ₽`, color: '#ef4444', icon: '💸' },
+    { label: 'Рейсов (заказы)', value: String(summary.orders_completed), color: '#2563eb', icon: '🚛' },
+    { label: 'Баланс', value: `${formatMoney(summary.balance)} ₽`, color: '#7c3aed', icon: '⚖️' },
   ];
+
+  const quickLinks: QuickAccessItem[] =
+    user?.role === 'admin'
+      ? [
+          { icon: '📑', title: 'Реестр', subtitle: 'Все рейсы', color: '#2563eb', onPress: () => navigation.replace('RegistryReport') },
+          { icon: '📊', title: 'Фин. отчёт', subtitle: 'Excel 3 листа', color: '#16a34a', onPress: () => navigation.navigate('FinanceReport') },
+          { icon: '💵', title: 'Зарплаты', subtitle: 'Выплаты', color: '#f59e0b', onPress: () => navigation.navigate('Salary') },
+          { icon: '💸', title: 'Расходы', subtitle: 'Учёт', color: '#ef4444', onPress: () => navigation.replace('Expenses') },
+        ]
+      : [];
 
   if (loading) return <LoadingScreen label="Загрузка отчёта…" />;
 
@@ -111,16 +125,11 @@ export function ReportsScreen() {
       contentContainerStyle={[screenUi.content, { paddingBottom: 32 }]}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
     >
-      <ScreenHeader title="📊 Статистика и отчёты" />
-      <Text style={{ fontSize: 13, color: '#6b7280', marginBottom: 12 }}>
-        {user?.role === 'admin'
-          ? 'Сводка по заказам, документам и финансам'
-          : 'Сводка только по вашим данным'}
-      </Text>
+      <ScreenHeader title="📊 Отчёты" />
+      <ScreenHero title="📈 Сводка" subtitle="Доход, расход и рейсы за период" />
       <ErrorText message={error} />
 
       <View style={screenUi.card}>
-        <Text style={screenUi.fieldLabel}>Фильтры</Text>
         <DateRangePicker from={from} to={to} onChangeFrom={setFrom} onChangeTo={setTo} />
         {user?.role === 'admin' ? (
           <>
@@ -132,28 +141,51 @@ export function ReportsScreen() {
             />
           </>
         ) : null}
-        <MenuButton label="🔍 Применить" onPress={load} variant="secondary" />
+        <Pressable
+          onPress={() => void load()}
+          style={{
+            backgroundColor: '#eef2ff',
+            borderRadius: 10,
+            paddingVertical: 12,
+            alignItems: 'center',
+            marginTop: 8,
+          }}
+        >
+          <Text style={{ color: '#2563eb', fontWeight: '600' }}>🔍 Обновить сводку</Text>
+        </Pressable>
         <ExcelExportButton loading={exporting} onPress={() => void onExportExcel()} />
       </View>
 
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-        {statCards.map((card) => (
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 16 }}>
+        {widgetCards.map((card) => (
           <View
             key={card.label}
             style={{
               width: '48%',
               backgroundColor: '#ffffff',
-              borderRadius: 12,
+              borderRadius: 14,
               borderWidth: 1,
               borderColor: '#e5e7eb',
-              padding: 12,
+              borderLeftWidth: 4,
+              borderLeftColor: card.color,
+              padding: 14,
             }}
           >
+            <Text style={{ fontSize: 22 }}>{card.icon}</Text>
             <Text style={screenUi.sumLabel}>{card.label}</Text>
             <Text style={[screenUi.sumValue, { color: card.color }]}>{card.value}</Text>
           </View>
         ))}
       </View>
+
+      {quickLinks.length > 0 ? (
+        <>
+          <Text style={{ fontSize: 15, fontWeight: '700', color: '#111827', marginBottom: 10 }}>
+            Быстрые отчёты
+          </Text>
+          <QuickAccessGrid items={quickLinks} />
+        </>
+      ) : null}
     </ScrollView>
   );
 }
