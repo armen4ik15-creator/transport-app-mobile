@@ -1,7 +1,9 @@
 import { api } from './client';
 import type {
+  DriverAccruedPreview,
   DriverDebtSummary,
   DriverPaymentRecord,
+  DriverPaymentMethod,
   DriverPaymentType,
   DriverSalarySummary,
 } from '../types';
@@ -17,15 +19,32 @@ export async function createSalaryPayment(payload: {
   driver_id: number;
   type: DriverPaymentType;
   amount: number;
+  method?: DriverPaymentMethod;
+  period_start: string;
+  period_end: string;
   note?: string;
 }): Promise<DriverPaymentRecord> {
   const { data } = await api.post<DriverPaymentRecord>('/salary/payments', payload);
   return data;
 }
 
-export async function getSalarySummary(driverId: number): Promise<DriverSalarySummary> {
+export async function getSalarySummary(
+  driverId: number,
+  params?: { from?: string; to?: string }
+): Promise<DriverSalarySummary> {
   const { data } = await api.get<DriverSalarySummary>('/salary/summary', {
-    params: { driver_id: driverId },
+    params: { driver_id: driverId, ...params },
+  });
+  return data;
+}
+
+export async function getSalaryAccruedPreview(
+  driverId: number,
+  from: string,
+  to: string
+): Promise<DriverAccruedPreview> {
+  const { data } = await api.get<DriverAccruedPreview>('/salary/accrued', {
+    params: { driver_id: driverId, from, to },
   });
   return data;
 }
