@@ -1,17 +1,30 @@
-import { useCallback, useState } from 'react';
-import { Alert, FlatList, Pressable, RefreshControl, Text, View } from 'react-native';
+import { useCallback, useMemo, useState } from 'react';
+import { Alert, FlatList, Linking, Pressable, RefreshControl, Text, View } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { useFocusEffect } from '@react-navigation/native';
+import { FilterChipRow } from '../components/FilterChipRow';
 import { FormBottomModal } from '../components/FormBottomModal';
 import { ScreenHeader } from '../components/ScreenHeader';
+import { ScreenHero } from '../components/ScreenHero';
+import { StatusBadge } from '../components/StatusBadge';
 import { ErrorText, Field, LoadingScreen, MenuButton } from '../components/ui';
-import { apiErrorMessage } from '../api/client';
+import { apiErrorMessage, getServerHost } from '../api/client';
 import { deleteDocument, listDocuments, uploadDocument } from '../api/documents';
 import { listOrders } from '../api/orders';
 import { screenUi } from '../styles/screenUi';
+import { formatDateTimeRu } from '../utils/datePeriods';
 import { withFallback } from '../utils/safeRequest';
 import { useAuth } from '../auth/AuthContext';
 import type { DocumentRecord, DocumentType, Order } from '../types';
+
+type DocFilter = 'all' | DocumentType;
+
+const DOC_FILTERS = [
+  { id: 'all' as const, label: 'Все' },
+  { id: 'waybill' as const, label: '📄 Путевые' },
+  { id: 'invoice' as const, label: '🧮 Счета' },
+  { id: 'act' as const, label: '📋 Акты' },
+];
 
 const initialForm = {
   order_id: 0,
@@ -20,9 +33,9 @@ const initialForm = {
 };
 
 function getDocTypeLabel(type: DocumentType): string {
-  if (type === 'waybill') return '📄 Путевой лист';
-  if (type === 'invoice') return '🧮 Счёт';
-  return '📋 Акт';
+  if (type === 'waybill') return 'Путевой лист';
+  if (type === 'invoice') return 'Счёт';
+  return 'Акт';
 }
 
 export function DocumentsScreen() {
@@ -35,6 +48,14 @@ export function DocumentsScreen() {
   const [formVisible, setFormVisible] = useState(false);
   const [form, setForm] = useState(initialForm);
   const [orders, setOrders] = useState<Order[]>([]);
+  const [docFilter, setDocFilter] = useState<DocFilter>('all');
+  const [fileHost, setFileHost] = useState('http://localhost:3000');
+
+  useFocusEffect(
+    useCallback(() => {
+      getServerHost().then(setFileHost).catch(() => setFileHost('http://localhost:3000'));
+    }, [])
+  );
 
   const load = useCallback(async () => {
     try {
@@ -56,6 +77,11 @@ export function DocumentsScreen() {
       load().finally(() => setLoading(false));
     }, [load])
   );
+
+  const filtered = useMemo(() => {
+    if (docFilter === 'all') return documents;
+    return documents.filter((d) => d.type === docFilter);
+  }, [documents, docFilter]);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -96,12 +122,22 @@ export function DocumentsScreen() {
       setForm(initialForm);
       setFormVisible(false);
       await load();
-      Alert.alert('Успех', 'Документ загружен');
+      Alert.alert('Готово', 'Документ загружен');
     } catch (e) {
       Alert.alert('Ошибка', apiErrorMessage(e, 'Не удалось загрузить документ'));
     } finally {
       setUploading(false);
     }
+  };
+
+  const onOpen = async (item: DocumentRecord) => {
+    const url = `${fileHost}${item.file_path}`;
+    const canOpen = await Linking.canOpenURL(url);
+    if (!canOpen) {
+      Alert.alert('Файл', url);
+      return;
+    }
+    await Linking.openURL(url);
   };
 
   const onDelete = (item: DocumentRecord) => {
@@ -127,41 +163,51 @@ export function DocumentsScreen() {
   return (
     <View style={screenUi.container}>
       <FlatList
-        data={documents}
+        data={filtered}
         keyExtractor={(item) => String(item.id)}
         contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 24 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         ListHeaderComponent={
           <View style={screenUi.content}>
-            <ScreenHeader
-              title="📑 Документы"
-              actionLabel="+ Загрузить"
-              onAction={() => setFormVisible(true)}
+            <ScreenHeader title="📑 Документы" actionLabel="+ Загрузить" onAction={() => setFormVisible(true)} />
+            <ScreenHero
+              title="📂 Документы"
+              subtitle={user?.role === 'admin' ? 'Все документы по заказам' : 'Ваши документы'}
             />
-            <Text style={{ fontSize: 13, color: '#6b7280', marginBottom: 8 }}>
-              {user?.role === 'admin' ? 'Все загруженные документы' : 'Ваши документы по заказам'}
-            </Text>
+            <FilterChipRow items={DOC_FILTERS} activeId={docFilter} onSelect={setDocFilter} />
             <View style={screenUi.summaryBar}>
               <View style={screenUi.sumItem}>
                 <Text style={screenUi.sumLabel}>Документов</Text>
-                <Text style={[screenUi.sumValue, { color: '#2563eb' }]}>{documents.length}</Text>
+                <Text style={[screenUi.sumValue, { color: '#2563eb' }]}>{filtered.length}</Text>
               </View>
             </View>
             <ErrorText message={error} />
           </View>
         }
         renderItem={({ item }) => (
-          <Pressable style={screenUi.card}>
-            <Text style={{ fontSize: 15, fontWeight: '600', color: '#111827' }}>
-              {getDocTypeLabel(item.type)} · Заказ #{item.order_id}
-            </Text>
-            <Text style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>#{item.id} · {item.created_at}</Text>
-            <Text style={{ fontSize: 13, color: '#4b5563', marginTop: 4 }}>👤 {item.created_by_email}</Text>
-            {user?.role === 'admin' ? (
-              <Pressable onPress={() => onDelete(item)} style={{ marginTop: 8 }}>
-                <Text style={{ color: '#ef4444', fontSize: 13 }}>🗑 Удалить</Text>
-              </Pressable>
-            ) : null}
+          <Pressable
+            style={[screenUi.card, { borderRadius: 14 }]}
+            onPress={() => void onOpen(item)}
+          >
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 16, fontWeight: '800', color: '#111827' }}>
+                  {getDocTypeLabel(item.type)}
+                </Text>
+                <Text style={{ fontSize: 13, color: '#4b5563', marginTop: 4 }}>📦 Заказ #{item.order_id}</Text>
+                <Text style={{ fontSize: 12, color: '#6b7280', marginTop: 4 }}>
+                  📅 {formatDateTimeRu(item.created_at)}
+                </Text>
+                <View style={{ marginTop: 8 }}>
+                  <StatusBadge label="Открыть файл" color="#2563eb" />
+                </View>
+              </View>
+              {user?.role === 'admin' ? (
+                <Pressable onPress={() => onDelete(item)} hitSlop={8}>
+                  <Text style={{ color: '#ef4444', fontSize: 16 }}>🗑</Text>
+                </Pressable>
+              ) : null}
+            </View>
           </Pressable>
         )}
         ListEmptyComponent={<Text style={screenUi.emptyText}>Документов пока нет</Text>}
@@ -178,15 +224,7 @@ export function DocumentsScreen() {
           setForm(initialForm);
         }}
       >
-        <Field
-          label="ID заказа"
-          value={String(form.order_id || '')}
-          onChangeText={(value) => {
-            const parsed = Number(value);
-            setForm((prev) => ({ ...prev, order_id: Number.isFinite(parsed) ? parsed : 0 }));
-          }}
-          keyboardType="number-pad"
-        />
+        <Text style={screenUi.fieldLabel}>Заказ</Text>
         {orders.slice(0, 12).map((order) => (
           <MenuButton
             key={order.id}
@@ -195,17 +233,15 @@ export function DocumentsScreen() {
             variant={form.order_id === order.id ? 'default' : 'secondary'}
           />
         ))}
-        <View style={{ flexDirection: 'row', gap: 8 }}>
-          {(['waybill', 'invoice', 'act'] as DocumentType[]).map((t) => (
-            <View key={t} style={{ flex: 1 }}>
-              <MenuButton
-                label={form.type === t ? `✅ ${getDocTypeLabel(t)}` : getDocTypeLabel(t)}
-                onPress={() => setForm((prev) => ({ ...prev, type: t }))}
-                variant={form.type === t ? 'default' : 'secondary'}
-              />
-            </View>
-          ))}
-        </View>
+        <Text style={screenUi.fieldLabel}>Тип документа</Text>
+        {(['waybill', 'invoice', 'act'] as DocumentType[]).map((t) => (
+          <MenuButton
+            key={t}
+            label={`${form.type === t ? '✅ ' : ''}${getDocTypeLabel(t)}`}
+            onPress={() => setForm((prev) => ({ ...prev, type: t }))}
+            variant={form.type === t ? 'default' : 'secondary'}
+          />
+        ))}
         <MenuButton label="📷 Камера" onPress={() => pickDocumentImage('camera')} variant="secondary" />
         <MenuButton label="🖼 Галерея" onPress={() => pickDocumentImage('library')} variant="secondary" />
         <Text style={{ fontSize: 13, color: '#6b7280', marginTop: 8 }}>
