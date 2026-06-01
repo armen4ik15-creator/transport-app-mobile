@@ -10,16 +10,38 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { FilterChipRow } from '../components/FilterChipRow';
 import { FormBottomModal } from '../components/FormBottomModal';
-import { InfoBanner } from '../components/InfoBanner';
+import { ScreenHero } from '../components/ScreenHero';
 import { ScreenHeader } from '../components/ScreenHeader';
 import { SearchBar } from '../components/SearchBar';
-import { ErrorText, Field, LoadingScreen } from '../components/ui';
-import { createDriver, deleteDriver, listDrivers } from '../api/drivers';
+import { StatusBadge } from '../components/StatusBadge';
+import { ErrorText, Field, LoadingScreen, MenuButton } from '../components/ui';
+import { createDriver, deleteDriver, listDrivers, updateDriver } from '../api/drivers';
 import { apiErrorMessage } from '../api/client';
 import type { RootStackParamList } from '../navigation/types';
 import { screenUi } from '../styles/screenUi';
 import type { Driver } from '../types';
+
+type DriverStatusFilter = 'all' | 'active' | 'inactive';
+
+const STATUS_FILTERS = [
+  { id: 'all' as const, label: 'Все' },
+  { id: 'active' as const, label: '✅ Активные' },
+  { id: 'inactive' as const, label: '⛔ Неактивные' },
+];
+
+const emptyCreateForm = {
+  email: '',
+  password: '',
+  full_name: '',
+  car_number: '',
+  phone: '',
+  license_number: '',
+  license_expiry: '',
+  medical_expiry: '',
+  is_active: true,
+};
 
 export function DriversScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
@@ -28,16 +50,11 @@ export function DriversScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<DriverStatusFilter>('all');
   const [formVisible, setFormVisible] = useState(false);
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [fullName, setFullName] = useState('');
-  const [carNumber, setCarNumber] = useState('');
-  const [phone, setPhone] = useState('');
-  const [licenseNumber, setLicenseNumber] = useState('');
-  const [licenseExpiry, setLicenseExpiry] = useState('');
-  const [medicalExpiry, setMedicalExpiry] = useState('');
-  const [creating, setCreating] = useState(false);
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [form, setForm] = useState(emptyCreateForm);
+  const [saving, setSaving] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -63,51 +80,82 @@ export function DriversScreen() {
 
   const filtered = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
-    if (!q) return drivers;
-    return drivers.filter(
-      (d) =>
+    return drivers.filter((d) => {
+      if (statusFilter === 'active' && !d.is_active) return false;
+      if (statusFilter === 'inactive' && Boolean(d.is_active)) return false;
+      if (!q) return true;
+      return (
         d.full_name?.toLowerCase().includes(q) ||
         d.email.toLowerCase().includes(q) ||
         d.car_number?.toLowerCase().includes(q)
-    );
-  }, [drivers, searchQuery]);
+      );
+    });
+  }, [drivers, searchQuery, statusFilter]);
 
-  const resetForm = () => {
-    setEmail('');
-    setPassword('');
-    setFullName('');
-    setCarNumber('');
-    setPhone('');
-    setLicenseNumber('');
-    setLicenseExpiry('');
-    setMedicalExpiry('');
+  const openCreate = () => {
+    setEditingId(null);
+    setForm(emptyCreateForm);
+    setFormVisible(true);
   };
 
-  const onCreate = async () => {
-    if (!email.trim() || !password || !fullName.trim()) {
-      Alert.alert('Заполните', 'Email, пароль и ФИО обязательны');
+  const openEdit = (driver: Driver) => {
+    setEditingId(driver.id);
+    setForm({
+      email: driver.email,
+      password: '',
+      full_name: driver.full_name ?? '',
+      car_number: driver.car_number ?? '',
+      phone: driver.phone ?? '',
+      license_number: driver.license_number ?? '',
+      license_expiry: driver.license_expiry ?? '',
+      medical_expiry: driver.medical_check_expiry ?? '',
+      is_active: Boolean(driver.is_active),
+    });
+    setFormVisible(true);
+  };
+
+  const onSave = async () => {
+    if (!form.full_name.trim()) {
+      Alert.alert('Заполните', 'ФИО обязательно');
       return;
     }
-    setCreating(true);
+    setSaving(true);
     try {
-      await createDriver({
-        email: email.trim().toLowerCase(),
-        password,
-        full_name: fullName.trim(),
-        phone: phone.trim() || undefined,
-        car_number: carNumber.trim() || undefined,
-        license_number: licenseNumber.trim() || undefined,
-        license_expiry: licenseExpiry.trim() || undefined,
-        medical_check_expiry: medicalExpiry.trim() || undefined,
-        is_active: true,
-      });
-      resetForm();
+      if (editingId) {
+        await updateDriver(editingId, {
+          full_name: form.full_name.trim(),
+          phone: form.phone.trim() || null,
+          car_number: form.car_number.trim() || null,
+          license_number: form.license_number.trim() || null,
+          license_expiry: form.license_expiry.trim() || null,
+          medical_check_expiry: form.medical_expiry.trim() || null,
+          is_active: form.is_active,
+        });
+      } else {
+        if (!form.email.trim() || !form.password) {
+          Alert.alert('Заполните', 'Email и пароль обязательны для нового водителя');
+          return;
+        }
+        await createDriver({
+          email: form.email.trim().toLowerCase(),
+          password: form.password,
+          full_name: form.full_name.trim(),
+          phone: form.phone.trim() || undefined,
+          car_number: form.car_number.trim() || undefined,
+          license_number: form.license_number.trim() || undefined,
+          license_expiry: form.license_expiry.trim() || undefined,
+          medical_check_expiry: form.medical_expiry.trim() || undefined,
+          is_active: form.is_active,
+        });
+      }
+      setForm(emptyCreateForm);
+      setEditingId(null);
       setFormVisible(false);
       await load();
     } catch (e) {
-      Alert.alert('Ошибка', apiErrorMessage(e, 'Не удалось создать'));
+      Alert.alert('Ошибка', apiErrorMessage(e, 'Не удалось сохранить'));
     } finally {
-      setCreating(false);
+      setSaving(false);
     }
   };
 
@@ -146,41 +194,48 @@ export function DriversScreen() {
               title="Водители"
               showBack
               onBack={() => navigation.replace('AdminHome')}
-              actionLabel="+ Добавить"
-              onAction={() => setFormVisible(true)}
+              actionLabel="+"
+              onAction={openCreate}
             />
-            <InfoBanner text="Данные на сервере — один список для всех админов. ✏️ — номер машины." />
-            <SearchBar
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              placeholder="Поиск по имени или машине"
-            />
+            <ScreenHero title="👤 Водители" subtitle={`${filtered.length} в списке`} />
+            <SearchBar value={searchQuery} onChangeText={setSearchQuery} placeholder="Поиск по имени или машине" />
+            <FilterChipRow items={STATUS_FILTERS} activeId={statusFilter} onSelect={setStatusFilter} />
             <ErrorText message={error} />
           </View>
         }
-        renderItem={({ item }) => (
-          <Pressable style={screenUi.card} onLongPress={() => onDelete(item)}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-              <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 16, fontWeight: '600', color: '#111827' }}>
-                  {item.full_name ?? 'Без имени'}
-                </Text>
-                <Text style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>
-                  #{item.id} · {item.email}
-                </Text>
-                <Text style={{ fontSize: 13, color: '#4b5563', marginTop: 4 }}>
-                  🚚 {item.car_number || 'без номера'}
-                </Text>
-                {item.phone ? (
-                  <Text style={{ fontSize: 13, color: '#4b5563', marginTop: 2 }}>📞 {item.phone}</Text>
-                ) : null}
+        renderItem={({ item }) => {
+          const active = Boolean(item.is_active);
+          return (
+            <Pressable
+              style={[screenUi.card, { borderRadius: 14 }]}
+              onPress={() => openEdit(item)}
+              onLongPress={() => onDelete(item)}
+            >
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <View style={{ flex: 1, paddingRight: 8 }}>
+                  <Text style={{ fontSize: 17, fontWeight: '800', color: '#111827' }}>
+                    {item.full_name ?? 'Без имени'}
+                  </Text>
+                  {item.phone ? (
+                    <Text style={{ fontSize: 14, color: '#4b5563', marginTop: 6 }}>📞 {item.phone}</Text>
+                  ) : null}
+                  <Text style={{ fontSize: 13, color: '#6b7280', marginTop: 4 }}>
+                    🚚 {item.car_number || 'без номера'}
+                  </Text>
+                  <View style={{ marginTop: 8 }}>
+                    <StatusBadge
+                      label={active ? 'Активен' : 'Неактивен'}
+                      color={active ? '#16a34a' : '#ef4444'}
+                    />
+                  </View>
+                </View>
+                <Pressable onPress={() => onDelete(item)} hitSlop={8}>
+                  <Text style={{ color: '#ef4444', fontSize: 16 }}>🗑</Text>
+                </Pressable>
               </View>
-              <Pressable onPress={() => onDelete(item)} hitSlop={8}>
-                <Text style={{ color: '#ef4444', fontSize: 16 }}>🗑</Text>
-              </Pressable>
-            </View>
-          </Pressable>
-        )}
+            </Pressable>
+          );
+        }}
         ListEmptyComponent={
           loading || refreshing ? (
             <ActivityIndicator style={{ marginTop: 48 }} color="#2563eb" />
@@ -192,29 +247,44 @@ export function DriversScreen() {
 
       <FormBottomModal
         visible={formVisible}
-        title="➕ Новый водитель"
-        saveLabel="Создать"
-        saving={creating}
-        onSave={onCreate}
+        title={editingId ? '✏️ Редактировать водителя' : '➕ Новый водитель'}
+        saveLabel={editingId ? 'Сохранить' : 'Создать'}
+        saving={saving}
+        onSave={onSave}
         onClose={() => {
           setFormVisible(false);
-          resetForm();
+          setEditingId(null);
+          setForm(emptyCreateForm);
         }}
       >
-        <Field label="ФИО *" value={fullName} onChangeText={setFullName} />
-        <Field
-          label="Email *"
-          value={email}
-          onChangeText={setEmail}
-          autoCapitalize="none"
-          keyboardType="email-address"
+        <Field label="ФИО *" value={form.full_name} onChangeText={(v) => setForm((p) => ({ ...p, full_name: v }))} />
+        {!editingId ? (
+          <>
+            <Field
+              label="Email *"
+              value={form.email}
+              onChangeText={(v) => setForm((p) => ({ ...p, email: v }))}
+              autoCapitalize="none"
+              keyboardType="email-address"
+            />
+            <Field
+              label="Пароль *"
+              value={form.password}
+              onChangeText={(v) => setForm((p) => ({ ...p, password: v }))}
+              secureTextEntry
+            />
+          </>
+        ) : null}
+        <Field label="Телефон" value={form.phone} onChangeText={(v) => setForm((p) => ({ ...p, phone: v }))} keyboardType="phone-pad" />
+        <Field label="Госномер" value={form.car_number} onChangeText={(v) => setForm((p) => ({ ...p, car_number: v }))} autoCapitalize="characters" />
+        <Field label="ВУ номер" value={form.license_number} onChangeText={(v) => setForm((p) => ({ ...p, license_number: v }))} />
+        <Field label="ВУ до (YYYY-MM-DD)" value={form.license_expiry} onChangeText={(v) => setForm((p) => ({ ...p, license_expiry: v }))} />
+        <Field label="Медосмотр до (YYYY-MM-DD)" value={form.medical_expiry} onChangeText={(v) => setForm((p) => ({ ...p, medical_expiry: v }))} />
+        <MenuButton
+          label={form.is_active ? '✅ Активен' : '⛔ Неактивен'}
+          onPress={() => setForm((p) => ({ ...p, is_active: !p.is_active }))}
+          variant={form.is_active ? 'default' : 'secondary'}
         />
-        <Field label="Пароль *" value={password} onChangeText={setPassword} secureTextEntry />
-        <Field label="Госномер" value={carNumber} onChangeText={setCarNumber} autoCapitalize="characters" />
-        <Field label="Телефон" value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
-        <Field label="ВУ номер" value={licenseNumber} onChangeText={setLicenseNumber} />
-        <Field label="ВУ до (YYYY-MM-DD)" value={licenseExpiry} onChangeText={setLicenseExpiry} />
-        <Field label="Медосмотр до (YYYY-MM-DD)" value={medicalExpiry} onChangeText={setMedicalExpiry} />
       </FormBottomModal>
     </View>
   );
