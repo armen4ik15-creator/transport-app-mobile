@@ -1,8 +1,10 @@
 import { useCallback, useMemo, useState } from 'react';
 import { Alert, FlatList, Pressable, RefreshControl, Text, View } from 'react-native';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useRoute } from '@react-navigation/native';
+import type { RouteProp } from '@react-navigation/native';
 import { FilterChipRow } from '../components/FilterChipRow';
 import { FormBottomModal } from '../components/FormBottomModal';
+import { ContractorFinanceRow, FinanceSummaryBar } from '../components/ListScreenParts';
 import { ScreenHeader } from '../components/ScreenHeader';
 import { ErrorText, Field, LoadingScreen, MenuButton } from '../components/ui';
 import { apiErrorMessage } from '../api/client';
@@ -13,7 +15,9 @@ import {
   getContractorDebtSummary,
   listContractorPayments,
 } from '../api/contractorPayments';
+import type { RootStackParamList } from '../navigation/types';
 import { screenUi } from '../styles/screenUi';
+import { formatDateTimeRu, formatMoney } from '../utils/datePeriods';
 import { withFallback } from '../utils/safeRequest';
 import type { Contractor, ContractorDebtSummary, ContractorPaymentRecord } from '../types';
 
@@ -23,12 +27,20 @@ const initialForm = {
   note: '',
 };
 
+type ContractorDebtRoute = RouteProp<RootStackParamList, 'ContractorDebt'>;
+
 export function ContractorDebtScreen() {
+  const route = useRoute<ContractorDebtRoute>();
+  const initialContractorId = route.params?.contractorId ?? null;
+
   const [contractors, setContractors] = useState<Contractor[]>([]);
   const [summary, setSummary] = useState<ContractorDebtSummary[]>([]);
   const [payments, setPayments] = useState<ContractorPaymentRecord[]>([]);
-  const [selectedContractorId, setSelectedContractorId] = useState<number | null>(null);
-  const [form, setForm] = useState(initialForm);
+  const [selectedContractorId, setSelectedContractorId] = useState<number | null>(initialContractorId);
+  const [form, setForm] = useState(() => ({
+    ...initialForm,
+    contractor_id: initialContractorId ?? 0,
+  }));
   const [formVisible, setFormVisible] = useState(false);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -39,6 +51,23 @@ export function ContractorDebtScreen() {
     () => summary.find((item) => item.contractor_id === selectedContractorId) ?? null,
     [selectedContractorId, summary]
   );
+
+  const totalsSummary = useMemo(
+    () =>
+      summary.reduce(
+        (acc, row) => ({
+          contractor_id: 0,
+          contractor_name: 'Все контрагенты',
+          accrued: acc.accrued + row.accrued,
+          paid: acc.paid + row.paid,
+          debt: acc.debt + row.debt,
+        }),
+        { contractor_id: 0, contractor_name: 'Все контрагенты', accrued: 0, paid: 0, debt: 0 }
+      ),
+    [summary]
+  );
+
+  const displaySummary = selectedSummary ?? totalsSummary;
 
   const load = useCallback(async () => {
     try {
@@ -52,7 +81,7 @@ export function ContractorDebtScreen() {
       setSummary(summaryData);
       setPayments(paymentsData);
     } catch (e) {
-      setError(apiErrorMessage(e, 'Не удалось загрузить долги контрагентов'));
+      setError(apiErrorMessage(e, 'Не удалось загрузить оплаты контрагентов'));
     }
   }, [selectedContractorId]);
 
@@ -77,6 +106,14 @@ export function ContractorDebtScreen() {
     [contractors]
   );
 
+  const openPaymentForm = (contractorId?: number) => {
+    setForm({
+      ...initialForm,
+      contractor_id: contractorId ?? selectedContractorId ?? 0,
+    });
+    setFormVisible(true);
+  };
+
   const onCreatePayment = async () => {
     const amount = Number(form.amount.replace(',', '.'));
     if (!form.contractor_id) {
@@ -97,7 +134,7 @@ export function ContractorDebtScreen() {
       setForm(initialForm);
       setFormVisible(false);
       await load();
-      Alert.alert('Успех', 'Оплата контрагенту сохранена');
+      Alert.alert('Готово', 'Оплата от контрагента сохранена');
     } catch (e) {
       Alert.alert('Ошибка', apiErrorMessage(e, 'Не удалось сохранить оплату'));
     } finally {
@@ -123,7 +160,9 @@ export function ContractorDebtScreen() {
     ]);
   };
 
-  if (loading && payments.length === 0 && summary.length === 0) return <LoadingScreen label="Загрузка долгов…" />;
+  if (loading && payments.length === 0 && summary.length === 0) {
+    return <LoadingScreen label="Загрузка оплат…" />;
+  }
 
   return (
     <View style={screenUi.container}>
@@ -134,66 +173,105 @@ export function ContractorDebtScreen() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         ListHeaderComponent={
           <View style={screenUi.content}>
-            <ScreenHeader title="🏦 Долги контрагентов" actionLabel="+ Оплата" onAction={() => setFormVisible(true)} />
+            <ScreenHeader
+              title="💳 Оплаты контрагентов"
+              actionLabel="+ Оплата"
+              onAction={() => openPaymentForm()}
+            />
+
+            <Text style={{ fontSize: 13, color: '#6b7280', marginBottom: 8 }}>
+              {selectedSummary
+                ? `Баланс: ${selectedSummary.contractor_name}`
+                : 'Сводка по всем контрагентам'}
+            </Text>
+
+            <FinanceSummaryBar
+              revenue={displaySummary.accrued}
+              paid={displaySummary.paid}
+              debt={displaySummary.debt}
+              revenueLabel="Навезли"
+              paidLabel="Оплатили"
+              debtLabel="Остаток"
+            />
+
             <Text style={screenUi.filterLabel}>Контрагент:</Text>
             <FilterChipRow
               items={contractorChips}
               activeId={selectedContractorId == null ? 'all' : String(selectedContractorId)}
               onSelect={(id) => setSelectedContractorId(id === 'all' ? null : Number(id))}
             />
-            {selectedSummary ? (
-              <View style={screenUi.summaryBar}>
-                <View style={screenUi.sumItem}>
-                  <Text style={screenUi.sumLabel}>Начислено</Text>
-                  <Text style={[screenUi.sumValue, { color: '#2563eb' }]}>
-                    {selectedSummary.accrued.toFixed(0)} ₽
-                  </Text>
-                </View>
-                <View style={screenUi.sumDivider} />
-                <View style={screenUi.sumItem}>
-                  <Text style={screenUi.sumLabel}>Долг</Text>
-                  <Text style={[screenUi.sumValue, { color: '#ef4444' }]}>
-                    {selectedSummary.debt.toFixed(0)} ₽
-                  </Text>
-                </View>
-              </View>
-            ) : null}
-            {summary.length > 0 ? (
-              <View style={[screenUi.card, { marginBottom: 8 }]}>
-                <Text style={{ fontSize: 13, fontWeight: '600', color: '#374151', marginBottom: 6 }}>
-                  📋 Общий реестр долгов
+
+            {summary.length > 0 && selectedContractorId == null ? (
+              <View style={[screenUi.card, { marginBottom: 12 }]}>
+                <Text style={{ fontSize: 14, fontWeight: '700', color: '#111827', marginBottom: 8 }}>
+                  📋 По контрагентам
                 </Text>
-                {summary.slice(0, 5).map((item) => (
-                  <Text key={item.contractor_id} style={{ fontSize: 12, color: '#6b7280', marginBottom: 2 }}>
-                    {item.contractor_name}: {item.debt.toFixed(0)} ₽
-                  </Text>
+                {summary.map((item) => (
+                  <Pressable
+                    key={item.contractor_id}
+                    onPress={() => setSelectedContractorId(item.contractor_id)}
+                    style={{
+                      paddingVertical: 10,
+                      borderTopWidth: 1,
+                      borderTopColor: '#f3f4f6',
+                    }}
+                  >
+                    <Text style={{ fontSize: 14, fontWeight: '600', color: '#111827', marginBottom: 4 }}>
+                      {item.contractor_name}
+                    </Text>
+                    <ContractorFinanceRow
+                      accrued={item.accrued}
+                      paid={item.paid}
+                      debt={item.debt}
+                      compact
+                    />
+                  </Pressable>
                 ))}
               </View>
             ) : null}
+
+            <Text style={{ fontSize: 14, fontWeight: '700', color: '#111827', marginBottom: 8 }}>
+              🧾 История оплат
+              {selectedSummary ? ` · ${selectedSummary.contractor_name}` : ''}
+            </Text>
             <ErrorText message={error} />
           </View>
         }
         renderItem={({ item }) => (
           <Pressable style={screenUi.card} onLongPress={() => onDelete(item.id)}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Text style={{ fontSize: 16, fontWeight: '600', color: '#111827' }}>{item.contractor_name}</Text>
-              <Text style={{ fontSize: 17, fontWeight: '700', color: '#16a34a' }}>{item.amount.toFixed(2)} ₽</Text>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <View style={{ flex: 1, paddingRight: 8 }}>
+                <Text style={{ fontSize: 15, fontWeight: '600', color: '#111827' }}>
+                  {item.contractor_name}
+                </Text>
+                <Text style={{ fontSize: 13, color: '#6b7280', marginTop: 4 }}>
+                  📅 {formatDateTimeRu(item.created_at)}
+                </Text>
+              </View>
+              <Text style={{ fontSize: 17, fontWeight: '700', color: '#16a34a' }}>
+                +{formatMoney(item.amount)} ₽
+              </Text>
             </View>
-            <Text style={{ fontSize: 12, color: '#6b7280', marginTop: 4 }}>#{item.id} · {item.created_at}</Text>
             {item.note ? (
-              <Text style={{ fontSize: 13, color: '#4b5563', marginTop: 4, fontStyle: 'italic' }}>{item.note}</Text>
+              <Text style={{ fontSize: 13, color: '#4b5563', marginTop: 6, fontStyle: 'italic' }}>
+                {item.note}
+              </Text>
             ) : null}
             <Pressable onPress={() => onDelete(item.id)} style={{ marginTop: 8 }}>
               <Text style={{ color: '#ef4444', fontSize: 13 }}>🗑 Удалить</Text>
             </Pressable>
           </Pressable>
         )}
-        ListEmptyComponent={<Text style={screenUi.emptyText}>Оплат контрагентам пока нет</Text>}
+        ListEmptyComponent={
+          <Text style={screenUi.emptyText}>
+            Оплат пока нет. Нажмите «+ Оплата», когда контрагент переведёт деньги.
+          </Text>
+        }
       />
 
       <FormBottomModal
         visible={formVisible}
-        title="➕ Новая оплата"
+        title="➕ Оплата от контрагента"
         saveLabel="Сохранить оплату"
         saving={saving}
         onSave={onCreatePayment}
@@ -212,13 +290,13 @@ export function ContractorDebtScreen() {
           />
         ))}
         <Field
-          label="Сумма оплаты"
+          label="Сумма оплаты, ₽"
           value={form.amount}
           onChangeText={(value) => setForm((prev) => ({ ...prev, amount: value }))}
           keyboardType="decimal-pad"
         />
         <Field
-          label="Комментарий"
+          label="Комментарий (необязательно)"
           value={form.note}
           onChangeText={(value) => setForm((prev) => ({ ...prev, note: value }))}
         />

@@ -41,7 +41,7 @@ export type RootStackParamList = {
   DriverFinances: undefined;
   Earnings: undefined;
   Salary: undefined;
-  ContractorDebt: undefined;
+  ContractorDebt: { contractorId?: number } | undefined;
   Materials: undefined;
   Vehicles: undefined;
   Waybills: undefined;
@@ -52,7 +52,7 @@ export type RootStackParamList = {
   CompleteProfile: undefined;
   Documents: undefined;
   Reports: undefined;
-  TripCreate: { orderId: number };
+  TripCreate: { orderId: number; openAction?: 'loading' | 'unloading' };
   TripPhotos: undefined;
   AllPhotos: undefined;
   ServerSetup: { reason?: string } | undefined;

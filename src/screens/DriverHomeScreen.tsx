@@ -3,7 +3,9 @@ import { Alert, Pressable, RefreshControl, ScrollView, Text, View } from 'react-
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { ScreenHeader } from '../components/ScreenHeader';
-import { ErrorText, LoadingScreen, MenuButton, Subtitle } from '../components/ui';
+import { DriverTripActionCard } from '../components/DriverTripActionCard';
+import { QuickAccessGrid, type QuickAccessItem } from '../components/QuickAccessGrid';
+import { ErrorText, LoadingScreen } from '../components/ui';
 import { useAuth } from '../auth/AuthContext';
 import type { RootStackParamList } from '../navigation/types';
 import { listOrders } from '../api/orders';
@@ -12,11 +14,13 @@ import { listNotifications } from '../api/notifications';
 import { apiErrorMessage } from '../api/client';
 import { screenUi } from '../styles/screenUi';
 import { withFallback } from '../utils/safeRequest';
+import type { Order } from '../types';
 
 export function DriverHomeScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { user, driver, signOut } = useAuth();
   const [activeOrders, setActiveOrders] = useState(0);
+  const [primaryOrder, setPrimaryOrder] = useState<Order | null>(null);
   const [estimatedIncome, setEstimatedIncome] = useState(0);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -43,6 +47,7 @@ export function DriverHomeScreen() {
         withFallback(() => listNotifications(), []),
       ]);
       setActiveOrders(orders.filter((item) => Boolean(item.is_active)).length);
+      setPrimaryOrder(orders.find((item) => Boolean(item.is_active)) ?? null);
       setEstimatedIncome(earnings.estimated_income);
       setUnreadNotifications(notifications.filter((item) => !item.read).length);
     } catch (e) {
@@ -79,6 +84,12 @@ export function DriverHomeScreen() {
 
   if (loading) return <LoadingScreen label="Загрузка дашборда…" />;
 
+  const quickItems: QuickAccessItem[] = [
+    { icon: '📦', title: 'Мои заказы', color: '#2563eb', onPress: () => navigation.replace('DriverOrders') },
+    { icon: '💼', title: 'Мои финансы', color: '#16a34a', onPress: () => navigation.replace('DriverFinancesHub') },
+    { icon: '🔔', title: 'Уведомления', color: '#7c3aed', onPress: () => navigation.navigate('Notifications') },
+  ];
+
   return (
     <ScrollView
       style={screenUi.container}
@@ -89,10 +100,10 @@ export function DriverHomeScreen() {
 
       <View
         style={{
-          backgroundColor: '#2563eb',
-          borderRadius: 12,
-          padding: 16,
-          marginBottom: 12,
+          backgroundColor: '#1e3a5f',
+          borderRadius: 14,
+          padding: 18,
+          marginBottom: 14,
           flexDirection: 'row',
           alignItems: 'center',
           justifyContent: 'space-between',
@@ -122,8 +133,36 @@ export function DriverHomeScreen() {
 
       <ErrorText message={error} />
 
+      {primaryOrder ? (
+        <View style={{ marginBottom: 12 }}>
+          <Text style={{ fontSize: 16, fontWeight: '700', color: '#111827', marginBottom: 8 }}>
+            🎯 Ваша задача сейчас
+          </Text>
+          <DriverTripActionCard
+            orderId={primaryOrder.id}
+            taskLabel={
+              primaryOrder.task_name ||
+              [primaryOrder.material, primaryOrder.load_address].filter(Boolean).join(' · ') ||
+              undefined
+            }
+          />
+          <Pressable
+            onPress={() => navigation.navigate('OrderDetail', { id: primaryOrder.id })}
+            style={{ paddingVertical: 8, alignItems: 'center' }}
+          >
+            <Text style={{ color: '#6b7280', fontSize: 13 }}>ℹ️ Подробнее о заказе</Text>
+          </Pressable>
+        </View>
+      ) : (
+        <View style={[screenUi.card, { marginBottom: 12 }]}>
+          <Text style={{ fontSize: 14, color: '#6b7280', textAlign: 'center' }}>
+            Активных заказов нет. Новые задачи появятся в «Мои заказы».
+          </Text>
+        </View>
+      )}
+
       <View style={screenUi.card}>
-        <Subtitle>📊 Сегодня</Subtitle>
+        <Text style={{ fontSize: 15, fontWeight: '700', color: '#111827', marginBottom: 8 }}>📊 Сегодня</Text>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 8 }}>
           {cards.map((card) => (
             <View
@@ -131,9 +170,11 @@ export function DriverHomeScreen() {
               style={{
                 width: '48%',
                 backgroundColor: '#f9fafb',
-                borderRadius: 10,
+                borderRadius: 12,
                 borderWidth: 1,
                 borderColor: '#e5e7eb',
+                borderLeftWidth: 4,
+                borderLeftColor: card.color,
                 padding: 12,
               }}
             >
@@ -144,20 +185,10 @@ export function DriverHomeScreen() {
         </View>
       </View>
 
-      <View style={screenUi.card}>
-        <Subtitle>📂 Разделы</Subtitle>
-        <MenuButton label="📦 Мои заказы" onPress={() => navigation.replace('DriverOrders')} />
-        <MenuButton
-          label="💼 Мои финансы"
-          onPress={() => navigation.replace('DriverFinancesHub')}
-          variant="secondary"
-        />
-        <MenuButton
-          label="🔔 Уведомления"
-          onPress={() => navigation.navigate('Notifications')}
-          variant="secondary"
-        />
-      </View>
+      <Text style={{ fontSize: 15, fontWeight: '700', color: '#111827', marginBottom: 10, marginTop: 4 }}>
+        📂 Разделы
+      </Text>
+      <QuickAccessGrid items={quickItems} />
     </ScrollView>
   );
 }

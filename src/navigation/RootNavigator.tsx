@@ -151,7 +151,11 @@ export function RootNavigator() {
             <Stack.Screen name="Reports" component={ReportsScreen} options={{ title: 'Отчёты' }} />
             <Stack.Screen name="Earnings" component={EarningsScreen} options={{ title: 'Заработок' }} />
             <Stack.Screen name="Salary" component={SalaryScreen} options={{ title: 'Зарплаты водителей' }} />
-            <Stack.Screen name="ContractorDebt" component={ContractorDebtScreen} options={{ title: 'Долги контрагентов' }} />
+            <Stack.Screen
+              name="ContractorDebt"
+              component={ContractorDebtScreen}
+              options={{ title: 'Оплаты контрагентов' }}
+            />
             <Stack.Screen name="TripPhotos" component={TripPhotosScreen} options={{ title: 'Фото ТТН' }} />
             <Stack.Screen name="AllPhotos" component={AllPhotosScreen} options={{ title: 'Фотографии ТТН' }} />
             <Stack.Screen name="TripCreate" component={TripCreateScreen} options={{ title: 'Рейсы и ТТН' }} />

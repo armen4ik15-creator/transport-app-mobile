@@ -3,6 +3,7 @@ import { Alert, FlatList, Pressable, RefreshControl, Text, View } from 'react-na
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { ScreenHeader } from '../components/ScreenHeader';
+import { DriverTripActionCard } from '../components/DriverTripActionCard';
 import { ErrorText, LoadingScreen, MenuButton } from '../components/ui';
 import { listOrders } from '../api/orders';
 import { apiErrorMessage } from '../api/client';
@@ -90,20 +91,25 @@ export function DriverOrdersScreen() {
             {item.quantity != null ? (
               <Text style={{ fontSize: 13, color: '#4b5563', marginTop: 2 }}>⚖️ {item.quantity}</Text>
             ) : null}
-            <View style={{ flexDirection: 'row', gap: 8, marginTop: 10, borderTopWidth: 1, borderTopColor: '#f3f4f6', paddingTop: 10 }}>
-              <Pressable
-                onPress={() => navigation.navigate('OrderDetail', { id: item.id })}
-                style={{ flex: 1, backgroundColor: '#2563eb', paddingVertical: 8, borderRadius: 7, alignItems: 'center' }}
-              >
-                <Text style={{ color: '#fff', fontSize: 12, fontWeight: '600' }}>Открыть</Text>
-              </Pressable>
-              <Pressable
-                onPress={() => navigation.navigate('TripCreate', { orderId: item.id })}
-                style={{ flex: 1, backgroundColor: '#16a34a', paddingVertical: 8, borderRadius: 7, alignItems: 'center' }}
-              >
-                <Text style={{ color: '#fff', fontSize: 12, fontWeight: '600' }}>🧾 Рейс</Text>
-              </Pressable>
+            {item.load_address ? (
+              <Text style={{ fontSize: 13, color: '#6b7280', marginTop: 4 }}>
+                📍 {item.load_address}
+                {item.unload_address ? ` → ${item.unload_address}` : ''}
+              </Text>
+            ) : null}
+            <View style={{ marginTop: 12 }}>
+              <DriverTripActionCard
+                orderId={item.id}
+                taskLabel={item.task_name ?? item.material ?? undefined}
+                compact
+              />
             </View>
+            <Pressable
+              onPress={() => navigation.navigate('OrderDetail', { id: item.id })}
+              style={{ paddingVertical: 8, alignItems: 'center' }}
+            >
+              <Text style={{ color: '#6b7280', fontSize: 12 }}>ℹ️ Подробнее о заказе</Text>
+            </Pressable>
           </View>
         )}
         onEndReached={() => {

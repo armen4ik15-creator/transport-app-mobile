@@ -4,6 +4,7 @@ import * as ImagePicker from 'expo-image-picker';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
 import { ScreenHeader } from '../components/ScreenHeader';
+import { DriverTripActionCard } from '../components/DriverTripActionCard';
 import { ErrorText, LoadingScreen, MenuButton, PrimaryButton } from '../components/ui';
 import { getOrder, updateOrderStatus, uploadOrderPhoto } from '../api/orders';
 import { apiErrorMessage, getServerHost } from '../api/client';
@@ -20,6 +21,7 @@ const STATUSES: OrderStatus[] = ['pending', 'in_progress', 'completed', 'cancell
 export function OrderDetailScreen({ route, navigation }: Props) {
   const { id } = route.params;
   const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const [order, setOrder] = useState<OrderWithPhotos | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -121,7 +123,7 @@ export function OrderDetailScreen({ route, navigation }: Props) {
           </Text>
         </View>
 
-        {user?.role === 'admin' ? (
+        {isAdmin ? (
           <View style={screenUi.card}>
             <MenuButton label="✏️ Редактировать заказ" onPress={() => navigation.navigate('OrderEdit', { id: order.id })} />
             <MenuButton
@@ -168,62 +170,79 @@ export function OrderDetailScreen({ route, navigation }: Props) {
           ) : null}
         </View>
 
-        <View style={screenUi.card}>
-          <PrimaryButton
-            label={`🧾 Рейсы и ТТН (${order.trips.length})`}
-            onPress={() => navigation.navigate('TripCreate', { orderId: order.id })}
-          />
-          <MenuButton label="📄 Путевые листы" onPress={() => navigation.navigate('Waybills')} variant="secondary" />
-          <MenuButton label="🧮 Счета" onPress={() => navigation.navigate('Invoices')} variant="secondary" />
-        </View>
-
-        {order.trips.map((trip) => (
-          <View key={trip.id} style={screenUi.card}>
-            <Text style={{ fontSize: 14, fontWeight: '600', color: '#111827' }}>
-              Рейс #{trip.id} · {TRIP_STAGE_LABEL[trip.stage]}
-            </Text>
-            <Text style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>{trip.created_at}</Text>
-            {trip.ttn_number ? (
-              <Text style={{ fontSize: 13, color: '#4b5563', marginTop: 4 }}>📄 ТТН: {trip.ttn_number}</Text>
-            ) : null}
-            {trip.volume != null ? (
-              <Text style={{ fontSize: 13, color: '#4b5563', marginTop: 2 }}>⚖️ {trip.volume}</Text>
-            ) : null}
-            {trip.photo_path ? (
-              <Image
-                source={{ uri: `${fileHost}${trip.photo_path}` }}
-                style={{ width: '100%', height: 180, borderRadius: 8, marginTop: 8 }}
-                resizeMode="cover"
-              />
-            ) : null}
-          </View>
-        ))}
-
-        <Text style={screenUi.fieldLabel}>Сменить статус</Text>
-        {STATUSES.map((s) => (
-          <MenuButton
-            key={s}
-            label={`${order.status === s ? '✅ ' : ''}${STATUS_LABEL[s]}`}
-            onPress={() => onSetStatus(s)}
-            variant={order.status === s ? 'default' : 'secondary'}
-          />
-        ))}
-
-        <Text style={[screenUi.fieldLabel, { marginTop: 12 }]}>📷 Фото ({order.photos.length})</Text>
-        <View style={screenUi.card}>
-          <PrimaryButton label="📷 Снять фото" onPress={() => onAttachPhoto('camera')} loading={busy} />
-          <MenuButton label="🖼 Из галереи" onPress={() => onAttachPhoto('library')} variant="secondary" />
-        </View>
-        {order.photos.map((p) => (
-          <View key={p.id} style={screenUi.card}>
-            <Text style={{ fontSize: 12, color: '#6b7280' }}>{p.uploaded_at}</Text>
-            <Image
-              source={{ uri: `${fileHost}${p.file_path}` }}
-              style={{ width: '100%', height: 220, borderRadius: 8, marginTop: 8 }}
-              resizeMode="cover"
+        {!isAdmin ? (
+          <View style={{ marginBottom: 12 }}>
+            <DriverTripActionCard
+              orderId={order.id}
+              taskLabel={order.task_name ?? order.material ?? undefined}
             />
           </View>
-        ))}
+        ) : null}
+
+        {isAdmin ? (
+          <View style={screenUi.card}>
+            <PrimaryButton
+              label={`🧾 Рейсы и ТТН (${order.trips.length})`}
+              onPress={() => navigation.navigate('TripCreate', { orderId: order.id })}
+            />
+            <MenuButton label="📄 Путевые листы" onPress={() => navigation.navigate('Waybills')} variant="secondary" />
+            <MenuButton label="🧮 Счета" onPress={() => navigation.navigate('Invoices')} variant="secondary" />
+          </View>
+        ) : null}
+
+        {isAdmin
+          ? order.trips.map((trip) => (
+              <View key={trip.id} style={screenUi.card}>
+                <Text style={{ fontSize: 14, fontWeight: '600', color: '#111827' }}>
+                  Рейс #{trip.id} · {TRIP_STAGE_LABEL[trip.stage]}
+                </Text>
+                <Text style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>{trip.created_at}</Text>
+                {trip.ttn_number ? (
+                  <Text style={{ fontSize: 13, color: '#4b5563', marginTop: 4 }}>📄 ТТН: {trip.ttn_number}</Text>
+                ) : null}
+                {trip.volume != null ? (
+                  <Text style={{ fontSize: 13, color: '#4b5563', marginTop: 2 }}>⚖️ {trip.volume}</Text>
+                ) : null}
+                {trip.photo_path ? (
+                  <Image
+                    source={{ uri: `${fileHost}${trip.photo_path}` }}
+                    style={{ width: '100%', height: 180, borderRadius: 8, marginTop: 8 }}
+                    resizeMode="cover"
+                  />
+                ) : null}
+              </View>
+            ))
+          : null}
+
+        {isAdmin ? (
+          <>
+            <Text style={screenUi.fieldLabel}>Сменить статус</Text>
+            {STATUSES.map((s) => (
+              <MenuButton
+                key={s}
+                label={`${order.status === s ? '✅ ' : ''}${STATUS_LABEL[s]}`}
+                onPress={() => onSetStatus(s)}
+                variant={order.status === s ? 'default' : 'secondary'}
+              />
+            ))}
+
+            <Text style={[screenUi.fieldLabel, { marginTop: 12 }]}>📷 Фото ({order.photos.length})</Text>
+            <View style={screenUi.card}>
+              <PrimaryButton label="📷 Снять фото" onPress={() => onAttachPhoto('camera')} loading={busy} />
+              <MenuButton label="🖼 Из галереи" onPress={() => onAttachPhoto('library')} variant="secondary" />
+            </View>
+            {order.photos.map((p) => (
+              <View key={p.id} style={screenUi.card}>
+                <Text style={{ fontSize: 12, color: '#6b7280' }}>{p.uploaded_at}</Text>
+                <Image
+                  source={{ uri: `${fileHost}${p.file_path}` }}
+                  style={{ width: '100%', height: 220, borderRadius: 8, marginTop: 8 }}
+                  resizeMode="cover"
+                />
+              </View>
+            ))}
+          </>
+        ) : null}
 
         <ErrorText message={error} />
       </ScrollView>

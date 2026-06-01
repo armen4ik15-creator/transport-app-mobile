@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { Alert, FlatList, Pressable, RefreshControl, Text, View } from 'react-native';
 
@@ -44,7 +44,7 @@ function tripStatusLabel(trip: TripRecord): string {
 
 export function TripCreateScreen({ route }: Props) {
 
-  const { orderId } = route.params;
+  const { orderId, openAction } = route.params;
 
   const [trips, setTrips] = useState<TripRecord[]>([]);
 
@@ -68,7 +68,7 @@ export function TripCreateScreen({ route }: Props) {
 
   const [photoUri, setPhotoUri] = useState<string | null>(null);
 
-
+  const autoOpenedRef = useRef(false);
 
   const activeTrip = useMemo(
 
@@ -104,7 +104,13 @@ export function TripCreateScreen({ route }: Props) {
 
   }, [orderId]);
 
-
+  useFocusEffect(
+    useCallback(() => {
+      return () => {
+        autoOpenedRef.current = false;
+      };
+    }, [])
+  );
 
   useFocusEffect(
 
@@ -115,6 +121,40 @@ export function TripCreateScreen({ route }: Props) {
       load().finally(() => setLoading(false));
 
     }, [load])
+
+  );
+
+  useFocusEffect(
+
+    useCallback(() => {
+
+      if (!openAction || loading || autoOpenedRef.current) return;
+
+      if (openAction === 'loading' && !activeTrip) {
+        autoOpenedRef.current = true;
+
+        setFormMode('loading');
+
+        resetForm();
+
+        setFormVisible(true);
+
+        return;
+
+      }
+
+      if (openAction === 'unloading' && activeTrip) {
+        autoOpenedRef.current = true;
+
+        setFormMode('unloading');
+
+        resetForm();
+
+        setFormVisible(true);
+
+      }
+
+    }, [openAction, loading, activeTrip])
 
   );
 

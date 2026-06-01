@@ -135,16 +135,30 @@ export interface EarningsSummary {
 
 export type DriverPaymentType = 'salary' | 'advance' | 'bonus' | 'deduction';
 
+export type DriverPaymentMethod = 'cash' | 'noncash';
+
 export interface DriverPaymentRecord {
   id: number;
   driver_id: number;
   type: DriverPaymentType;
   amount: number;
+  method: DriverPaymentMethod | null;
   note: string | null;
+  period_start: string | null;
+  period_end: string | null;
   created_by: number | null;
   created_at: string;
   driver_name: string;
   driver_car_number: string | null;
+}
+
+export interface DriverAccruedPreview {
+  driver_id: number;
+  from: string;
+  to: string;
+  accrued: number;
+  deductions: number;
+  net: number;
 }
 
 export interface DriverSalarySummary {

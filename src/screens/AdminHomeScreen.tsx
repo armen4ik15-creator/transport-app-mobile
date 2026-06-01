@@ -2,7 +2,9 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert, Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { QuickAccessGrid, type QuickAccessItem } from '../components/QuickAccessGrid';
 import { ScreenHeader } from '../components/ScreenHeader';
+import { ScreenHero } from '../components/ScreenHero';
 import { ErrorText, LoadingScreen, MenuButton, Subtitle } from '../components/ui';
 import { useAuth } from '../auth/AuthContext';
 import type { RootStackParamList } from '../navigation/types';
@@ -65,11 +67,20 @@ export function AdminHomeScreen() {
     () => [
       { title: 'Активные заказы', value: String(activeOrders), color: '#2563eb' },
       { title: 'Водителей на линии', value: String(driversOnline), color: '#16a34a' },
-      { title: 'Общая задолженность', value: `${Math.round(totalDebt)} ₽`, color: '#ef4444' },
-      { title: 'Новых уведомлений', value: String(unreadNotifications), color: '#7c3aed' },
+      { title: 'Задолженность', value: `${Math.round(totalDebt)} ₽`, color: '#ef4444' },
+      { title: 'Уведомления', value: String(unreadNotifications), color: '#7c3aed' },
     ],
     [activeOrders, driversOnline, totalDebt, unreadNotifications]
   );
+
+  const quickItems: QuickAccessItem[] = [
+    { icon: '➕', title: 'Новый заказ', color: '#2563eb', onPress: () => navigation.navigate('OrderCreate') },
+    { icon: '📦', title: 'Заказы', color: '#0891b2', onPress: () => navigation.replace('Orders') },
+    { icon: '👤', title: 'Водители', color: '#16a34a', onPress: () => navigation.replace('Drivers') },
+    { icon: '🏢', title: 'Контрагенты', color: '#f59e0b', onPress: () => navigation.replace('Contractors') },
+    { icon: '📑', title: 'Реестр', color: '#7c3aed', onPress: () => navigation.replace('RegistryReport') },
+    { icon: '💼', title: 'Финансы', color: '#6366f1', onPress: () => navigation.replace('FinancesHub') },
+  ];
 
   if (loading) return <LoadingScreen label="Загрузка дашборда…" />;
 
@@ -83,28 +94,23 @@ export function AdminHomeScreen() {
 
       <View
         style={{
-          backgroundColor: '#2563eb',
-          borderRadius: 12,
-          padding: 16,
-          marginBottom: 12,
+          backgroundColor: '#1e3a5f',
+          borderRadius: 14,
+          padding: 18,
+          marginBottom: 14,
           flexDirection: 'row',
           alignItems: 'center',
           justifyContent: 'space-between',
         }}
       >
         <View style={{ flex: 1, paddingRight: 12 }}>
-          <Text style={{ color: '#dbeafe', fontSize: 13, marginBottom: 4 }}>Добро пожаловать!</Text>
-          <Text style={{ color: '#ffffff', fontSize: 15, fontWeight: '700' }}>{user?.email}</Text>
-          <Text style={{ color: '#bfdbfe', fontSize: 13, marginTop: 4 }}>👤 Администратор</Text>
+          <Text style={{ color: '#cbd5e1', fontSize: 13 }}>Добро пожаловать!</Text>
+          <Text style={{ color: '#ffffff', fontSize: 16, fontWeight: '700', marginTop: 4 }}>{user?.email}</Text>
+          <Text style={{ color: '#94a3b8', fontSize: 13, marginTop: 4 }}>👤 Администратор</Text>
         </View>
         <Pressable
           onPress={onLogout}
-          style={{
-            backgroundColor: '#ef4444',
-            borderRadius: 8,
-            paddingHorizontal: 14,
-            paddingVertical: 10,
-          }}
+          style={{ backgroundColor: '#ef4444', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 10 }}
         >
           <Text style={{ color: '#fff', fontWeight: '700' }}>Выйти</Text>
         </Pressable>
@@ -113,7 +119,7 @@ export function AdminHomeScreen() {
       <ErrorText message={error} />
 
       <View style={screenUi.card}>
-        <Subtitle>📊 Сводка на сегодня</Subtitle>
+        <Subtitle>📊 Сводка</Subtitle>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 8 }}>
           {summaryCards.map((card) => (
             <View
@@ -121,9 +127,11 @@ export function AdminHomeScreen() {
               style={{
                 width: '48%',
                 backgroundColor: '#f9fafb',
-                borderRadius: 10,
+                borderRadius: 12,
                 borderWidth: 1,
                 borderColor: '#e5e7eb',
+                borderLeftWidth: 4,
+                borderLeftColor: card.color,
                 padding: 12,
               }}
             >
@@ -134,44 +142,12 @@ export function AdminHomeScreen() {
         </View>
       </View>
 
-      <View style={screenUi.card}>
-        <Subtitle>⚡ Быстрые действия</Subtitle>
-        <MenuButton label="➕ Создать заказ" onPress={() => navigation.navigate('OrderCreate')} />
-        <MenuButton
-          label="🔔 Уведомления"
-          onPress={() => navigation.navigate('Notifications')}
-          variant="secondary"
-        />
-      </View>
+      <Text style={{ fontSize: 15, fontWeight: '700', color: '#111827', marginBottom: 10 }}>⚡ Быстрый доступ</Text>
+      <QuickAccessGrid items={quickItems} />
 
-      <View style={screenUi.card}>
-        <Subtitle>📂 Разделы</Subtitle>
-        <MenuButton label="📦 Заказы — назначить задачи" onPress={() => navigation.replace('Orders')} />
-        <MenuButton
-          label="👤 Водители — список и машины"
-          onPress={() => navigation.replace('Drivers')}
-          variant="secondary"
-        />
-        <MenuButton
-          label="💰 Контрагенты — заказчики"
-          onPress={() => navigation.replace('Contractors')}
-          variant="secondary"
-        />
-        <MenuButton
-          label="💸 Расходы — топливо, ремонт"
-          onPress={() => navigation.replace('Expenses')}
-          variant="secondary"
-        />
-        <MenuButton
-          label="📑 Реестр — все рейсы"
-          onPress={() => navigation.replace('RegistryReport')}
-          variant="secondary"
-        />
-        <MenuButton
-          label="💼 Все финансы — отчёты, зарплата"
-          onPress={() => navigation.replace('FinancesHub')}
-          variant="secondary"
-        />
+      <View style={[screenUi.card, { marginTop: 14 }]}>
+        <MenuButton label="🔔 Уведомления" onPress={() => navigation.navigate('Notifications')} />
+        <MenuButton label="💸 Расходы" onPress={() => navigation.replace('Expenses')} variant="secondary" />
       </View>
     </ScrollView>
   );
