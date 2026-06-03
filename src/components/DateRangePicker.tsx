@@ -7,6 +7,8 @@ interface DateRangePickerProps {
   to: string;
   onChangeFrom: (value: string) => void;
   onChangeTo: (value: string) => void;
+  /** Вызывается при выборе дня в календаре (для показа отчёта за день) */
+  onDaySelected?: (iso: string) => void;
 }
 
 function toIsoDate(year: number, month: number, day: number): string {
@@ -133,7 +135,7 @@ function MiniCalendar({
   );
 }
 
-export function DateRangePicker({ from, to, onChangeFrom, onChangeTo }: DateRangePickerProps) {
+export function DateRangePicker({ from, to, onChangeFrom, onChangeTo, onDaySelected }: DateRangePickerProps) {
   const [activeField, setActiveField] = useState<'from' | 'to' | null>(null);
 
   return (
@@ -177,10 +179,24 @@ export function DateRangePicker({ from, to, onChangeFrom, onChangeTo }: DateRang
       </View>
 
       {activeField === 'from' ? (
-        <MiniCalendar value={from} onSelect={(iso) => { onChangeFrom(iso); setActiveField(null); }} />
+        <MiniCalendar
+          value={from}
+          onSelect={(iso) => {
+            onChangeFrom(iso);
+            onDaySelected?.(iso);
+            setActiveField(null);
+          }}
+        />
       ) : null}
       {activeField === 'to' ? (
-        <MiniCalendar value={to} onSelect={(iso) => { onChangeTo(iso); setActiveField(null); }} />
+        <MiniCalendar
+          value={to}
+          onSelect={(iso) => {
+            onChangeTo(iso);
+            onDaySelected?.(iso);
+            setActiveField(null);
+          }}
+        />
       ) : null}
     </View>
   );
