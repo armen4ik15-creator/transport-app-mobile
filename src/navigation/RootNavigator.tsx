@@ -7,6 +7,7 @@ import { LoadingScreen } from '../components/ui';
 import { NetworkIssueBanner } from '../components/NetworkIssueBanner';
 import { LoginScreen } from '../screens/LoginScreen';
 import { RegisterScreen } from '../screens/RegisterScreen';
+import { ForgotPasswordScreen } from '../screens/ForgotPasswordScreen';
 import { OrderCreateScreen } from '../screens/OrderCreateScreen';
 import { OrderDetailScreen } from '../screens/OrderDetailScreen';
 import { AdminFinancesScreen } from '../screens/AdminFinancesScreen';
@@ -119,6 +120,7 @@ export function RootNavigator() {
           <>
             <Stack.Screen name="Login" component={LoginScreen} options={{ title: 'Вход' }} />
             <Stack.Screen name="Register" component={RegisterScreen} options={{ title: 'Регистрация' }} />
+            <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} options={{ title: 'Восстановление пароля' }} />
             <Stack.Screen name="ServerSetup" options={{ title: 'Настройки сервера' }}>
               {(props) => <ServerSetupScreen {...props} onConfigured={onServerConfigured} />}
             </Stack.Screen>

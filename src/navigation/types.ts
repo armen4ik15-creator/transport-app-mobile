@@ -19,6 +19,7 @@ export type DriverTabParamList = {
 export type RootStackParamList = {
   Login: undefined;
   Register: undefined;
+  ForgotPassword: undefined;
   AdminHome: undefined;
   Contractors: undefined;
   Drivers: undefined;

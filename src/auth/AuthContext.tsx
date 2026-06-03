@@ -14,12 +14,12 @@ interface AuthState {
   signUp: (payload: {
     email: string;
     password: string;
-    role?: 'admin' | 'driver';
     full_name?: string;
     phone?: string;
     license_number?: string;
     license_expiry?: string;
     medical_check_expiry?: string;
+    invite_code?: string;
   }) => Promise<User>;
   signOut: () => Promise<void>;
   refresh: () => Promise<void>;

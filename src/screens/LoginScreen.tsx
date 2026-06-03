@@ -61,6 +61,11 @@ export function LoginScreen({ navigation }: Props) {
           <ErrorText message={error} />
           <PrimaryButton label="🔑 Войти" onPress={onSubmit} loading={loading} />
           <MenuButton
+            label="🔐 Забыли пароль?"
+            onPress={() => navigation.navigate('ForgotPassword')}
+            variant="secondary"
+          />
+          <MenuButton
             label="📝 Регистрация водителя"
             onPress={() => navigation.navigate('Register')}
             variant="secondary"

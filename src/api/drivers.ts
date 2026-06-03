@@ -31,6 +31,7 @@ export async function updateDriver(
     license_expiry?: string | null;
     medical_check_expiry?: string | null;
     is_active?: boolean;
+    password?: string;
   }
 ): Promise<Driver> {
   const { data } = await api.put<Driver>(`/drivers/${id}`, payload);

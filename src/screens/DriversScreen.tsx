@@ -130,6 +130,7 @@ export function DriversScreen() {
           license_expiry: form.license_expiry.trim() || null,
           medical_check_expiry: form.medical_expiry.trim() || null,
           is_active: form.is_active,
+          ...(form.password.trim() ? { password: form.password.trim() } : {}),
         });
       } else {
         if (!form.email.trim() || !form.password) {
@@ -274,6 +275,14 @@ export function DriversScreen() {
               secureTextEntry
             />
           </>
+        ) : null}
+        {editingId ? (
+          <Field
+            label="Новый пароль (оставьте пустым, если не менять)"
+            value={form.password}
+            onChangeText={(v) => setForm((p) => ({ ...p, password: v }))}
+            secureTextEntry
+          />
         ) : null}
         <Field label="Телефон" value={form.phone} onChangeText={(v) => setForm((p) => ({ ...p, phone: v }))} keyboardType="phone-pad" />
         <Field label="Госномер" value={form.car_number} onChangeText={(v) => setForm((p) => ({ ...p, car_number: v }))} autoCapitalize="characters" />

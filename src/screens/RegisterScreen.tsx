@@ -1,10 +1,12 @@
-import { useState } from 'react';
-import { Alert, ScrollView, Text, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Alert, ScrollView, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { ErrorText, Field, MenuButton, PrimaryButton } from '../components/ui';
+import { ScreenHero } from '../components/ScreenHero';
+import { getSecurityConfig } from '../api/auth';
 import { useAuth } from '../auth/AuthContext';
 import { apiErrorMessage } from '../api/client';
-import type { RootStackParamList } from '../navigation/RootNavigator';
+import type { RootStackParamList } from '../navigation/types';
 import { screenUi } from '../styles/screenUi';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Register'>;
@@ -13,18 +15,36 @@ export function RegisterScreen({ navigation }: Props) {
   const { signUp } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState<'admin' | 'driver'>('driver');
+  const [inviteCode, setInviteCode] = useState('');
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
   const [licenseNumber, setLicenseNumber] = useState('');
   const [licenseExpiry, setLicenseExpiry] = useState('');
   const [medicalExpiry, setMedicalExpiry] = useState('');
+  const [registrationAvailable, setRegistrationAvailable] = useState<boolean | null>(null);
+  const [requiresInvite, setRequiresInvite] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    void (async () => {
+      try {
+        const config = await getSecurityConfig();
+        setRegistrationAvailable(config.registration_available);
+        setRequiresInvite(config.registration_requires_invite);
+      } catch {
+        setRegistrationAvailable(false);
+      }
+    })();
+  }, []);
 
   const onSubmit = async () => {
     if (!email.trim() || !password || !fullName.trim()) {
       setError('Email, пароль и ФИО обязательны');
+      return;
+    }
+    if (requiresInvite && !inviteCode.trim()) {
+      setError('Введите код приглашения от администратора');
       return;
     }
     if (password.length < 6) {
@@ -37,12 +57,12 @@ export function RegisterScreen({ navigation }: Props) {
       await signUp({
         email: email.trim().toLowerCase(),
         password,
-        role,
         full_name: fullName.trim(),
         phone: phone.trim() || undefined,
-        license_number: role === 'driver' ? licenseNumber.trim() || undefined : undefined,
-        license_expiry: role === 'driver' ? licenseExpiry.trim() || undefined : undefined,
-        medical_check_expiry: role === 'driver' ? medicalExpiry.trim() || undefined : undefined,
+        license_number: licenseNumber.trim() || undefined,
+        license_expiry: licenseExpiry.trim() || undefined,
+        medical_check_expiry: medicalExpiry.trim() || undefined,
+        invite_code: inviteCode.trim() || undefined,
       });
     } catch (e) {
       const msg = apiErrorMessage(e, 'Не удалось зарегистрироваться');
@@ -55,27 +75,27 @@ export function RegisterScreen({ navigation }: Props) {
 
   return (
     <View style={screenUi.container}>
-      <ScrollView
-        contentContainerStyle={{ flexGrow: 1, padding: 16, paddingBottom: 32 }}
-        keyboardShouldPersistTaps="handled"
-      >
-        <View style={[screenUi.card, { padding: 24 }]}>
-          <Text style={{ fontSize: 24, fontWeight: '700', color: '#111827', textAlign: 'center', marginBottom: 4 }}>
-            📝 Регистрация
-          </Text>
-          <Text style={{ fontSize: 14, color: '#6b7280', textAlign: 'center', marginBottom: 16 }}>
-            Создание аккаунта пользователя
-          </Text>
-          <MenuButton
-            label={role === 'driver' ? '✅ 🚛 Водитель' : '🚛 Водитель'}
-            onPress={() => setRole('driver')}
-            variant={role === 'driver' ? 'default' : 'secondary'}
+      <ScrollView contentContainerStyle={{ flexGrow: 1, padding: 16, paddingBottom: 32 }} keyboardShouldPersistTaps="handled">
+        <View style={[screenUi.card, { padding: 24, borderRadius: 16 }]}>
+          <ScreenHero
+            title="📝 Регистрация водителя"
+            subtitle="Только для сотрудников компании · админ создаёт аккаунты в разделе «Водители»"
           />
-          <MenuButton
-            label={role === 'admin' ? '✅ 👤 Администратор' : '👤 Администратор'}
-            onPress={() => setRole('admin')}
-            variant={role === 'admin' ? 'default' : 'secondary'}
-          />
+
+          {registrationAvailable === false ? (
+            <ErrorText message="Самостоятельная регистрация отключена. Попросите администратора создать аккаунт." />
+          ) : null}
+
+          {requiresInvite ? (
+            <Field
+              label="Код приглашения *"
+              value={inviteCode}
+              onChangeText={setInviteCode}
+              autoCapitalize="none"
+              placeholder="Код от администратора"
+            />
+          ) : null}
+
           <Field label="ФИО *" value={fullName} onChangeText={setFullName} />
           <Field
             label="Email *"
@@ -86,15 +106,16 @@ export function RegisterScreen({ navigation }: Props) {
           />
           <Field label="Пароль * (от 6 символов)" value={password} onChangeText={setPassword} secureTextEntry />
           <Field label="Телефон" value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
-          {role === 'driver' ? (
-            <>
-              <Field label="Номер водительского удостоверения" value={licenseNumber} onChangeText={setLicenseNumber} />
-              <Field label="Срок действия прав (YYYY-MM-DD)" value={licenseExpiry} onChangeText={setLicenseExpiry} />
-              <Field label="Срок медосмотра (YYYY-MM-DD)" value={medicalExpiry} onChangeText={setMedicalExpiry} />
-            </>
-          ) : null}
+          <Field label="Номер водительского удостоверения" value={licenseNumber} onChangeText={setLicenseNumber} />
+          <Field label="Срок действия прав (YYYY-MM-DD)" value={licenseExpiry} onChangeText={setLicenseExpiry} />
+          <Field label="Срок медосмотра (YYYY-MM-DD)" value={medicalExpiry} onChangeText={setMedicalExpiry} />
           <ErrorText message={error} />
-          <PrimaryButton label="✅ Зарегистрироваться" onPress={onSubmit} loading={loading} />
+          <PrimaryButton
+            label="✅ Зарегистрироваться"
+            onPress={onSubmit}
+            loading={loading}
+            disabled={registrationAvailable === false}
+          />
           <MenuButton label="← Назад ко входу" onPress={() => navigation.goBack()} variant="secondary" />
         </View>
       </ScrollView>
