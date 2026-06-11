@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useAuth } from '../auth/AuthContext';
+import { BootstrapErrorScreen } from '../components/BootstrapErrorScreen';
 import { LoadingScreen } from '../components/ui';
 import { NetworkIssueBanner } from '../components/NetworkIssueBanner';
 import { LoginScreen } from '../screens/LoginScreen';
@@ -33,8 +34,6 @@ import { ActivityLogScreen } from '../screens/ActivityLogScreen';
 import { CompleteProfileScreen } from '../screens/CompleteProfileScreen';
 import { OrderEditScreen } from '../screens/OrderEditScreen';
 import { FinanceReportScreen } from '../screens/FinanceReportScreen';
-import { FuelRefillsScreen } from '../screens/FuelRefillsScreen';
-import { FuelSettingsScreen } from '../screens/FuelSettingsScreen';
 import {
   AdminFinancesHubTabScreen,
   AdminHomeTabScreen,
@@ -52,6 +51,7 @@ import {
   DriverOrdersTabScreen,
 } from './DriverMainLayout';
 import { ensureDefaultServerUrl, getServerUrl, setServerIssueHandler } from '../api/client';
+import { logStartup } from '../utils/startupLogger';
 import type { RootStackParamList } from './types';
 
 export type { AdminTabParamList, DriverTabParamList, RootStackParamList } from './types';
@@ -59,14 +59,23 @@ export type { AdminTabParamList, DriverTabParamList, RootStackParamList } from '
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export function RootNavigator() {
-  const { user, driver, loading, networkIssue, refresh, clearNetworkIssue } = useAuth();
+  const { user, driver, loading, initError, networkIssue, refresh, clearNetworkIssue, retryInit } =
+    useAuth();
   const [serverReady, setServerReady] = useState<boolean | null>(null);
   const [showNetworkBanner, setShowNetworkBanner] = useState(false);
 
   const checkServerConfigured = useCallback(async () => {
-    await ensureDefaultServerUrl();
-    const url = await getServerUrl();
-    setServerReady(Boolean(url));
+    try {
+      void logStartup('server_config_check_start');
+      await ensureDefaultServerUrl();
+      const url = await getServerUrl();
+      setServerReady(Boolean(url));
+      void logStartup('server_config_check_done', url ? 'configured' : 'missing');
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : 'Ошибка настройки сервера';
+      void logStartup('server_config_check_error', message);
+      setServerReady(true);
+    }
   }, []);
 
   useEffect(() => {
@@ -100,6 +109,16 @@ export function RootNavigator() {
 
   if (loading || serverReady === null) {
     return <LoadingScreen label="Загрузка…" />;
+  }
+
+  if (initError) {
+    return (
+      <BootstrapErrorScreen
+        message={initError}
+        onRetry={() => void retryInit()}
+        retrying={loading}
+      />
+    );
   }
 
   return (
@@ -155,8 +174,6 @@ export function RootNavigator() {
             <Stack.Screen name="TripPhotos" component={TripPhotosScreen} options={{ title: 'Фото ТТН' }} />
             <Stack.Screen name="AllPhotos" component={AllPhotosScreen} options={{ title: 'Фотографии ТТН' }} />
             <Stack.Screen name="TripCreate" component={TripCreateScreen} options={{ title: 'Рейсы и ТТН' }} />
-            <Stack.Screen name="FuelRefills" component={FuelRefillsScreen} options={{ title: 'Заправки Opti' }} />
-            <Stack.Screen name="FuelSettings" component={FuelSettingsScreen} options={{ title: 'Топливные карты' }} />
             <Stack.Screen name="ServerSetup" options={{ title: 'Настройки сервера' }}>
               {(props) => <ServerSetupScreen {...props} onConfigured={onServerConfigured} />}
             </Stack.Screen>
@@ -185,7 +202,6 @@ export function RootNavigator() {
             <Stack.Screen name="Reports" component={ReportsScreen} options={{ title: 'Отчёты' }} />
             <Stack.Screen name="Earnings" component={EarningsScreen} options={{ title: 'Мой заработок' }} />
             <Stack.Screen name="Expenses" component={ExpensesScreen} options={{ title: 'Мои расходы' }} />
-            <Stack.Screen name="FuelRefills" component={FuelRefillsScreen} options={{ title: 'Мои заправки' }} />
             <Stack.Screen name="TripCreate" component={TripCreateScreen} options={{ title: 'Рейсы и ТТН' }} />
             <Stack.Screen name="ServerSetup" options={{ title: 'Настройки сервера' }}>
               {(props) => <ServerSetupScreen {...props} onConfigured={onServerConfigured} />}

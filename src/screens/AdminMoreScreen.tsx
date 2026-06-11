@@ -119,13 +119,6 @@ export function AdminMoreScreen() {
           title: '⚙️ Настройки',
           items: [
             {
-              icon: '⛽',
-              title: 'Топливные карты Opti',
-              subtitle: 'Источник данных, синхронизация, привязка карт',
-              accentColor: '#f97316',
-              onPress: () => navigation.navigate('FuelSettings'),
-            },
-            {
               icon: '🔄',
               title: 'Проверить обновление',
               subtitle: `Текущая версия: ${updateLabel}`,

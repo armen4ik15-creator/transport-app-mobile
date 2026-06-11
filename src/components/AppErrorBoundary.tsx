@@ -1,5 +1,7 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, Text } from 'react-native';
+import { PrimaryButton } from './ui';
+import { logStartup } from '../utils/startupLogger';
 
 interface ErrorBoundaryProps {
   children: ReactNode;
@@ -18,7 +20,17 @@ export class AppErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundar
 
   componentDidCatch(error: Error, info: ErrorInfo): void {
     console.error('AppErrorBoundary:', error.message, info.componentStack);
+    void logStartup('error_boundary', `${error.message} | ${info.componentStack?.slice(0, 200) ?? ''}`);
+    Alert.alert(
+      'Ошибка приложения',
+      `${error.message}\n\nСкопируйте текст и отправьте администратору.`,
+      [{ text: 'OK' }]
+    );
   }
+
+  private onRetry = (): void => {
+    this.setState({ error: null });
+  };
 
   render(): ReactNode {
     if (this.state.error) {
@@ -26,7 +38,11 @@ export class AppErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundar
         <ScrollView contentContainerStyle={styles.container}>
           <Text style={styles.title}>Ошибка приложения</Text>
           <Text style={styles.message}>{this.state.error.message}</Text>
-          <Text style={styles.hint}>Переустановите APK или обратитесь к администратору.</Text>
+          <Text style={styles.hint}>
+            Попробуйте повторить. Если не помогает — переустановите APK или отправьте логи
+            администратору (см. STARTUP-DEBUG.md, adb logcat).
+          </Text>
+          <PrimaryButton label="Повторить" onPress={this.onRetry} />
         </ScrollView>
       );
     }
@@ -55,5 +71,7 @@ const styles = StyleSheet.create({
   hint: {
     fontSize: 13,
     color: '#6b7280',
+    marginBottom: 20,
+    lineHeight: 18,
   },
 });

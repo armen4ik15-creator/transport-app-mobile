@@ -2,7 +2,7 @@
   "expo": {
     "name": "РеестрПро",
     "slug": "reestrpro-mobile",
-    "version": "1.0.2",
+    "version": "1.0.4",
     "orientation": "portrait",
     "scheme": "reestrpro",
     "userInterfaceStyle": "light",
@@ -31,6 +31,7 @@
     },
     "android": {
       "package": "com.reestrpro.mobile",
+      "versionCode": 5,
       "permissions": [
         "android.permission.CAMERA",
         "android.permission.READ_EXTERNAL_STORAGE",
@@ -39,7 +40,6 @@
       ]
     },
     "plugins": [
-      "expo-secure-store",
       [
         "expo-image-picker",
         {

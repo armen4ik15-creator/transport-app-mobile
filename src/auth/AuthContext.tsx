@@ -11,6 +11,7 @@ import {
   setUserSnapshot,
 } from '../storage/sessionStorage';
 import { isNetworkAuthError, isUnauthorizedError } from '../utils/authErrors';
+import { logStartup } from '../utils/startupLogger';
 import type { Driver, User } from '../types';
 
 interface AuthState {
@@ -33,6 +34,7 @@ interface AuthState {
   signOut: () => Promise<void>;
   refresh: () => Promise<void>;
   clearNetworkIssue: () => void;
+  retryInit: () => Promise<void>;
 }
 
 const AuthCtx = createContext<AuthState | null>(null);
@@ -88,26 +90,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [applySession, clearLocalSession]);
 
-  useEffect(() => {
-    (async () => {
-      try {
-        // Быстрый старт из кэша, пока идёт проверка токена на сервере
-        const token = await getStoredToken();
-        if (token) {
-          const snapshot = await getUserSnapshot();
-          if (snapshot) {
-            setUser(snapshot.user);
-            setDriver(snapshot.driver);
-          }
+  const bootstrap = useCallback(async () => {
+    setInitError(null);
+    setLoading(true);
+    try {
+      void logStartup('auth_bootstrap_start');
+      const token = await getStoredToken();
+      void logStartup('auth_token_read', token ? 'present' : 'empty');
+      if (token) {
+        const snapshot = await getUserSnapshot();
+        if (snapshot) {
+          setUser(snapshot.user);
+          setDriver(snapshot.driver);
+          void logStartup('auth_snapshot_restored');
         }
-        await refresh();
-      } catch (e: unknown) {
-        setInitError(e instanceof Error ? e.message : 'Ошибка инициализации');
-      } finally {
-        setLoading(false);
       }
-    })();
+      await refresh();
+      void logStartup('auth_bootstrap_done');
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : 'Ошибка инициализации';
+      void logStartup('auth_bootstrap_error', message);
+      setInitError(message);
+    } finally {
+      setLoading(false);
+    }
   }, [refresh]);
+
+  useEffect(() => {
+    void bootstrap();
+  }, [bootstrap]);
 
   useEffect(() => {
     setUnauthorizedHandler(async () => {
@@ -157,6 +168,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const clearNetworkIssue = useCallback(() => setNetworkIssue(false), []);
 
+  const retryInit = useCallback(async () => {
+    await bootstrap();
+  }, [bootstrap]);
+
   const value = useMemo<AuthState>(
     () => ({
       user,
@@ -169,6 +184,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signOut,
       refresh,
       clearNetworkIssue,
+      retryInit,
     }),
     [
       user,
@@ -181,6 +197,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signOut,
       refresh,
       clearNetworkIssue,
+      retryInit,
     ]
   );
 
