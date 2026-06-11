@@ -5,14 +5,16 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { ErrorText, Field, PrimaryButton } from '../components/ui';
 import { ScreenHero } from '../components/ScreenHero';
 import {
+  DEFAULT_PRODUCTION_HOST,
+  DEFAULT_PRODUCTION_PORT,
+} from '../constants/config';
+import {
   buildApiUrl,
   getServerUrl,
   setServerUrl,
   clearServerUrl,
   SERVER_URL_KEY,
-  TOKEN_KEY,
 } from '../api/client';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { RootStackParamList } from '../navigation/RootNavigator';
 import { screenUi } from '../styles/screenUi';
 
@@ -22,13 +24,13 @@ type ComponentProps = Props & { onConfigured?: () => void };
 function parseSavedAddress(url: string): { ip: string; port: string } {
   const withoutApi = url.replace(/\/api\/?$/, '');
   const match = withoutApi.match(/^https?:\/\/([^:/]+)(?::(\d+))?$/i);
-  if (!match) return { ip: '', port: '443' };
-  return { ip: match[1], port: match[2] || '443' };
+  if (!match) return { ip: DEFAULT_PRODUCTION_HOST, port: DEFAULT_PRODUCTION_PORT };
+  return { ip: match[1], port: match[2] || DEFAULT_PRODUCTION_PORT };
 }
 
 export function ServerSetupScreen({ route, onConfigured }: ComponentProps) {
-  const [ip, setIp] = useState('');
-  const [port, setPort] = useState('443');
+  const [ip, setIp] = useState(DEFAULT_PRODUCTION_HOST);
+  const [port, setPort] = useState(DEFAULT_PRODUCTION_PORT);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -49,7 +51,7 @@ export function ServerSetupScreen({ route, onConfigured }: ComponentProps) {
 
   const onConnect = async () => {
     const cleanIp = ip.trim();
-    const cleanPort = port.trim() || '443';
+    const cleanPort = port.trim() || DEFAULT_PRODUCTION_PORT;
 
     if (!cleanIp) {
       setError('Введите IP-адрес сервера');
@@ -70,7 +72,6 @@ export function ServerSetupScreen({ route, onConfigured }: ComponentProps) {
         throw new Error('Некорректный ответ health');
       }
       await setServerUrl(apiUrl);
-      await AsyncStorage.removeItem(TOKEN_KEY);
       onConfigured?.();
       Alert.alert('Подключение успешно', `Сервер сохранён в ${SERVER_URL_KEY}`);
     } catch {
@@ -96,7 +97,7 @@ export function ServerSetupScreen({ route, onConfigured }: ComponentProps) {
             onChangeText={setIp}
             autoCapitalize="none"
             autoCorrect={false}
-            placeholder="armen4ik15-creator-transport-app-server-43b9.twc1.net"
+            placeholder={DEFAULT_PRODUCTION_HOST}
           />
           <Field label="Порт" value={port} onChangeText={setPort} keyboardType="number-pad" placeholder="443" />
           <ErrorText message={error} />

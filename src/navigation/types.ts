@@ -57,4 +57,6 @@ export type RootStackParamList = {
   TripPhotos: undefined;
   AllPhotos: undefined;
   ServerSetup: { reason?: string } | undefined;
+  FuelRefills: undefined;
+  FuelSettings: undefined;
 };

@@ -198,7 +198,17 @@ export function ContractorsScreen() {
             <ErrorText message={error} />
           </View>
         }
-        renderItem={({ item }) => (
+        renderItem={({ item }) => {
+          const finance = debtSummary.find((row) => row.contractor_id === item.id);
+          const debtStatus =
+            finance && finance.debt <= 0 && finance.paid > 0
+              ? '✅ Оплачено'
+              : finance && finance.paid > 0
+                ? '⏳ Частично'
+                : finance && finance.accrued > 0
+                  ? '❌ Долг'
+                  : null;
+          return (
           <Pressable
             style={[screenUi.card, { borderRadius: 14 }]}
             onPress={() => navigation.navigate('ContractorDebt', { contractorId: item.id })}
@@ -207,6 +217,12 @@ export function ContractorsScreen() {
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
               <View style={{ flex: 1, paddingRight: 8 }}>
                 <Text style={{ fontSize: 17, fontWeight: '800', color: '#111827' }}>{item.name}</Text>
+                {debtStatus ? (
+                  <Text style={{ fontSize: 12, color: '#6b7280', marginTop: 4 }}>
+                    {debtStatus}
+                    {finance && finance.paid > 0 ? ` · ${finance.paid.toFixed(0)} ₽` : ''}
+                  </Text>
+                ) : null}
                 {item.phone ? (
                   <Text style={{ fontSize: 14, color: '#4b5563', marginTop: 6 }}>📞 {item.phone}</Text>
                 ) : (
@@ -225,7 +241,8 @@ export function ContractorsScreen() {
             </View>
             <Text style={{ fontSize: 12, color: '#2563eb', marginTop: 10 }}>💳 Оплаты и долг →</Text>
           </Pressable>
-        )}
+          );
+        }}
         ListEmptyComponent={
           <EmptyStateButton message="Контрагентов нет" buttonLabel="+ Добавить" onPress={openCreate} />
         }

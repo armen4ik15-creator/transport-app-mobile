@@ -1,9 +1,16 @@
 import axios, { AxiosError } from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { DEFAULT_PRODUCTION_API_URL } from '../constants/config';
+import {
+  clearStoredToken,
+  getStoredToken,
+  TOKEN_KEY,
+} from '../storage/sessionStorage';
 
-export const TOKEN_KEY = 'reestrpro.token';
+export { TOKEN_KEY };
+
 export const SERVER_URL_KEY = 'SERVER_URL';
-const FALLBACK_API_URL = 'http://localhost:3000/api';
+const FALLBACK_API_URL = DEFAULT_PRODUCTION_API_URL;
 
 let unauthorizedHandler: (() => Promise<void> | void) | null = null;
 let serverIssueHandler: (() => Promise<void> | void) | null = null;
@@ -57,6 +64,15 @@ function normalizeApiUrl(url: string): string {
   return buildApiUrl(url);
 }
 
+/** При первом запуске сохраняем продакшен-URL, чтобы не требовать ручной настройки */
+export async function ensureDefaultServerUrl(): Promise<string> {
+  const saved = await AsyncStorage.getItem(SERVER_URL_KEY);
+  if (saved) return normalizeApiUrl(saved);
+  const normalized = normalizeApiUrl(DEFAULT_PRODUCTION_API_URL);
+  await AsyncStorage.setItem(SERVER_URL_KEY, normalized);
+  return normalized;
+}
+
 export async function getServerUrl(): Promise<string | null> {
   const saved = await AsyncStorage.getItem(SERVER_URL_KEY);
   if (!saved) return null;
@@ -65,8 +81,12 @@ export async function getServerUrl(): Promise<string | null> {
 
 export async function setServerUrl(url: string): Promise<string> {
   const normalized = normalizeApiUrl(url);
+  const previous = await getServerUrl();
   await AsyncStorage.setItem(SERVER_URL_KEY, normalized);
-  await AsyncStorage.removeItem(TOKEN_KEY);
+  // Токен сбрасываем только при смене сервера
+  if (previous && previous !== normalized) {
+    await clearStoredToken();
+  }
   return normalized;
 }
 
@@ -86,12 +106,12 @@ export async function getServerHost(): Promise<string> {
 
 export const api = axios.create({
   baseURL: FALLBACK_API_URL,
-  timeout: 15000,
+  timeout: 20000,
 });
 
 api.interceptors.request.use(async (cfg) => {
   cfg.baseURL = await getApiBaseUrl();
-  const token = await AsyncStorage.getItem(TOKEN_KEY);
+  const token = await getStoredToken();
   if (token) {
     cfg.headers = cfg.headers ?? {};
     cfg.headers.Authorization = `Bearer ${token}`;
@@ -105,18 +125,15 @@ api.interceptors.response.use(
     const isNetworkIssue =
       !error.response || error.message === 'Network Error' || error.code === 'ECONNABORTED';
 
+    // Сетевые сбои — только баннер, без сброса сессии
     if (isNetworkIssue && serverIssueHandler) {
       await serverIssueHandler();
     }
 
     if (error.response?.status === 401) {
-      await AsyncStorage.removeItem(TOKEN_KEY);
+      await clearStoredToken();
       if (unauthorizedHandler) {
         await unauthorizedHandler();
-      }
-      const serverUnavailableMessage = error.response.data?.error || '';
-      if (serverUnavailableMessage.toLowerCase().includes('сервер') && serverIssueHandler) {
-        await serverIssueHandler();
       }
     }
     return Promise.reject(error);
@@ -132,7 +149,7 @@ export function apiErrorMessage(err: unknown, fallback = 'Ошибка'): string
     }
     if (axErr.code === 'ECONNABORTED') return 'Превышено время ожидания';
     if (axErr.message === 'Network Error') {
-      return 'Нет связи с сервером. Проверьте настройки адреса сервера.';
+      return 'Нет связи с сервером. Проверьте интернет или настройки сервера.';
     }
     return axErr.message;
   }

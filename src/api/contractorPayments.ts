@@ -11,6 +11,7 @@ export async function listContractorPayments(contractorId?: number): Promise<Con
 export async function createContractorPayment(payload: {
   contractor_id: number;
   amount: number;
+  payment_date?: string;
   note?: string;
 }): Promise<ContractorPaymentRecord> {
   const { data } = await api.post<ContractorPaymentRecord>('/contractors/payments', payload);

@@ -179,6 +179,7 @@ export interface ContractorPaymentRecord {
   contractor_id: number;
   amount: number;
   note: string | null;
+  payment_date: string | null;
   created_by: number | null;
   created_at: string;
   contractor_name: string;
@@ -346,3 +347,56 @@ export const STATUS_LABEL: Record<OrderStatus, string> = {
   completed: 'Завершён',
   cancelled: 'Отменён',
 };
+
+export type FuelDataSourceType = 'mock' | 'opti';
+
+export interface FuelSyncStatus {
+  data_source: FuelDataSourceType;
+  sync_enabled: boolean;
+  sync_interval_minutes: number;
+  opti_login: string;
+  has_opti_password: boolean;
+  last_sync_at: string | null;
+  last_sync_status: 'ok' | 'error' | null;
+  last_sync_new_count: number;
+  last_sync_error: string | null;
+}
+
+export interface FuelCardRecord {
+  id: number;
+  driver_id: number;
+  card_number: string;
+  label: string | null;
+  is_active: number;
+  created_at: string;
+  car_number?: string | null;
+  driver_name?: string | null;
+  driver_email?: string | null;
+}
+
+export interface FuelTransactionRecord {
+  id: number;
+  external_id: string;
+  source: FuelDataSourceType;
+  card_number: string;
+  driver_id: number | null;
+  transaction_at: string;
+  station_name: string | null;
+  amount: number;
+  liters: number | null;
+  car_number: string | null;
+  expense_id: number | null;
+  created_at: string;
+  driver_name: string | null;
+}
+
+export interface FuelSyncLogRecord {
+  id: number;
+  started_at: string;
+  finished_at: string | null;
+  status: 'ok' | 'error';
+  source: FuelDataSourceType | null;
+  fetched_count: number;
+  created_count: number;
+  error_message: string | null;
+}

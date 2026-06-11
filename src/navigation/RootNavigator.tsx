@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Alert } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useAuth } from '../auth/AuthContext';
@@ -34,6 +33,8 @@ import { ActivityLogScreen } from '../screens/ActivityLogScreen';
 import { CompleteProfileScreen } from '../screens/CompleteProfileScreen';
 import { OrderEditScreen } from '../screens/OrderEditScreen';
 import { FinanceReportScreen } from '../screens/FinanceReportScreen';
+import { FuelRefillsScreen } from '../screens/FuelRefillsScreen';
+import { FuelSettingsScreen } from '../screens/FuelSettingsScreen';
 import {
   AdminFinancesHubTabScreen,
   AdminHomeTabScreen,
@@ -50,7 +51,7 @@ import {
   DriverMoreTabScreen,
   DriverOrdersTabScreen,
 } from './DriverMainLayout';
-import { getServerUrl, setServerIssueHandler } from '../api/client';
+import { ensureDefaultServerUrl, getServerUrl, setServerIssueHandler } from '../api/client';
 import type { RootStackParamList } from './types';
 
 export type { AdminTabParamList, DriverTabParamList, RootStackParamList } from './types';
@@ -58,12 +59,12 @@ export type { AdminTabParamList, DriverTabParamList, RootStackParamList } from '
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export function RootNavigator() {
-  const { user, driver, loading } = useAuth();
+  const { user, driver, loading, networkIssue, refresh, clearNetworkIssue } = useAuth();
   const [serverReady, setServerReady] = useState<boolean | null>(null);
-  const [serverIssue, setServerIssue] = useState(false);
   const [showNetworkBanner, setShowNetworkBanner] = useState(false);
 
   const checkServerConfigured = useCallback(async () => {
+    await ensureDefaultServerUrl();
     const url = await getServerUrl();
     setServerReady(Boolean(url));
   }, []);
@@ -74,38 +75,31 @@ export function RootNavigator() {
 
   useEffect(() => {
     setServerIssueHandler(() => {
-      setServerIssue(true);
       setShowNetworkBanner(true);
     });
     return () => setServerIssueHandler(null);
   }, []);
 
-  const openServerSettingsPrompt = useCallback(() => {
-    Alert.alert('Проблема с сервером', 'Не удалось подключиться к серверу.', [
-      { text: 'Отмена', style: 'cancel', onPress: () => setServerIssue(false) },
-      { text: 'Настройки сервера', onPress: () => setServerReady(false) },
-    ]);
-  }, []);
-
   useEffect(() => {
-    if (!serverIssue) return;
-    openServerSettingsPrompt();
-  }, [openServerSettingsPrompt, serverIssue]);
+    if (networkIssue) setShowNetworkBanner(true);
+  }, [networkIssue]);
 
   const onServerConfigured = useCallback(() => {
-    setServerIssue(false);
     setShowNetworkBanner(false);
+    clearNetworkIssue();
     setServerReady(true);
-  }, []);
+    void refresh();
+  }, [clearNetworkIssue, refresh]);
 
   const onRetryConnection = useCallback(() => {
-    setServerIssue(false);
     setShowNetworkBanner(false);
+    clearNetworkIssue();
+    void refresh();
     checkServerConfigured();
-  }, [checkServerConfigured]);
+  }, [checkServerConfigured, clearNetworkIssue, refresh]);
 
   if (loading || serverReady === null) {
-    return <LoadingScreen label="Подключение к серверу…" />;
+    return <LoadingScreen label="Загрузка…" />;
   }
 
   return (
@@ -161,6 +155,8 @@ export function RootNavigator() {
             <Stack.Screen name="TripPhotos" component={TripPhotosScreen} options={{ title: 'Фото ТТН' }} />
             <Stack.Screen name="AllPhotos" component={AllPhotosScreen} options={{ title: 'Фотографии ТТН' }} />
             <Stack.Screen name="TripCreate" component={TripCreateScreen} options={{ title: 'Рейсы и ТТН' }} />
+            <Stack.Screen name="FuelRefills" component={FuelRefillsScreen} options={{ title: 'Заправки Opti' }} />
+            <Stack.Screen name="FuelSettings" component={FuelSettingsScreen} options={{ title: 'Топливные карты' }} />
             <Stack.Screen name="ServerSetup" options={{ title: 'Настройки сервера' }}>
               {(props) => <ServerSetupScreen {...props} onConfigured={onServerConfigured} />}
             </Stack.Screen>
@@ -189,6 +185,7 @@ export function RootNavigator() {
             <Stack.Screen name="Reports" component={ReportsScreen} options={{ title: 'Отчёты' }} />
             <Stack.Screen name="Earnings" component={EarningsScreen} options={{ title: 'Мой заработок' }} />
             <Stack.Screen name="Expenses" component={ExpensesScreen} options={{ title: 'Мои расходы' }} />
+            <Stack.Screen name="FuelRefills" component={FuelRefillsScreen} options={{ title: 'Мои заправки' }} />
             <Stack.Screen name="TripCreate" component={TripCreateScreen} options={{ title: 'Рейсы и ТТН' }} />
             <Stack.Screen name="ServerSetup" options={{ title: 'Настройки сервера' }}>
               {(props) => <ServerSetupScreen {...props} onConfigured={onServerConfigured} />}

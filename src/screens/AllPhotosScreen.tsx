@@ -20,8 +20,8 @@ import { ScreenHeader } from '../components/ScreenHeader';
 import { ScreenHero } from '../components/ScreenHero';
 import { ErrorText, Field, LoadingScreen, MenuButton } from '../components/ui';
 import { getAllPhotos, type GetAllPhotosParams } from '../api/photos';
-import { apiErrorMessage, getServerHost, TOKEN_KEY } from '../api/client';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { apiErrorMessage, getServerHost } from '../api/client';
+import { getStoredToken } from '../storage/sessionStorage';
 import { listDrivers } from '../api/drivers';
 import { listOrders } from '../api/orders';
 import type { RootStackParamList } from '../navigation/types';
@@ -65,7 +65,7 @@ export function AllPhotosScreen() {
     if (!previewPhoto) return;
     setSavingPhoto(true);
     try {
-      const token = await AsyncStorage.getItem(TOKEN_KEY);
+      const token = await getStoredToken();
       const url = `${fileHost}${previewPhoto.file_path}`;
       const ext = previewPhoto.file_path.split('.').pop() ?? 'jpg';
       const targetUri = `${FileSystem.cacheDirectory ?? ''}ttn_${previewPhoto.id}.${ext}`;

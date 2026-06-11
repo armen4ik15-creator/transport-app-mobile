@@ -30,6 +30,13 @@ export function DriverFinancesHubScreen() {
             },
             {
               icon: '⛽',
+              title: 'Мои заправки',
+              subtitle: 'Импорт с топливной карты Opti',
+              accentColor: '#f97316',
+              onPress: () => navigation.navigate('FuelRefills'),
+            },
+            {
+              icon: '💸',
               title: 'Мои расходы',
               subtitle: 'Топливо, ремонт, прочее',
               accentColor: '#ef4444',

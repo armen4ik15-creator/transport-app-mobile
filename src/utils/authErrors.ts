@@ -1,0 +1,14 @@
+import axios from 'axios';
+
+/** Сетевая ошибка — токен не трогаем, сессию не сбрасываем */
+export function isNetworkAuthError(err: unknown): boolean {
+  if (!axios.isAxiosError(err)) return false;
+  if (!err.response) return true;
+  if (err.code === 'ECONNABORTED') return true;
+  if (err.message === 'Network Error') return true;
+  return false;
+}
+
+export function isUnauthorizedError(err: unknown): boolean {
+  return axios.isAxiosError(err) && err.response?.status === 401;
+}

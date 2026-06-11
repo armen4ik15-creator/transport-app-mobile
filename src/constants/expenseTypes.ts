@@ -34,6 +34,7 @@ export const ALL_EXPENSE_TYPES: ExpenseTypeOption[] = [
   { value: 'wash', label: 'Мойка', icon: '🚿' },
   { value: 'toll', label: 'Платные дороги', icon: '🏁' },
   { value: 'fine', label: 'Штрафы', icon: '⚠️' },
+  { value: 'dps', label: 'ДПС', icon: '🚔' },
   { value: 'lease', label: 'Аренда/Лизинг', icon: '🏢' },
   { value: 'bank_fee', label: 'Банковские комиссии', icon: '🏦' },
   { value: 'other', label: 'Прочие расходы', icon: '📦' },

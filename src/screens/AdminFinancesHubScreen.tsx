@@ -33,6 +33,13 @@ export function AdminFinancesHubScreen() {
           onPress: () => navigation.navigate('Earnings'),
         },
         {
+          icon: '⛽',
+          title: 'Заправки Opti',
+          subtitle: 'Автоимпорт с топливных карт · история',
+          accentColor: '#f97316',
+          onPress: () => navigation.navigate('FuelRefills'),
+        },
+        {
           icon: '💸',
           title: 'Расходы',
           subtitle: 'Топливо, ремонт, штрафы · Excel',

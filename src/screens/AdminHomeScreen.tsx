@@ -14,7 +14,9 @@ import { getContractorDebtSummary } from '../api/contractorPayments';
 import { listNotifications } from '../api/notifications';
 import { apiErrorMessage } from '../api/client';
 import { screenUi } from '../styles/screenUi';
+import { getFuelSyncStatus } from '../api/fuel';
 import { withFallback } from '../utils/safeRequest';
+import { formatFuelSyncLabel } from '../utils/fuelSyncLabel';
 
 export function AdminHomeScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
@@ -26,20 +28,31 @@ export function AdminHomeScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [fuelSyncLabel, setFuelSyncLabel] = useState<string | null>(null);
 
   const loadDashboard = useCallback(async () => {
     try {
       setError(null);
-      const [orders, drivers, debts, notifications] = await Promise.all([
+      const [orders, drivers, debts, notifications, fuelStatus] = await Promise.all([
         withFallback(() => listOrders(), []),
         withFallback(() => listDrivers(), []),
         withFallback(() => getContractorDebtSummary(), []),
         withFallback(() => listNotifications(), []),
+        withFallback(() => getFuelSyncStatus(), null),
       ]);
       setActiveOrders(orders.filter((o) => Boolean(o.is_active)).length);
       setDriversOnline(drivers.filter((d) => Boolean(d.is_active)).length);
       setTotalDebt(debts.reduce((sum, item) => sum + item.debt, 0));
       setUnreadNotifications(notifications.filter((item) => !item.read).length);
+      setFuelSyncLabel(
+        fuelStatus
+          ? formatFuelSyncLabel(
+              fuelStatus.last_sync_at,
+              fuelStatus.last_sync_new_count,
+              fuelStatus.last_sync_status
+            )
+          : null
+      );
     } catch (e) {
       setError(apiErrorMessage(e, 'Не удалось загрузить дашборд'));
     }
@@ -115,6 +128,16 @@ export function AdminHomeScreen() {
       </Pressable>
 
       <ErrorText message={error} />
+
+      {fuelSyncLabel ? (
+        <Pressable
+          onPress={() => navigation.navigate('FuelRefills')}
+          style={[screenUi.card, { marginBottom: 12, borderLeftWidth: 4, borderLeftColor: '#f97316' }]}
+        >
+          <Text style={{ fontWeight: '700', color: '#111827' }}>⛽ Топливо Opti</Text>
+          <Text style={{ color: '#64748b', marginTop: 4 }}>{fuelSyncLabel}</Text>
+        </Pressable>
+      ) : null}
 
       <View style={screenUi.card}>
         <Subtitle>📊 Сводка</Subtitle>

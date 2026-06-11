@@ -1,8 +1,8 @@
 import { Alert } from 'react-native';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { getApiBaseUrl, TOKEN_KEY } from '../api/client';
+import { getApiBaseUrl } from '../api/client';
+import { getStoredToken } from '../storage/sessionStorage';
 
 export function buildExportQuery(
   params: Record<string, string | number | undefined | null>
@@ -17,7 +17,7 @@ export function buildExportQuery(
 export async function downloadAndShareExcel(apiPath: string, filename: string): Promise<void> {
   try {
     const apiBase = await getApiBaseUrl();
-    const token = await AsyncStorage.getItem(TOKEN_KEY);
+    const token = await getStoredToken();
     const normalizedPath = apiPath.startsWith('/') ? apiPath : `/${apiPath}`;
     const url = `${apiBase}${normalizedPath}`;
     const targetUri = `${FileSystem.cacheDirectory ?? ''}${filename}`;

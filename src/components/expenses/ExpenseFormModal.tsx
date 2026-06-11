@@ -12,6 +12,7 @@ import {
   View,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
+import { ExpenseDatePicker } from '../ExpenseDatePicker';
 import { ALL_EXPENSE_TYPES } from '../../constants/expenseTypes';
 import { screenUi } from '../../styles/screenUi';
 import { todayIso } from '../../utils/datePeriods';
@@ -203,13 +204,9 @@ export function ExpenseFormModal({
               />
             ) : null}
 
-            <Text style={screenUi.fieldLabel}>Дата (ГГГГ-ММ-ДД) *</Text>
-            <TextInput
-              style={screenUi.input}
+            <ExpenseDatePicker
               value={form.exp_date}
-              onChangeText={(value) => setForm((prev) => ({ ...prev, exp_date: value }))}
-              placeholder="2026-05-28"
-              placeholderTextColor="#9ca3af"
+              onChange={(iso) => setForm((prev) => ({ ...prev, exp_date: iso }))}
             />
 
             <Text style={screenUi.fieldLabel}>Тип расхода *</Text>

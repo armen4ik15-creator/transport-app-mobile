@@ -8,7 +8,9 @@ import {
   View,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { BatchExportModal } from '../components/expenses/BatchExportModal';
 import { DateRangePicker } from '../components/DateRangePicker';
+import { CollapsiblePanel } from '../components/CollapsiblePanel';
 import { ExcelExportButton } from '../components/ExcelExportButton';
 import { ExpenseFormModal, type VehicleOption } from '../components/expenses/ExpenseFormModal';
 import { FilterChipRow } from '../components/FilterChipRow';
@@ -27,11 +29,19 @@ import { createExpense, deleteExpense, listExpenses } from '../api/expenses';
 import { listDrivers } from '../api/drivers';
 import { apiErrorMessage } from '../api/client';
 import { screenUi } from '../styles/screenUi';
-import { formatMoney, getPeriodBounds } from '../utils/datePeriods';
+import { formatMoney, getPeriodBounds, todayIso } from '../utils/datePeriods';
 import { buildExportQuery, downloadAndShareExcel } from '../utils/exportUtils';
 import { withFallback } from '../utils/safeRequest';
 import { useAuth } from '../auth/AuthContext';
 import type { ExpenseMethod, ExpenseRecord } from '../types';
+
+function countRecordsInPeriod(records: ExpenseRecord[], from: string, to: string): number {
+  return records.filter((item) => {
+    if (from && item.exp_date < from) return false;
+    if (to && item.exp_date > to) return false;
+    return true;
+  }).length;
+}
 
 export function ExpensesScreen() {
   const navigation = useNavigation();
@@ -51,6 +61,7 @@ export function ExpensesScreen() {
   const [formVisible, setFormVisible] = useState(false);
   const [editingRecord, setEditingRecord] = useState<ExpenseRecord | null>(null);
   const [exporting, setExporting] = useState(false);
+  const [batchExportVisible, setBatchExportVisible] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -109,18 +120,45 @@ export function ExpensesScreen() {
     };
   }, [dateFrom, dateTo, periodFilter]);
 
-  const onExportExcel = async () => {
+  const runExport = async (from: string, to: string, filename: string) => {
     setExporting(true);
     try {
       const query = buildExportQuery({
-        date_from: exportBounds.from,
-        date_to: exportBounds.to,
+        date_from: from,
+        date_to: to,
         driver_id: isAdmin ? undefined : driver?.id,
       });
-      await downloadAndShareExcel(`/export/expenses${query}`, 'rashody.xlsx');
+      await downloadAndShareExcel(`/export/expenses${query}`, filename);
+      setBatchExportVisible(false);
     } finally {
       setExporting(false);
     }
+  };
+
+  const onExportExcel = async () => {
+    await runExport(exportBounds.from ?? todayIso(), exportBounds.to ?? todayIso(), 'rashody.xlsx');
+  };
+
+  const onExportToday = async () => {
+    const today = todayIso();
+    await runExport(today, today, `rashody_${today}.xlsx`);
+  };
+
+  const onExportPeriod = async (from: string, to: string) => {
+    if (!from || !to) {
+      Alert.alert('Период', 'Укажите даты «С» и «По»');
+      return;
+    }
+    const count = countRecordsInPeriod(records, from, to);
+    if (count === 0) {
+      Alert.alert('Нет данных', 'За выбранный период расходов не найдено');
+      return;
+    }
+    await runExport(from, to, `rashody_${from}_${to}.xlsx`);
+  };
+
+  const openBatchExport = () => {
+    setBatchExportVisible(true);
   };
 
   const totalAmount = displayedRecords.reduce((sum, item) => sum + item.amount, 0);
@@ -202,56 +240,84 @@ export function ExpensesScreen() {
 
   return (
     <View style={screenUi.container}>
-      <View style={screenUi.content}>
-        <ScreenHeader
-          title="💸 Расходы"
-          showBack={navigation.canGoBack()}
-          onBack={() => navigation.goBack()}
-          actionLabel="+ Добавить"
-          onAction={openCreate}
-        />
-        <ScreenHero
-          title="💸 Учёт расходов"
-          subtitle={isAdmin ? 'Топливо, ремонт, штрафы · экспорт Excel' : 'Ваши расходы по рейсам'}
-        />
-
-        <FilterChipRow items={periodChips} activeId={periodFilter} onSelect={setPeriodFilter} />
-        <DateRangePicker
-          from={dateFrom}
-          to={dateTo}
-          onChangeFrom={setDateFrom}
-          onChangeTo={setDateTo}
-        />
-        <FilterChipRow items={typeChips} activeId={typeFilter} onSelect={setTypeFilter} />
-        {isAdmin ? (
-          <FilterChipRow items={carChips} activeId={carFilter} onSelect={setCarFilter} />
-        ) : null}
-
-        <View style={screenUi.summaryBar}>
-          <View style={screenUi.sumItem}>
-            <Text style={screenUi.sumLabel}>Записей</Text>
-            <Text style={[screenUi.sumValue, { color: '#2563eb' }]}>
-              {displayedRecords.length}
-            </Text>
-          </View>
-          <View style={screenUi.sumDivider} />
-          <View style={screenUi.sumItem}>
-            <Text style={screenUi.sumLabel}>Итого расходы</Text>
-            <Text style={[screenUi.sumValue, { color: '#ef4444' }]}>
-              {formatMoney(totalAmount)} ₽
-            </Text>
-          </View>
-        </View>
-
-        <Text style={screenUi.hint}>Нажмите — редактировать · Удерживайте — удалить</Text>
-        <ExcelExportButton loading={exporting} onPress={() => void onExportExcel()} />
-      </View>
-
       <FlatList
         data={displayedRecords}
         keyExtractor={(item) => String(item.id)}
         contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 24 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        ListHeaderComponent={
+          <View style={screenUi.content}>
+            <ScreenHeader
+              title="💸 Расходы"
+              showBack={navigation.canGoBack()}
+              onBack={() => navigation.goBack()}
+              actionLabel="+ Добавить"
+              onAction={openCreate}
+            />
+
+            <CollapsiblePanel
+              title="Фильтры и экспорт"
+              subtitle={`${displayedRecords.length} записей · ${formatMoney(totalAmount)} ₽`}
+              defaultExpanded
+            >
+              <ScreenHero
+                title="💸 Учёт расходов"
+                subtitle={isAdmin ? 'Топливо, ремонт, штрафы · экспорт Excel' : 'Ваши расходы по рейсам'}
+              />
+
+              <FilterChipRow items={periodChips} activeId={periodFilter} onSelect={setPeriodFilter} />
+              <DateRangePicker
+                from={dateFrom}
+                to={dateTo}
+                onChangeFrom={setDateFrom}
+                onChangeTo={setDateTo}
+              />
+              <FilterChipRow items={typeChips} activeId={typeFilter} onSelect={setTypeFilter} />
+              {isAdmin ? (
+                <FilterChipRow items={carChips} activeId={carFilter} onSelect={setCarFilter} />
+              ) : null}
+
+              <View style={screenUi.summaryBar}>
+                <View style={screenUi.sumItem}>
+                  <Text style={screenUi.sumLabel}>Записей</Text>
+                  <Text style={[screenUi.sumValue, { color: '#2563eb' }]}>
+                    {displayedRecords.length}
+                  </Text>
+                </View>
+                <View style={screenUi.sumDivider} />
+                <View style={screenUi.sumItem}>
+                  <Text style={screenUi.sumLabel}>Итого расходы</Text>
+                  <Text style={[screenUi.sumValue, { color: '#ef4444' }]}>
+                    {formatMoney(totalAmount)} ₽
+                  </Text>
+                </View>
+              </View>
+
+              <Text style={screenUi.hint}>Нажмите — редактировать · Удерживайте — удалить</Text>
+              <ExcelExportButton
+                label="📤 Экспорт за период (фильтры)"
+                loading={exporting}
+                onPress={() => void onExportExcel()}
+              />
+              <Pressable
+                onPress={openBatchExport}
+                style={{
+                  marginTop: 8,
+                  backgroundColor: '#f3f4f6',
+                  borderRadius: 10,
+                  paddingVertical: 12,
+                  alignItems: 'center',
+                  borderWidth: 1,
+                  borderColor: '#e5e7eb',
+                }}
+              >
+                <Text style={{ fontSize: 14, fontWeight: '600', color: '#2563eb' }}>
+                  📅 Пакетный экспорт (сегодня / период)
+                </Text>
+              </Pressable>
+            </CollapsiblePanel>
+          </View>
+        }
         ListEmptyComponent={
           <Text style={screenUi.emptyText}>Нет расходов за выбранный период</Text>
         }
@@ -308,6 +374,15 @@ export function ExpensesScreen() {
           setEditingRecord(null);
         }}
         onSave={onSave}
+      />
+
+      <BatchExportModal
+        visible={batchExportVisible}
+        records={records}
+        exporting={exporting}
+        onClose={() => setBatchExportVisible(false)}
+        onExportToday={() => void onExportToday()}
+        onExportPeriod={(from, to) => void onExportPeriod(from, to)}
       />
     </View>
   );

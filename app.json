@@ -2,7 +2,7 @@
   "expo": {
     "name": "РеестрПро",
     "slug": "reestrpro-mobile",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "orientation": "portrait",
     "scheme": "reestrpro",
     "userInterfaceStyle": "light",
@@ -39,6 +39,7 @@
       ]
     },
     "plugins": [
+      "expo-secure-store",
       [
         "expo-image-picker",
         {

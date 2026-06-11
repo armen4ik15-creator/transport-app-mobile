@@ -1,8 +1,16 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { AppState, type AppStateStatus } from 'react-native';
 import { getMe, login, registerDriver } from '../api/auth';
-import { setUnauthorizedHandler, TOKEN_KEY } from '../api/client';
+import { setUnauthorizedHandler } from '../api/client';
+import {
+  clearSession,
+  getStoredToken,
+  getUserSnapshot,
+  setStoredToken,
+  setUserSnapshot,
+} from '../storage/sessionStorage';
+import { isNetworkAuthError, isUnauthorizedError } from '../utils/authErrors';
 import type { Driver, User } from '../types';
 
 interface AuthState {
@@ -10,6 +18,7 @@ interface AuthState {
   driver: Driver | null;
   loading: boolean;
   initError: string | null;
+  networkIssue: boolean;
   signIn: (email: string, password: string) => Promise<User>;
   signUp: (payload: {
     email: string;
@@ -23,6 +32,7 @@ interface AuthState {
   }) => Promise<User>;
   signOut: () => Promise<void>;
   refresh: () => Promise<void>;
+  clearNetworkIssue: () => void;
 }
 
 const AuthCtx = createContext<AuthState | null>(null);
@@ -32,28 +42,64 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [driver, setDriver] = useState<Driver | null>(null);
   const [loading, setLoading] = useState(true);
   const [initError, setInitError] = useState<string | null>(null);
+  const [networkIssue, setNetworkIssue] = useState(false);
+  const appStateRef = useRef<AppStateStatus>(AppState.currentState);
+
+  const applySession = useCallback(async (nextUser: User, nextDriver: Driver | null) => {
+    setUser(nextUser);
+    setDriver(nextDriver);
+    await setUserSnapshot(nextUser, nextDriver);
+    setNetworkIssue(false);
+  }, []);
+
+  const clearLocalSession = useCallback(async () => {
+    await clearSession();
+    setUser(null);
+    setDriver(null);
+  }, []);
 
   const refresh = useCallback(async () => {
-    const token = await AsyncStorage.getItem(TOKEN_KEY);
+    const token = await getStoredToken();
     if (!token) {
       setUser(null);
       setDriver(null);
       return;
     }
+
     try {
       const me = await getMe();
-      setUser(me.user);
-      setDriver(me.driver);
-    } catch {
-      await AsyncStorage.removeItem(TOKEN_KEY);
-      setUser(null);
-      setDriver(null);
+      await applySession(me.user, me.driver);
+    } catch (err: unknown) {
+      if (isUnauthorizedError(err)) {
+        await clearLocalSession();
+        return;
+      }
+      if (isNetworkAuthError(err)) {
+        // Сеть недоступна — восстанавливаем кэш, токен не трогаем
+        const snapshot = await getUserSnapshot();
+        if (snapshot) {
+          setUser(snapshot.user);
+          setDriver(snapshot.driver);
+        }
+        setNetworkIssue(true);
+        return;
+      }
+      await clearLocalSession();
     }
-  }, []);
+  }, [applySession, clearLocalSession]);
 
   useEffect(() => {
     (async () => {
       try {
+        // Быстрый старт из кэша, пока идёт проверка токена на сервере
+        const token = await getStoredToken();
+        if (token) {
+          const snapshot = await getUserSnapshot();
+          if (snapshot) {
+            setUser(snapshot.user);
+            setDriver(snapshot.driver);
+          }
+        }
         await refresh();
       } catch (e: unknown) {
         setInitError(e instanceof Error ? e.message : 'Ошибка инициализации');
@@ -71,31 +117,71 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => setUnauthorizedHandler(null);
   }, []);
 
-  const signIn = useCallback(async (email: string, password: string) => {
-    const res = await login(email, password);
-    await AsyncStorage.setItem(TOKEN_KEY, res.token);
-    setUser(res.user);
-    await refresh();
-    return res.user;
+  // Обновление сессии при возврате из фона
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (nextState) => {
+      const wasBackground = appStateRef.current.match(/inactive|background/);
+      appStateRef.current = nextState;
+      if (wasBackground && nextState === 'active') {
+        void refresh();
+      }
+    });
+    return () => subscription.remove();
   }, [refresh]);
 
-  const signUp = useCallback<AuthState['signUp']>(async (payload) => {
-    const res = await registerDriver(payload);
-    await AsyncStorage.setItem(TOKEN_KEY, res.token);
-    setUser(res.user);
-    await refresh();
-    return res.user;
-  }, [refresh]);
+  const signIn = useCallback(
+    async (email: string, password: string) => {
+      const res = await login(email, password);
+      await setStoredToken(res.token);
+      setUser(res.user);
+      await refresh();
+      return res.user;
+    },
+    [refresh]
+  );
+
+  const signUp = useCallback<AuthState['signUp']>(
+    async (payload) => {
+      const res = await registerDriver(payload);
+      await setStoredToken(res.token);
+      setUser(res.user);
+      await refresh();
+      return res.user;
+    },
+    [refresh]
+  );
 
   const signOut = useCallback(async () => {
-    await AsyncStorage.removeItem(TOKEN_KEY);
-    setUser(null);
-    setDriver(null);
-  }, []);
+    await clearLocalSession();
+  }, [clearLocalSession]);
+
+  const clearNetworkIssue = useCallback(() => setNetworkIssue(false), []);
 
   const value = useMemo<AuthState>(
-    () => ({ user, driver, loading, initError, signIn, signUp, signOut, refresh }),
-    [user, driver, loading, initError, signIn, signUp, signOut, refresh]
+    () => ({
+      user,
+      driver,
+      loading,
+      initError,
+      networkIssue,
+      signIn,
+      signUp,
+      signOut,
+      refresh,
+      clearNetworkIssue,
+    }),
+    [
+      user,
+      driver,
+      loading,
+      initError,
+      networkIssue,
+      signIn,
+      signUp,
+      signOut,
+      refresh,
+      clearNetworkIssue,
+    ]
   );
 
   return <AuthCtx.Provider value={value}>{children}</AuthCtx.Provider>;
