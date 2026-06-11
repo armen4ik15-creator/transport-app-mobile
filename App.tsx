@@ -7,6 +7,7 @@ import { AuthProvider } from './src/auth/AuthContext';
 import { RootNavigator } from './src/navigation/RootNavigator';
 import { AppErrorBoundary } from './src/components/AppErrorBoundary';
 import { logStartup } from './src/utils/startupLogger';
+import { installGlobalErrorHandler } from './src/utils/installGlobalErrorHandler';
 
 function AppShell() {
   return (
@@ -24,6 +25,7 @@ export default function App() {
 
   useEffect(() => {
     void logStartup('app_mount');
+    installGlobalErrorHandler();
     const frame = requestAnimationFrame(() => {
       setReady(true);
       void logStartup('app_ready');
