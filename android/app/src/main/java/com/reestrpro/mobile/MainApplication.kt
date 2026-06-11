@@ -2,7 +2,6 @@ package com.reestrpro.mobile
 
 import android.app.Application
 import android.content.res.Configuration
-import android.util.Log
 
 import com.facebook.react.PackageList
 import com.facebook.react.ReactApplication
@@ -40,11 +39,7 @@ class MainApplication : Application(), ReactApplication {
     get() = ReactNativeHostWrapper.createReactHost(applicationContext, reactNativeHost)
 
   override fun onCreate() {
-    val defaultHandler = Thread.getDefaultUncaughtExceptionHandler()
-    Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
-      Log.e("ReestrProStartup", "Uncaught exception in thread ${thread.name}", throwable)
-      defaultHandler?.uncaughtException(thread, throwable)
-    }
+    ReestrProCrashHandler.install(this)
 
     super.onCreate()
     DefaultNewArchitectureEntryPoint.releaseLevel = try {

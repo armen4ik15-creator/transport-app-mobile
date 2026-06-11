@@ -19,7 +19,7 @@ export function installGlobalErrorHandler(): void {
     if (isFatal) {
       showFatalAlert(
         'Критическая ошибка',
-        `Приложение не может продолжить работу.\n\n${detail}`
+        `${error.message}${error.stack ? `\n\n${error.stack.slice(0, 1500)}` : ''}`
       );
     }
 

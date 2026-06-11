@@ -64,17 +64,41 @@ function normalizeApiUrl(url: string): string {
   return buildApiUrl(url);
 }
 
+async function safeStorageGet(key: string): Promise<string | null> {
+  try {
+    return await AsyncStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+async function safeStorageSet(key: string, value: string): Promise<void> {
+  try {
+    await AsyncStorage.setItem(key, value);
+  } catch {
+    // ignore — server URL fallback still works in memory
+  }
+}
+
+async function safeStorageRemove(key: string): Promise<void> {
+  try {
+    await AsyncStorage.removeItem(key);
+  } catch {
+    // ignore
+  }
+}
+
 /** При первом запуске сохраняем продакшен-URL, чтобы не требовать ручной настройки */
 export async function ensureDefaultServerUrl(): Promise<string> {
-  const saved = await AsyncStorage.getItem(SERVER_URL_KEY);
+  const saved = await safeStorageGet(SERVER_URL_KEY);
   if (saved) return normalizeApiUrl(saved);
   const normalized = normalizeApiUrl(DEFAULT_PRODUCTION_API_URL);
-  await AsyncStorage.setItem(SERVER_URL_KEY, normalized);
+  await safeStorageSet(SERVER_URL_KEY, normalized);
   return normalized;
 }
 
 export async function getServerUrl(): Promise<string | null> {
-  const saved = await AsyncStorage.getItem(SERVER_URL_KEY);
+  const saved = await safeStorageGet(SERVER_URL_KEY);
   if (!saved) return null;
   return normalizeApiUrl(saved);
 }
@@ -82,7 +106,7 @@ export async function getServerUrl(): Promise<string | null> {
 export async function setServerUrl(url: string): Promise<string> {
   const normalized = normalizeApiUrl(url);
   const previous = await getServerUrl();
-  await AsyncStorage.setItem(SERVER_URL_KEY, normalized);
+  await safeStorageSet(SERVER_URL_KEY, normalized);
   // Токен сбрасываем только при смене сервера
   if (previous && previous !== normalized) {
     await clearStoredToken();
@@ -91,7 +115,7 @@ export async function setServerUrl(url: string): Promise<string> {
 }
 
 export async function clearServerUrl(): Promise<void> {
-  await AsyncStorage.removeItem(SERVER_URL_KEY);
+  await safeStorageRemove(SERVER_URL_KEY);
 }
 
 export async function getApiBaseUrl(): Promise<string> {

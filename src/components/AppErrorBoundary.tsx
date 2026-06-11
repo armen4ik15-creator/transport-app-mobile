@@ -21,9 +21,10 @@ export class AppErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundar
   componentDidCatch(error: Error, info: ErrorInfo): void {
     console.error('AppErrorBoundary:', error.message, info.componentStack);
     void logStartup('error_boundary', `${error.message} | ${info.componentStack?.slice(0, 200) ?? ''}`);
+    const componentStack = info.componentStack?.trim() ?? '';
     Alert.alert(
       'Ошибка приложения',
-      `${error.message}\n\nСкопируйте текст и отправьте администратору.`,
+      `${error.message}${componentStack ? `\n\n${componentStack.slice(0, 1500)}` : ''}`,
       [{ text: 'OK' }]
     );
   }

@@ -28,6 +28,17 @@ adb logcat --pid=$(adb shell pidof -s com.reestrpro.mobile)
 
 С v1.0.4 шаги `[startup]` пишутся только в `adb logcat` (тег `ReactNativeJS`), без `expo-file-system` на старте.
 
+## Нативный диалог сбоя (v1.0.5+)
+
+При native crash до загрузки JS на телефоне появляется диалог **«ReestrPro — сбой»** (тег logcat: `ReestrProCrash`).
+Лог также пишется в `files/crash.log` внутри приложения.
+
+Фильтр logcat:
+
+```bash
+adb logcat -s ReestrProCrash AndroidRuntime ReactNativeJS
+```
+
 ## Типичные причины мгновенного закрытия
 
 1. Несовместимая версия нативного модуля или неполный `prebuild` (манифест ссылается на `@xml/secure_store_*` без ресурсов).

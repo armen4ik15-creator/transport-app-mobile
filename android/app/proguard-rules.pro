@@ -11,4 +11,5 @@
 -keep class com.swmansion.reanimated.** { *; }
 -keep class com.facebook.react.turbomodule.** { *; }
 
-# Add any project specific keep options here:
+# expo-updates (disabled at launch but keep classes if re-enabled)
+-keep class expo.modules.updates.** { *; }

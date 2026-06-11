@@ -2,7 +2,7 @@
   "expo": {
     "name": "РеестрПро",
     "slug": "reestrpro-mobile",
-    "version": "1.0.4",
+    "version": "1.0.5",
     "orientation": "portrait",
     "scheme": "reestrpro",
     "userInterfaceStyle": "light",
@@ -12,8 +12,8 @@
     },
     "updates": {
       "url": "https://u.expo.dev/55c1448c-d923-4b4a-9214-ba474b5a951e",
-      "enabled": true,
-      "checkAutomatically": "ON_LOAD",
+      "enabled": false,
+      "checkAutomatically": "NEVER",
       "fallbackToCacheTimeout": 0,
       "requestHeaders": {
         "expo-channel-name": "production"
@@ -31,7 +31,7 @@
     },
     "android": {
       "package": "com.reestrpro.mobile",
-      "versionCode": 5,
+      "versionCode": 6,
       "permissions": [
         "android.permission.CAMERA",
         "android.permission.READ_EXTERNAL_STORAGE",
