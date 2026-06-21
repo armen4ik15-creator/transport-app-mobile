@@ -131,6 +131,11 @@ export interface EarningsSummary {
   actual_income: number;
   actual_expense: number;
   actual_balance: number;
+  expenses_pending?: number;
+  expenses_approved?: number;
+  expenses_rejected?: number;
+  compensations?: number;
+  total_earnings?: number;
 }
 
 export type DriverPaymentType = 'salary' | 'advance' | 'bonus' | 'deduction';
@@ -157,6 +162,7 @@ export interface DriverAccruedPreview {
   from: string;
   to: string;
   accrued: number;
+  compensations?: number;
   deductions: number;
   net: number;
 }
@@ -164,6 +170,8 @@ export interface DriverAccruedPreview {
 export interface DriverSalarySummary {
   driver_id: number;
   gross: number;
+  gross_trips?: number;
+  compensations?: number;
   paid: number;
   deducted: number;
   debt: number;
@@ -195,6 +203,10 @@ export interface ContractorDebtSummary {
 
 export type ExpenseMethod = 'cash' | 'noncash' | null;
 
+export type ExpenseStatus = 'pending' | 'approved' | 'rejected';
+
+export type ExpenseSource = 'driver' | 'admin' | 'system';
+
 export interface ExpenseRecord {
   id: number;
   exp_date: string;
@@ -207,6 +219,11 @@ export interface ExpenseRecord {
   created_by: number | null;
   created_at: string;
   driver_name: string | null;
+  status?: ExpenseStatus | null;
+  source?: ExpenseSource | null;
+  rejection_reason?: string | null;
+  photo_path?: string | null;
+  updated_at?: string | null;
 }
 
 export interface Material {

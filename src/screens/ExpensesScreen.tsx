@@ -17,15 +17,24 @@ import { FilterChipRow } from '../components/FilterChipRow';
 import { ScreenHeader } from '../components/ScreenHeader';
 import { Fab, Pill } from '../components/ui-kit';
 import { LoadingScreen } from '../components/ui';
+import { RemoteImage } from '../components/RemoteImage';
 import {
   ALL_EXPENSE_TYPES,
+  getExpenseStatusLabel,
   getExpenseTypeIcon,
   getExpenseTypeLabel,
   PERIOD_FILTERS,
   PERIOD_LABELS,
   type PeriodFilter,
 } from '../constants/expenseTypes';
-import { createExpense, deleteExpense, listExpenses } from '../api/expenses';
+import {
+  approveExpense,
+  createExpense,
+  createExpenseWithPhoto,
+  deleteExpense,
+  listExpenses,
+  rejectExpense,
+} from '../api/expenses';
 import { listDrivers } from '../api/drivers';
 import { apiErrorMessage } from '../api/client';
 import { screenUi } from '../styles/screenUi';
@@ -34,7 +43,26 @@ import { formatMoney, getPeriodBounds, todayIso } from '../utils/datePeriods';
 import { buildExportQuery, downloadAndShareExcel } from '../utils/exportUtils';
 import { withFallback } from '../utils/safeRequest';
 import { useAuth } from '../auth/AuthContext';
-import type { ExpenseMethod, ExpenseRecord } from '../types';
+import type { ExpenseMethod, ExpenseRecord, ExpenseStatus } from '../types';
+
+function statusTone(status: ExpenseStatus | null | undefined): 'warning' | 'positive' | 'danger' | 'neutral' {
+  if (status === 'pending') return 'warning';
+  if (status === 'rejected') return 'danger';
+  if (status === 'approved') return 'positive';
+  return 'neutral';
+}
+
+function resolveStatus(record: ExpenseRecord): ExpenseStatus {
+  return record.status ?? 'approved';
+}
+
+function canDriverEdit(record: ExpenseRecord): boolean {
+  return record.source === 'driver' && resolveStatus(record) === 'pending';
+}
+
+function canDriverDelete(record: ExpenseRecord): boolean {
+  return canDriverEdit(record);
+}
 
 function countRecordsInPeriod(records: ExpenseRecord[], from: string, to: string): number {
   return records.filter((item) => {
@@ -183,8 +211,65 @@ export function ExpensesScreen() {
   };
 
   const openEdit = (record: ExpenseRecord) => {
+    if (!isAdmin && !canDriverEdit(record)) {
+      Alert.alert('Нельзя изменить', 'Редактирование доступно только для расходов на проверке');
+      return;
+    }
     setEditingRecord(record);
     setFormVisible(true);
+  };
+
+  const onReviewApprove = (record: ExpenseRecord) => {
+    Alert.alert('Одобрить расход?', `${formatMoney(record.amount)} ₽ — ${getExpenseTypeLabel(record.exp_type)}`, [
+      { text: 'Отмена', style: 'cancel' },
+      {
+        text: 'Одобрить',
+        onPress: async () => {
+          try {
+            await approveExpense(record.id);
+            await load();
+            Alert.alert('Готово', 'Расход одобрен, сумма учтена в компенсации');
+          } catch (e) {
+            Alert.alert('Ошибка', apiErrorMessage(e, 'Не удалось одобрить расход'));
+          }
+        },
+      },
+    ]);
+  };
+
+  const onReviewReject = (record: ExpenseRecord) => {
+    const submitReject = async (reason?: string) => {
+      const trimmed = reason?.trim();
+      if (!trimmed) {
+        Alert.alert('Ошибка', 'Причина отклонения обязательна');
+        return;
+      }
+      try {
+        await rejectExpense(record.id, trimmed);
+        await load();
+        Alert.alert('Готово', 'Расход отклонён');
+      } catch (e) {
+        Alert.alert('Ошибка', apiErrorMessage(e, 'Не удалось отклонить расход'));
+      }
+    };
+
+    Alert.prompt
+      ? Alert.prompt('Отклонить расход', 'Укажите причину отклонения', [
+          { text: 'Отмена', style: 'cancel' },
+          {
+            text: 'Отклонить',
+            style: 'destructive',
+            onPress: (reason?: string) => void submitReject(reason),
+          },
+        ])
+      : Alert.alert('Отклонить расход', 'Отклонить без указания причины?', [
+          { text: 'Отмена', style: 'cancel' },
+          {
+            text: 'Отклонить',
+            style: 'destructive',
+            onPress: () => void submitReject('Отклонено администратором'),
+          },
+        ]);
   };
 
   const onSave = async (payload: {
@@ -195,17 +280,47 @@ export function ExpensesScreen() {
     comment?: string;
     car_number?: string;
     driver_id?: number;
+    photoUri?: string | null;
   }) => {
     setSaving(true);
     try {
       if (editingRecord) {
         await deleteExpense(editingRecord.id);
       }
-      await createExpense(payload);
+
+      if (payload.photoUri) {
+        await createExpenseWithPhoto({
+          exp_date: payload.exp_date,
+          exp_type: payload.exp_type,
+          amount: payload.amount,
+          comment: payload.comment,
+          car_number: payload.car_number,
+          driver_id: payload.driver_id,
+          photoUri: payload.photoUri,
+        });
+      } else if (isAdmin) {
+        await createExpense(payload);
+      } else {
+        await createExpense({
+          exp_date: payload.exp_date,
+          exp_type: payload.exp_type,
+          amount: payload.amount,
+          comment: payload.comment,
+          driver_id: payload.driver_id,
+        });
+      }
+
       setFormVisible(false);
       setEditingRecord(null);
       await load();
-      Alert.alert('Готово', editingRecord ? 'Расход обновлён' : 'Расход добавлен');
+      Alert.alert(
+        'Готово',
+        isAdmin
+          ? editingRecord
+            ? 'Расход обновлён'
+            : 'Расход добавлен'
+          : 'Расход отправлен на проверку'
+      );
     } catch (e) {
       Alert.alert('Ошибка', apiErrorMessage(e, 'Не удалось сохранить расход'));
     } finally {
@@ -214,6 +329,10 @@ export function ExpensesScreen() {
   };
 
   const onDelete = (record: ExpenseRecord) => {
+    if (!isAdmin && !canDriverDelete(record)) {
+      Alert.alert('Нельзя удалить', 'Удаление доступно только для расходов на проверке');
+      return;
+    }
     Alert.alert(
       'Удалить расход?',
       `${getExpenseTypeLabel(record.exp_type)} — ${formatMoney(record.amount)} ₽`,
@@ -307,6 +426,10 @@ export function ExpensesScreen() {
           <Text style={screenUi.emptyText}>Нет расходов за выбранный период</Text>
         }
         renderItem={({ item }) => {
+          const status = resolveStatus(item);
+          const showReviewActions =
+            isAdmin && item.source === 'driver' && status === 'pending';
+
           return (
             <Pressable
               style={screenUi.card}
@@ -322,12 +445,16 @@ export function ExpensesScreen() {
                     </Text>
                     <Text style={screenUi.cardMeta}>
                       {item.exp_date}
+                      {item.driver_name ? ` · ${item.driver_name}` : ''}
                     </Text>
                     <View style={{ flexDirection: 'row', gap: 6, marginTop: 6, flexWrap: 'wrap' }}>
-                      <Pill tone="neutral">{getExpenseTypeLabel(item.exp_type)}</Pill>
-                      <Pill tone={item.method === 'cash' ? 'warning' : 'info'}>
-                        {item.method === 'cash' ? '💵 Нал' : '💳 Безнал'}
-                      </Pill>
+                      <Pill tone={statusTone(status)}>{getExpenseStatusLabel(status)}</Pill>
+                      {item.source === 'driver' ? <Pill tone="info">👤 Водитель</Pill> : null}
+                      {isAdmin && item.method ? (
+                        <Pill tone={item.method === 'cash' ? 'warning' : 'info'}>
+                          {item.method === 'cash' ? '💵 Нал' : '💳 Безнал'}
+                        </Pill>
+                      ) : null}
                       {item.car_number ? (
                         <Pill tone="neutral">🚗 {item.car_number}</Pill>
                       ) : null}
@@ -338,15 +465,48 @@ export function ExpensesScreen() {
                   <Text style={[screenUi.sumValue, { color: colors.loss }]}>
                     {formatMoney(item.amount)} ₽
                   </Text>
-                  <Pressable onPress={() => onDelete(item)} hitSlop={8}>
-                    <Text style={screenUi.dangerIcon}>🗑</Text>
-                  </Pressable>
+                  {(isAdmin || canDriverDelete(item)) ? (
+                    <Pressable onPress={() => onDelete(item)} hitSlop={8}>
+                      <Text style={screenUi.dangerIcon}>🗑</Text>
+                    </Pressable>
+                  ) : null}
                 </View>
               </View>
+              {item.photo_path ? (
+                <RemoteImage
+                  filePath={item.photo_path}
+                  style={{ width: '100%', height: 120, borderRadius: 8, marginTop: 10 }}
+                />
+              ) : null}
               {item.comment ? (
                 <Text style={screenUi.cardComment}>
                   📝 {item.comment}
                 </Text>
+              ) : null}
+              {status === 'rejected' && item.rejection_reason ? (
+                <Text style={[screenUi.cardComment, { color: colors.loss }]}>
+                  ❌ {item.rejection_reason}
+                </Text>
+              ) : null}
+              {showReviewActions ? (
+                <View style={{ flexDirection: 'row', gap: 8, marginTop: 10 }}>
+                  <Pressable
+                    onPress={() => onReviewApprove(item)}
+                    style={[screenUi.secondaryBtn, { flex: 1, marginBottom: 0 }]}
+                  >
+                    <Text style={{ color: colors.profit, fontWeight: '600', textAlign: 'center' }}>
+                      ✓ Одобрить
+                    </Text>
+                  </Pressable>
+                  <Pressable
+                    onPress={() => onReviewReject(item)}
+                    style={[screenUi.secondaryBtn, { flex: 1, marginBottom: 0 }]}
+                  >
+                    <Text style={{ color: colors.loss, fontWeight: '600', textAlign: 'center' }}>
+                      ✕ Отклонить
+                    </Text>
+                  </Pressable>
+                </View>
               ) : null}
             </Pressable>
           );

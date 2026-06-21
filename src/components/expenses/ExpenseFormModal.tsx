@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   Image,
@@ -13,7 +13,10 @@ import {
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { ExpenseDatePicker } from '../ExpenseDatePicker';
-import { ALL_EXPENSE_TYPES } from '../../constants/expenseTypes';
+import {
+  ALL_EXPENSE_TYPES,
+  DRIVER_EXPENSE_CATEGORIES,
+} from '../../constants/expenseTypes';
 import { screenUi } from '../../styles/screenUi';
 import { colors } from '../../theme';
 import { todayIso } from '../../utils/datePeriods';
@@ -40,6 +43,7 @@ interface ExpenseFormModalProps {
     comment?: string;
     car_number?: string;
     driver_id?: number;
+    photoUri?: string | null;
   }) => Promise<void>;
 }
 
@@ -72,7 +76,12 @@ export function ExpenseFormModal({
   onSave,
 }: ExpenseFormModalProps) {
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
-  const [invoiceUri, setInvoiceUri] = useState<string | null>(null);
+  const [photoUri, setPhotoUri] = useState<string | null>(null);
+
+  const typeOptions = useMemo(
+    () => (isAdmin ? ALL_EXPENSE_TYPES : DRIVER_EXPENSE_CATEGORIES),
+    [isAdmin]
+  );
 
   useEffect(() => {
     if (!visible) return;
@@ -88,7 +97,7 @@ export function ExpenseFormModal({
     } else {
       setForm({ ...EMPTY_FORM, exp_date: todayIso() });
     }
-    setInvoiceUri(null);
+    setPhotoUri(null);
   }, [visible, editingRecord]);
 
   const pickFromGallery = async () => {
@@ -102,7 +111,7 @@ export function ExpenseFormModal({
       quality: 0.8,
     });
     if (!result.canceled && result.assets[0]) {
-      setInvoiceUri(result.assets[0].uri);
+      setPhotoUri(result.assets[0].uri);
     }
   };
 
@@ -114,7 +123,7 @@ export function ExpenseFormModal({
     }
     const result = await ImagePicker.launchCameraAsync({ quality: 0.8 });
     if (!result.canceled && result.assets[0]) {
-      setInvoiceUri(result.assets[0].uri);
+      setPhotoUri(result.assets[0].uri);
     }
   };
 
@@ -123,7 +132,7 @@ export function ExpenseFormModal({
       Alert.alert('Ошибка', 'Выберите тип расхода');
       return;
     }
-    if (form.method !== 'cash' && form.method !== 'noncash') {
+    if (isAdmin && form.method !== 'cash' && form.method !== 'noncash') {
       Alert.alert('Ошибка', 'Выберите способ оплаты');
       return;
     }
@@ -137,17 +146,15 @@ export function ExpenseFormModal({
       return;
     }
 
-    const commentParts = [form.comment.trim()];
-    if (invoiceUri) commentParts.push('[фото счёта]');
-
     await onSave({
       exp_date: form.exp_date,
       exp_type: form.exp_type,
-      method: form.method,
+      method: isAdmin ? (form.method as ExpenseMethod) : null,
       amount,
-      comment: commentParts.filter(Boolean).join(' ') || undefined,
+      comment: form.comment.trim() || undefined,
       car_number: form.car_number.trim() || undefined,
       driver_id: isAdmin ? undefined : defaultDriverId,
+      photoUri,
     });
   };
 
@@ -159,10 +166,12 @@ export function ExpenseFormModal({
       >
         <View style={screenUi.modalSheet}>
           <Text style={screenUi.modalTitle}>
-            {editingRecord ? 'Редактировать расход' : 'Новый расход'}
+            {editingRecord ? 'Редактировать расход' : isAdmin ? 'Новый расход' : 'Личный расход'}
           </Text>
           <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-            <Text style={screenUi.fieldLabel}>Счёт на оплату (необязательно)</Text>
+            <Text style={screenUi.fieldLabel}>
+              {isAdmin ? 'Счёт на оплату (необязательно)' : 'Фото чека (рекомендуется)'}
+            </Text>
             <View style={{ flexDirection: 'row', gap: 10, marginBottom: 8 }}>
               <Pressable
                 onPress={pickFromGallery}
@@ -181,9 +190,9 @@ export function ExpenseFormModal({
                 </Text>
               </Pressable>
             </View>
-            {invoiceUri ? (
+            {photoUri ? (
               <Image
-                source={{ uri: invoiceUri }}
+                source={{ uri: photoUri }}
                 style={{ width: '100%', height: 140, borderRadius: 8, marginBottom: 10 }}
                 resizeMode="cover"
               />
@@ -196,7 +205,7 @@ export function ExpenseFormModal({
 
             <Text style={screenUi.fieldLabel}>Тип расхода *</Text>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 4 }}>
-              {ALL_EXPENSE_TYPES.map(({ value, label, icon }) => {
+              {typeOptions.map(({ value, label, icon }) => {
                 const active = form.exp_type === value;
                 return (
                   <Pressable
@@ -225,42 +234,50 @@ export function ExpenseFormModal({
               })}
             </View>
 
-            <Text style={screenUi.fieldLabel}>Способ оплаты *</Text>
-            <View style={{ flexDirection: 'row', gap: 10, marginBottom: 4 }}>
-              {(
-                [
-                  ['cash', '💵 Наличные'],
-                  ['noncash', '💳 Безнал'],
-                ] as const
-              ).map(([value, label]) => {
-                const active = form.method === value;
-                return (
-                  <Pressable
-                    key={value}
-                    onPress={() => setForm((prev) => ({ ...prev, method: value }))}
-                    style={[
-                      screenUi.actionBtn,
-                      {
-                        backgroundColor: active ? colors.primary : colors.surfaceElevated,
-                        borderWidth: 1,
-                        borderColor: active ? colors.primary : colors.border,
-                        paddingVertical: 12,
-                      },
-                    ]}
-                  >
-                    <Text
-                      style={{
-                        fontSize: 14,
-                        color: active ? colors.text : colors.textMuted,
-                        fontWeight: active ? '600' : '400',
-                      }}
-                    >
-                      {label}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </View>
+            {isAdmin ? (
+              <>
+                <Text style={screenUi.fieldLabel}>Способ оплаты *</Text>
+                <View style={{ flexDirection: 'row', gap: 10, marginBottom: 4 }}>
+                  {(
+                    [
+                      ['cash', '💵 Наличные'],
+                      ['noncash', '💳 Безнал'],
+                    ] as const
+                  ).map(([value, label]) => {
+                    const active = form.method === value;
+                    return (
+                      <Pressable
+                        key={value}
+                        onPress={() => setForm((prev) => ({ ...prev, method: value }))}
+                        style={[
+                          screenUi.actionBtn,
+                          {
+                            backgroundColor: active ? colors.primary : colors.surfaceElevated,
+                            borderWidth: 1,
+                            borderColor: active ? colors.primary : colors.border,
+                            paddingVertical: 12,
+                          },
+                        ]}
+                      >
+                        <Text
+                          style={{
+                            fontSize: 14,
+                            color: active ? colors.text : colors.textMuted,
+                            fontWeight: active ? '600' : '400',
+                          }}
+                        >
+                          {label}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              </>
+            ) : (
+              <Text style={[screenUi.hint, { marginBottom: 8 }]}>
+                Расход будет отправлен администратору на проверку
+              </Text>
+            )}
 
             <Text style={screenUi.fieldLabel}>Сумма (₽) *</Text>
             <TextInput
@@ -323,7 +340,13 @@ export function ExpenseFormModal({
             style={[screenUi.saveBtn, saving && { opacity: 0.6 }]}
           >
             <Text style={screenUi.saveBtnText}>
-              {saving ? 'Сохранение…' : editingRecord ? 'Сохранить изменения' : 'Добавить расход'}
+              {saving
+                ? 'Сохранение…'
+                : editingRecord
+                  ? 'Сохранить изменения'
+                  : isAdmin
+                    ? 'Добавить расход'
+                    : 'Отправить на проверку'}
             </Text>
           </Pressable>
           <Pressable onPress={onClose} style={screenUi.cancelBtn}>

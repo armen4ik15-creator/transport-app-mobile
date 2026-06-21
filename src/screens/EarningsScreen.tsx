@@ -26,6 +26,11 @@ const emptySummary: EarningsSummary = {
   actual_income: 0,
   actual_expense: 0,
   actual_balance: 0,
+  expenses_pending: 0,
+  expenses_approved: 0,
+  expenses_rejected: 0,
+  compensations: 0,
+  total_earnings: 0,
 };
 
 export function EarningsScreen({ navigation }: Props) {
@@ -124,10 +129,37 @@ export function EarningsScreen({ navigation }: Props) {
     }
   };
 
+  const compensations = summary.compensations ?? 0;
+  const totalEarnings = summary.total_earnings ?? summary.estimated_income + compensations;
+
   const statCards = [
     { label: 'Рейсов', value: String(summary.total_trips), color: '#2563eb' },
     { label: 'Объём', value: summary.total_volume.toFixed(2), color: '#7c3aed' },
-    { label: 'Заработок (ставка × рейсы)', value: `${summary.estimated_income.toFixed(2)} ₽`, color: '#16a34a' },
+    {
+      label: 'Заработок (рейсы)',
+      value: `${summary.estimated_income.toFixed(2)} ₽`,
+      color: '#16a34a',
+    },
+    {
+      label: 'Компенсации',
+      value: `${compensations.toFixed(2)} ₽`,
+      color: '#0891b2',
+    },
+    {
+      label: 'Итого начислено',
+      value: `${totalEarnings.toFixed(2)} ₽`,
+      color: '#15803d',
+    },
+    {
+      label: 'На проверке',
+      value: `${(summary.expenses_pending ?? 0).toFixed(2)} ₽`,
+      color: '#d97706',
+    },
+    {
+      label: 'Отклонено',
+      value: `${(summary.expenses_rejected ?? 0).toFixed(2)} ₽`,
+      color: '#ef4444',
+    },
     { label: 'Факт. доход', value: `${summary.actual_income.toFixed(2)} ₽`, color: '#16a34a' },
     { label: 'Факт. расход', value: `${summary.actual_expense.toFixed(2)} ₽`, color: '#ef4444' },
     { label: 'Факт. баланс', value: `${summary.actual_balance.toFixed(2)} ₽`, color: '#2563eb' },
@@ -142,11 +174,14 @@ export function EarningsScreen({ navigation }: Props) {
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
     >
       <ScreenHeader title="🧮 Заработок и рейсы" />
-      <ScreenHero title="💵 Начисления водителям" subtitle="Ставка за рейс · завершённые перевозки" />
+      <ScreenHero
+        title="💵 Начисления водителям"
+        subtitle="Ставка за рейс + одобренные компенсации личных расходов"
+      />
       <Text style={{ fontSize: 13, color: '#6b7280', marginBottom: 12 }}>
         {user?.role === 'admin'
-          ? 'Сумма ставок водителя по завершённым рейсам (driver_rate из задачи)'
-          : `${driver?.full_name ?? user?.email}: личная статистика рейсов`}
+          ? 'Сумма ставок и одобренных компенсаций водителя за период'
+          : `${driver?.full_name ?? user?.email}: рейсы и личные расходы`}
       </Text>
       <ErrorText message={error} />
 

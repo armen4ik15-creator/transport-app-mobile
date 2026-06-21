@@ -35,12 +35,31 @@ export const ALL_EXPENSE_TYPES: ExpenseTypeOption[] = [
   { value: 'toll', label: 'Платные дороги', icon: '🏁' },
   { value: 'fine', label: 'Штрафы', icon: '⚠️' },
   { value: 'dps', label: 'ДПС', icon: '🚔' },
+  { value: 'supplies', label: 'Мелкие расходники', icon: '🧰' },
   { value: 'lease', label: 'Аренда/Лизинг', icon: '🏢' },
   { value: 'bank_fee', label: 'Банковские комиссии', icon: '🏦' },
   { value: 'other', label: 'Прочие расходы', icon: '📦' },
   { value: 'salary_other', label: 'Зарплата (прочая)', icon: '👤' },
   { value: 'dividend', label: 'Дивиденды', icon: '💰' },
 ];
+
+export const DRIVER_EXPENSE_CATEGORIES: ExpenseTypeOption[] = [
+  { value: 'dps', label: 'ДПС', icon: '🚔' },
+  { value: 'toll', label: 'Платная дорога', icon: '🏁' },
+  { value: 'supplies', label: 'Мелкие расходники', icon: '🧰' },
+  { value: 'other', label: 'Другое', icon: '📦' },
+];
+
+export const EXPENSE_STATUS_LABEL: Record<string, string> = {
+  pending: 'На проверке',
+  approved: 'Одобрено',
+  rejected: 'Отклонено',
+};
+
+export function getExpenseStatusLabel(value: string | null | undefined): string {
+  if (!value) return EXPENSE_STATUS_LABEL.approved;
+  return EXPENSE_STATUS_LABEL[value] ?? value;
+}
 
 export function getExpenseTypeLabel(value: string): string {
   return ALL_EXPENSE_TYPES.find((item) => item.value === value)?.label ?? value;
