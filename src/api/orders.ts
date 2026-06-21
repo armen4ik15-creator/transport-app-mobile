@@ -1,8 +1,8 @@
 import { api } from './client';
 import type { Order, OrderPhoto, OrderStatus, OrderWithPhotos } from '../types';
 
-export async function listOrders(): Promise<Order[]> {
-  const { data } = await api.get<Order[]>('/orders');
+export async function listOrders(params?: { limit?: number; offset?: number }): Promise<Order[]> {
+  const { data } = await api.get<Order[]>('/orders', { params });
   return data;
 }
 
@@ -84,6 +84,10 @@ export async function updateOrder(
 ): Promise<Order> {
   const { data } = await api.put<Order>(`/orders/${id}`, payload);
   return data;
+}
+
+export async function deleteOrder(id: number): Promise<void> {
+  await api.delete(`/orders/${id}`);
 }
 
 export async function updateOrderStatus(id: number, status: OrderStatus): Promise<Order> {

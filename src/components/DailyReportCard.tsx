@@ -2,6 +2,7 @@ import { Pressable, Text, View } from 'react-native';
 import { formatMoney } from '../utils/datePeriods';
 import type { ReportDailyRow } from '../api/reports';
 import { screenUi } from '../styles/screenUi';
+import { colors } from '../theme';
 
 interface DailyReportCardProps {
   row: ReportDailyRow;
@@ -21,7 +22,7 @@ function formatDayLabel(iso: string): string {
 }
 
 export function DailyReportCard({ row, selected, onPress }: DailyReportCardProps) {
-  const profitColor = row.profit >= 0 ? '#16a34a' : '#ef4444';
+  const profitColor = row.profit >= 0 ? colors.profit : colors.loss;
 
   return (
     <Pressable
@@ -31,43 +32,43 @@ export function DailyReportCard({ row, selected, onPress }: DailyReportCardProps
         {
           borderRadius: 14,
           borderLeftWidth: 4,
-          borderLeftColor: selected ? '#2563eb' : profitColor,
-          backgroundColor: selected ? '#eff6ff' : '#ffffff',
+          borderLeftColor: selected ? colors.primary : profitColor,
+          backgroundColor: selected ? colors.primaryMuted : colors.surface,
           marginBottom: 10,
         },
       ]}
     >
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <View style={{ flex: 1 }}>
-          <Text style={{ fontSize: 15, fontWeight: '800', color: '#111827' }}>{formatDayLabel(row.date)}</Text>
-          <Text style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>
+          <Text style={screenUi.cardTitleSm}>{formatDayLabel(row.date)}</Text>
+          <Text style={screenUi.cardMeta}>
             🚛 {row.trips_count} рейс{row.trips_count === 1 ? '' : row.trips_count < 5 ? 'а' : 'ов'}
           </Text>
         </View>
         <Text style={{ fontSize: 18, fontWeight: '800', color: profitColor }}>{formatMoney(row.profit)} ₽</Text>
       </View>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 10 }}>
-        <MetricPill label="Выручка" value={row.revenue} color="#16a34a" />
-        <MetricPill label="Расходы" value={row.expenses + row.driver_pay} color="#ef4444" />
+        <MetricPill label="Выручка" value={row.revenue} accentColor={colors.profit} />
+        <MetricPill label="Расходы" value={row.expenses + row.driver_pay} accentColor={colors.loss} />
       </View>
     </Pressable>
   );
 }
 
-function MetricPill({ label, value, color }: { label: string; value: number; color: string }) {
+function MetricPill({ label, value, accentColor }: { label: string; value: number; accentColor: string }) {
   return (
     <View
       style={{
-        backgroundColor: '#f9fafb',
+        backgroundColor: colors.surfaceElevated,
         borderRadius: 8,
         paddingHorizontal: 10,
         paddingVertical: 6,
         borderWidth: 1,
-        borderColor: '#e5e7eb',
+        borderColor: colors.border,
       }}
     >
-      <Text style={{ fontSize: 10, color: '#6b7280' }}>{label}</Text>
-      <Text style={{ fontSize: 13, fontWeight: '700', color }}>{formatMoney(value)} ₽</Text>
+      <Text style={{ fontSize: 10, color: colors.textMuted }}>{label}</Text>
+      <Text style={{ fontSize: 13, fontWeight: '700', color: accentColor }}>{formatMoney(value)} ₽</Text>
     </View>
   );
 }

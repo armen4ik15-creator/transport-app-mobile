@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { screenUi } from '../styles/screenUi';
+import { colors } from '../theme';
 import { todayIso } from '../utils/datePeriods';
 
 interface ExpenseDatePickerProps {
@@ -89,13 +90,13 @@ export function ExpenseDatePicker({ value, onChange }: ExpenseDatePickerProps) {
             flex: 1,
             paddingVertical: 8,
             borderRadius: 8,
-            backgroundColor: value === todayIso() ? '#eff6ff' : '#f3f4f6',
+            backgroundColor: value === todayIso() ? 'rgba(26,115,232,0.15)' : colors.surfaceElevated,
             borderWidth: 1,
-            borderColor: value === todayIso() ? '#2563eb' : '#e5e7eb',
+            borderColor: value === todayIso() ? colors.primary : colors.border,
             alignItems: 'center',
           }}
         >
-          <Text style={{ fontSize: 13, color: '#374151', fontWeight: '600' }}>Сегодня</Text>
+          <Text style={{ fontSize: 13, color: colors.text, fontWeight: '600' }}>Сегодня</Text>
         </Pressable>
         <Pressable
           onPress={() => pickDate(yesterdayIso())}
@@ -103,13 +104,13 @@ export function ExpenseDatePicker({ value, onChange }: ExpenseDatePickerProps) {
             flex: 1,
             paddingVertical: 8,
             borderRadius: 8,
-            backgroundColor: value === yesterdayIso() ? '#eff6ff' : '#f3f4f6',
+            backgroundColor: value === yesterdayIso() ? 'rgba(26,115,232,0.15)' : colors.surfaceElevated,
             borderWidth: 1,
-            borderColor: value === yesterdayIso() ? '#2563eb' : '#e5e7eb',
+            borderColor: value === yesterdayIso() ? colors.primary : colors.border,
             alignItems: 'center',
           }}
         >
-          <Text style={{ fontSize: 13, color: '#374151', fontWeight: '600' }}>Вчера</Text>
+          <Text style={{ fontSize: 13, color: colors.text, fontWeight: '600' }}>Вчера</Text>
         </Pressable>
       </View>
 
@@ -117,8 +118,8 @@ export function ExpenseDatePicker({ value, onChange }: ExpenseDatePickerProps) {
         onPress={() => setExpanded((prev) => !prev)}
         style={{
           borderWidth: 1,
-          borderColor: expanded ? '#2563eb' : '#d1d5db',
-          backgroundColor: '#ffffff',
+          borderColor: expanded ? colors.primary : colors.border,
+          backgroundColor: colors.surface,
           borderRadius: 10,
           paddingHorizontal: 14,
           paddingVertical: 12,
@@ -128,12 +129,12 @@ export function ExpenseDatePicker({ value, onChange }: ExpenseDatePickerProps) {
         }}
       >
         <View>
-          <Text style={{ fontSize: 11, color: '#6b7280' }}>Дата расхода</Text>
-          <Text style={{ fontSize: 15, color: '#111827', fontWeight: '600', marginTop: 2 }}>
+          <Text style={{ fontSize: 11, color: colors.textMuted }}>Дата расхода</Text>
+          <Text style={{ fontSize: 15, color: colors.text, fontWeight: '600', marginTop: 2 }}>
             {formatDisplayRu(value)}
           </Text>
         </View>
-        <Text style={{ fontSize: 16, color: '#2563eb' }}>{expanded ? '▲' : '▼'}</Text>
+        <Text style={{ fontSize: 16, color: colors.primary }}>{expanded ? '▲' : '▼'}</Text>
       </Pressable>
 
       {expanded ? (
@@ -141,28 +142,28 @@ export function ExpenseDatePicker({ value, onChange }: ExpenseDatePickerProps) {
           style={{
             marginTop: 8,
             borderRadius: 12,
-            backgroundColor: '#ffffff',
+            backgroundColor: colors.surface,
             borderWidth: 1,
-            borderColor: '#e5e7eb',
+            borderColor: colors.border,
             padding: 10,
           }}
         >
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
             <Pressable onPress={() => shiftMonth(-1)} hitSlop={8}>
-              <Text style={{ fontSize: 18, color: '#2563eb' }}>‹</Text>
+              <Text style={{ fontSize: 18, color: colors.primary }}>‹</Text>
             </Pressable>
             <Text
               style={{
                 fontSize: 14,
                 fontWeight: '600',
-                color: '#111827',
+                color: colors.text,
                 textTransform: 'capitalize',
               }}
             >
               {monthLabel}
             </Text>
             <Pressable onPress={() => shiftMonth(1)} hitSlop={8}>
-              <Text style={{ fontSize: 18, color: '#2563eb' }}>›</Text>
+              <Text style={{ fontSize: 18, color: colors.primary }}>›</Text>
             </Pressable>
           </View>
 
@@ -174,7 +175,7 @@ export function ExpenseDatePicker({ value, onChange }: ExpenseDatePickerProps) {
                   flex: 1,
                   textAlign: 'center',
                   fontSize: 11,
-                  color: '#9ca3af',
+                  color: colors.textMuted,
                   fontWeight: '600',
                 }}
               >
@@ -206,10 +207,10 @@ export function ExpenseDatePicker({ value, onChange }: ExpenseDatePickerProps) {
                         borderRadius: 16,
                         alignItems: 'center',
                         justifyContent: 'center',
-                        backgroundColor: selected ? '#2563eb' : 'transparent',
+                        backgroundColor: selected ? colors.primary : 'transparent',
                       }}
                     >
-                      <Text style={{ color: selected ? '#ffffff' : '#111827', fontSize: 13 }}>
+                      <Text style={{ color: selected ? colors.text : colors.textMuted, fontSize: 13 }}>
                         {cell.day}
                       </Text>
                     </View>

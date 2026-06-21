@@ -257,8 +257,43 @@ export interface NotificationItem {
   user_id: number;
   message: string;
   read: number;
+  kind?: 'general' | 'admin_registration' | 'driver_registration';
+  ref_id?: number | null;
   created_at: string;
   user_email?: string | null;
+}
+
+export type AdminRegistrationStatus = 'pending' | 'approved' | 'rejected';
+
+export interface AdminRegistrationRequest {
+  id: number;
+  email: string;
+  full_name: string;
+  phone: string | null;
+  status: AdminRegistrationStatus;
+  reviewed_by: number | null;
+  reviewed_at: string | null;
+  rejection_reason: string | null;
+  created_at: string;
+  reviewed_by_email?: string | null;
+  reviewed_by_name?: string | null;
+}
+
+export interface DriverRegistrationRequest {
+  id: number;
+  email: string;
+  full_name: string;
+  phone: string | null;
+  license_number: string | null;
+  license_expiry: string | null;
+  medical_check_expiry: string | null;
+  status: AdminRegistrationStatus;
+  reviewed_by: number | null;
+  reviewed_at: string | null;
+  rejection_reason: string | null;
+  created_at: string;
+  reviewed_by_email?: string | null;
+  reviewed_by_name?: string | null;
 }
 
 export interface ActivityLogItem {

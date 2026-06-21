@@ -6,27 +6,42 @@ import { ScreenHeader } from '../components/ScreenHeader';
 import { DriverTripActionCard } from '../components/DriverTripActionCard';
 import { ErrorText, LoadingScreen, MenuButton } from '../components/ui';
 import { listOrders } from '../api/orders';
+import { listTrips } from '../api/trips';
 import { apiErrorMessage } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
+import { fetchCached, invalidateCache } from '../utils/apiCache';
+import { buildOrderTripMap } from '../utils/orderTripMap';
 import { screenUi } from '../styles/screenUi';
 import { STATUS_LABEL, type Order } from '../types';
 import type { RootStackParamList } from '../navigation/types';
 
 const PAGE_SIZE = 20;
+const ORDERS_CACHE_KEY = 'driver:orders';
+const TRIPS_CACHE_KEY = 'driver:trips';
+const LIST_TTL_MS = 45_000;
 
 export function DriverOrdersScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { user, driver } = useAuth();
   const [orders, setOrders] = useState<Order[]>([]);
+  const [tripMap, setTripMap] = useState(() => buildOrderTripMap([]));
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (force = false) => {
     try {
       setError(null);
-      setOrders(await listOrders());
+      if (force) {
+        invalidateCache('driver:');
+      }
+      const [orderData, tripData] = await Promise.all([
+        fetchCached(ORDERS_CACHE_KEY, LIST_TTL_MS, () => listOrders({ limit: 200 })),
+        fetchCached(TRIPS_CACHE_KEY, LIST_TTL_MS, () => listTrips()),
+      ]);
+      setOrders(orderData);
+      setTripMap(buildOrderTripMap(tripData));
     } catch (e) {
       const msg = apiErrorMessage(e, 'Не удалось загрузить заказы');
       setError(msg);
@@ -35,13 +50,19 @@ export function DriverOrdersScreen() {
   }, []);
 
   useEffect(() => {
+    let cancelled = false;
     setLoading(true);
-    load().finally(() => setLoading(false));
+    load().finally(() => {
+      if (!cancelled) setLoading(false);
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [load]);
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await load();
+    await load(true);
     setRefreshing(false);
   };
 
@@ -59,6 +80,10 @@ export function DriverOrdersScreen() {
       <FlatList
         data={pagedOrders}
         keyExtractor={(o) => String(o.id)}
+        initialNumToRender={8}
+        maxToRenderPerBatch={6}
+        windowSize={7}
+        removeClippedSubviews
         contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 24 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         ListHeaderComponent={
@@ -102,6 +127,7 @@ export function DriverOrdersScreen() {
                 orderId={item.id}
                 taskLabel={item.task_name ?? item.material ?? undefined}
                 compact
+                tripSnapshot={tripMap.get(item.id)}
               />
             </View>
             <Pressable

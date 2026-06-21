@@ -9,21 +9,25 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { OrderCreateModal } from '../components/orders/OrderCreateModal';
+import { CollapsiblePanel } from '../components/CollapsiblePanel';
 import { ScreenHeader } from '../components/ScreenHeader';
-import { ScreenHero } from '../components/ScreenHero';
 import { LoadingScreen } from '../components/ui';
 import { listDrivers } from '../api/drivers';
-import { listOrders, updateOrder } from '../api/orders';
+import { deleteOrder, listOrders, updateOrder } from '../api/orders';
 import { apiErrorMessage } from '../api/client';
 import type { RootStackParamList } from '../navigation/types';
 import { screenUi } from '../styles/screenUi';
-import { withFallback } from '../utils/safeRequest';
+import { colors } from '../theme';
+import { fetchCached, invalidateCache } from '../utils/apiCache';
 import { STATUS_LABEL, type Driver, type Order } from '../types';
 
 type OrdersTab = 'active' | 'archive';
+
+const ORDERS_CACHE_KEY = 'admin:orders';
+const DRIVERS_CACHE_KEY = 'admin:drivers';
+const LIST_TTL_MS = 45_000;
 
 export function OrdersScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
@@ -34,13 +38,15 @@ export function OrdersScreen() {
   const [driverFilterId, setDriverFilterId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [createVisible, setCreateVisible] = useState(false);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (force = false) => {
     try {
+      if (force) {
+        invalidateCache('admin:');
+      }
       const [orderData, driverData] = await Promise.all([
-        withFallback(() => listOrders(), []),
-        withFallback(() => listDrivers(), []),
+        fetchCached(ORDERS_CACHE_KEY, LIST_TTL_MS, () => listOrders({ limit: 300 })),
+        fetchCached(DRIVERS_CACHE_KEY, LIST_TTL_MS, () => listDrivers()),
       ]);
       setOrders(orderData);
       setDrivers(driverData);
@@ -50,13 +56,44 @@ export function OrdersScreen() {
   }, []);
 
   useEffect(() => {
+    let cancelled = false;
     setLoading(true);
-    load().finally(() => setLoading(false));
+    load().finally(() => {
+      if (!cancelled) setLoading(false);
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [load]);
 
+  useFocusEffect(
+    useCallback(() => {
+      void load();
+    }, [load])
+  );
+
+  const onDeleteOrder = (item: Order) => {
+    Alert.alert('Удалить заказ?', `Заказ #${item.id} будет удалён безвозвратно`, [
+      { text: 'Отмена', style: 'cancel' },
+      {
+        text: 'Удалить',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await deleteOrder(item.id);
+            invalidateCache('admin:');
+            invalidateCache('dashboard:');
+            await load(true);
+          } catch (e) {
+            Alert.alert('Ошибка', apiErrorMessage(e, 'Не удалось удалить заказ'));
+          }
+        },
+      },
+    ]);
+  };
   const onRefresh = async () => {
     setRefreshing(true);
-    await load();
+    await load(true);
     setRefreshing(false);
   };
 
@@ -125,86 +162,76 @@ export function OrdersScreen() {
 
   return (
     <View style={screenUi.container}>
-      <View style={screenUi.content}>
-        <ScreenHeader
-          pageTitle="📦 Заказы"
-          title="Задачи"
-          showBack
-          onBack={() => navigation.replace('AdminHome')}
-          actionLabel="+ Создать"
-          onAction={() => setCreateVisible(true)}
-        />
-        <ScreenHero
-          title="📦 Заказы и задачи"
-          subtitle={`Активных: ${activeOrders.length} · В архиве: ${archivedOrders.length}`}
-        />
-
-        <View style={screenUi.tabs}>
-          <Pressable
-            style={[screenUi.tabBtn, tab === 'active' && screenUi.tabBtnActive]}
-            onPress={() => setTab('active')}
-          >
-            <Text style={[screenUi.tabBtnText, tab === 'active' && screenUi.tabBtnTextActive]}>
-              ✅ Активные ({activeOrders.length})
-            </Text>
-          </Pressable>
-          <Pressable
-            style={[screenUi.tabBtn, tab === 'archive' && screenUi.tabBtnActive]}
-            onPress={() => setTab('archive')}
-          >
-            <Text style={[screenUi.tabBtnText, tab === 'archive' && screenUi.tabBtnTextActive]}>
-              📦 Архив ({archivedOrders.length})
-            </Text>
-          </Pressable>
-        </View>
-
-        <View style={screenUi.searchContainer}>
-          <Text style={{ fontSize: 16 }}>🔍</Text>
-          <TextInput
-            style={screenUi.searchInput}
-            placeholder="Поиск по заказчику, материалу..."
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            placeholderTextColor="#9ca3af"
-          />
-          {searchQuery ? (
-            <Pressable onPress={() => setSearchQuery('')}>
-              <Text style={{ fontSize: 16, color: '#9ca3af' }}>✕</Text>
-            </Pressable>
-          ) : null}
-        </View>
-
-        <Text style={screenUi.filterLabel}>Водитель:</Text>
-        <Pressable
-          onPress={pickDriver}
-          style={{
-            alignSelf: 'flex-start',
-            backgroundColor: '#2563eb',
-            borderRadius: 24,
-            paddingHorizontal: 16,
-            paddingVertical: 12,
-            marginBottom: 8,
-          }}
-        >
-          <Text style={{ color: '#ffffff', fontSize: 14, fontWeight: '600' }}>
-            👥 {driverFilterLabel}
-          </Text>
-        </Pressable>
-
-        <Text style={screenUi.countLabel}>
-          Показано: {filteredOrders.length}{' '}
-          {tab === 'active' ? 'активных' : 'архивных'} задач
-        </Text>
-      </View>
-
       <FlatList
         data={filteredOrders}
         keyExtractor={(item) => String(item.id)}
+        initialNumToRender={10}
+        maxToRenderPerBatch={8}
+        windowSize={7}
+        removeClippedSubviews
         contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 24, flexGrow: 1 }}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
+        ListHeaderComponent={
+          <View style={screenUi.content}>
+            <ScreenHeader
+              pageTitle="📦 Заказы"
+              title="Задачи"
+              showBack
+              onBack={() => navigation.navigate('AdminHome')}
+              actionLabel="+ Создать"
+              onAction={() => navigation.navigate('OrderCreate')}
+            />
+
+            <CollapsiblePanel
+              title="Фильтры"
+              subtitle={`Показано: ${filteredOrders.length} ${tab === 'active' ? 'активных' : 'архивных'} задач`}
+              defaultExpanded
+            >
+              <View style={screenUi.tabs}>
+                <Pressable
+                  style={[screenUi.tabBtn, tab === 'active' && screenUi.tabBtnActive]}
+                  onPress={() => setTab('active')}
+                >
+                  <Text style={[screenUi.tabBtnText, tab === 'active' && screenUi.tabBtnTextActive]}>
+                    ✅ Активные ({activeOrders.length})
+                  </Text>
+                </Pressable>
+                <Pressable
+                  style={[screenUi.tabBtn, tab === 'archive' && screenUi.tabBtnActive]}
+                  onPress={() => setTab('archive')}
+                >
+                  <Text style={[screenUi.tabBtnText, tab === 'archive' && screenUi.tabBtnTextActive]}>
+                    📦 Архив ({archivedOrders.length})
+                  </Text>
+                </Pressable>
+              </View>
+
+              <View style={screenUi.searchContainer}>
+                <Text style={{ fontSize: 16 }}>🔍</Text>
+                <TextInput
+                  style={screenUi.searchInput}
+                  placeholder="Поиск по заказчику, материалу..."
+                  value={searchQuery}
+                  onChangeText={setSearchQuery}
+                  placeholderTextColor={colors.textMuted}
+                />
+                {searchQuery ? (
+                  <Pressable onPress={() => setSearchQuery('')}>
+                    <Text style={{ fontSize: 16, color: colors.textMuted }}>✕</Text>
+                  </Pressable>
+                ) : null}
+              </View>
+
+              <Text style={screenUi.filterLabel}>Водитель:</Text>
+              <Pressable onPress={pickDriver} style={[screenUi.primaryPill, { marginBottom: 8 }]}>
+                <Text style={screenUi.primaryPillText}>👥 {driverFilterLabel}</Text>
+              </Pressable>
+            </CollapsiblePanel>
+          </View>
+        }
         ListEmptyComponent={
           loading || refreshing ? (
-            <ActivityIndicator style={{ marginTop: 40 }} color="#2563eb" />
+            <ActivityIndicator style={{ marginTop: 40 }} color={colors.primary} />
           ) : (
             <Text style={screenUi.emptyText}>
               {tab === 'active'
@@ -217,7 +244,7 @@ export function OrdersScreen() {
           <View
             style={[
               screenUi.card,
-              tab === 'archive' && { backgroundColor: '#fafafa', borderColor: '#e5e7eb' },
+              tab === 'archive' && screenUi.archiveCard,
             ]}
           >
             <View
@@ -229,116 +256,75 @@ export function OrdersScreen() {
               }}
             >
               <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 16, fontWeight: '600', color: '#111827' }}>
+                <Text style={screenUi.cardTitleSm}>
                   {item.task_name || 'Без названия'}
                 </Text>
-                <Text style={{ fontSize: 12, color: '#6b7280' }}>#{item.id}</Text>
+                <Text style={screenUi.cardMeta}>#{item.id}</Text>
               </View>
               {tab === 'archive' ? (
-                <View
-                  style={{
-                    backgroundColor: '#fef3c7',
-                    borderRadius: 6,
-                    paddingHorizontal: 6,
-                    paddingVertical: 2,
-                  }}
-                >
-                  <Text style={{ fontSize: 11, color: '#92400e', fontWeight: '600' }}>Архив</Text>
+                <View style={screenUi.archiveBadge}>
+                  <Text style={screenUi.archiveBadgeText}>Архив</Text>
                 </View>
               ) : (
-                <Text style={{ fontSize: 12, color: '#2563eb', fontWeight: '600' }}>
+                <Text style={{ fontSize: 12, color: colors.primary, fontWeight: '600' }}>
                   {STATUS_LABEL[item.status]}
                 </Text>
               )}
             </View>
 
-            <Text style={{ fontSize: 14, color: '#1f2937', marginBottom: 4 }}>
+            <Text style={{ fontSize: 14, color: colors.text, marginBottom: 4 }}>
               Заказчик: {item.contractor_name ?? '—'}
             </Text>
-            <Text style={{ fontSize: 14, color: '#4b5563', marginBottom: 4 }}>
+            <Text style={{ fontSize: 14, color: colors.textMuted, marginBottom: 4 }}>
               Материал: {item.material ?? '—'}
             </Text>
-            <Text style={{ fontSize: 13, color: '#4b5563', marginBottom: 8 }}>
+            <Text style={{ fontSize: 13, color: colors.textMuted, marginBottom: 8 }}>
               📍 {item.load_address ?? '—'} → {item.unload_address ?? '—'}
             </Text>
-            <Text style={{ fontSize: 12, color: '#6b7280', marginBottom: 10 }}>
+            <Text style={{ fontSize: 12, color: colors.textMuted, marginBottom: 10 }}>
               👤 Водитель: {item.driver_name ?? '—'}
               {item.driver_car_number ? ` (${item.driver_car_number})` : ''}
             </Text>
 
-            <View
-              style={{
-                flexDirection: 'row',
-                gap: 8,
-                borderTopWidth: 1,
-                borderTopColor: '#f3f4f6',
-                paddingTop: 10,
-              }}
-            >
+            <View style={[screenUi.dividerTop, screenUi.actionRow]}>
               {tab === 'archive' ? (
-                <Pressable
-                  onPress={() => toggleArchive(item, true)}
-                  style={{
-                    flex: 1,
-                    backgroundColor: '#16a34a',
-                    paddingVertical: 8,
-                    borderRadius: 7,
-                    alignItems: 'center',
-                  }}
-                >
-                  <Text style={{ color: '#ffffff', fontSize: 12, fontWeight: '600' }}>
-                    Восстановить
-                  </Text>
-                </Pressable>
+                <>
+                  <Pressable
+                    onPress={() => toggleArchive(item, true)}
+                    style={[screenUi.actionBtn, { backgroundColor: colors.profit }]}
+                  >
+                    <Text style={screenUi.actionBtnText}>Восстановить</Text>
+                  </Pressable>
+                  <Pressable
+                    onPress={() => onDeleteOrder(item)}
+                    style={[screenUi.actionBtn, { backgroundColor: colors.loss }]}
+                  >
+                    <Text style={screenUi.actionBtnText}>Удалить</Text>
+                  </Pressable>
+                </>
               ) : (
                 <Pressable
                   onPress={() => toggleArchive(item, false)}
-                  style={{
-                    flex: 1,
-                    backgroundColor: '#6b7280',
-                    paddingVertical: 8,
-                    borderRadius: 7,
-                    alignItems: 'center',
-                  }}
+                  style={[screenUi.actionBtn, { backgroundColor: colors.textMuted }]}
                 >
-                  <Text style={{ color: '#ffffff', fontSize: 12, fontWeight: '600' }}>
-                    В архив
-                  </Text>
+                  <Text style={screenUi.actionBtnText}>В архив</Text>
                 </Pressable>
               )}
               <Pressable
                 onPress={() => navigation.navigate('OrderDetail', { id: item.id })}
-                style={{
-                  flex: 1,
-                  backgroundColor: '#2563eb',
-                  paddingVertical: 8,
-                  borderRadius: 7,
-                  alignItems: 'center',
-                }}
+                style={[screenUi.actionBtn, { backgroundColor: colors.primary }]}
               >
-                <Text style={{ color: '#ffffff', fontSize: 12, fontWeight: '600' }}>Открыть</Text>
+                <Text style={screenUi.actionBtnText}>Открыть</Text>
               </Pressable>
               <Pressable
                 onPress={() => navigation.navigate('OrderEdit', { id: item.id })}
-                style={{
-                  flex: 1,
-                  backgroundColor: '#7c3aed',
-                  paddingVertical: 8,
-                  borderRadius: 7,
-                  alignItems: 'center',
-                }}
+                style={[screenUi.actionBtn, { backgroundColor: colors.accent }]}
               >
-                <Text style={{ color: '#ffffff', fontSize: 12, fontWeight: '600' }}>Изменить</Text>
+                <Text style={screenUi.actionBtnText}>Изменить</Text>
               </Pressable>
             </View>
           </View>
         )}
-      />
-
-      <OrderCreateModal
-        visible={createVisible}
-        onClose={() => setCreateVisible(false)}
-        onCreated={load}
       />
     </View>
   );

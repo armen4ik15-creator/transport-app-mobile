@@ -2,7 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import type { ReactNode } from 'react';
 import { AppState, type AppStateStatus } from 'react-native';
 import { getMe, login, registerDriver } from '../api/auth';
-import { setUnauthorizedHandler } from '../api/client';
+import { clearApiClientCache, getApiBaseUrl, primeApiClientCache, setUnauthorizedHandler } from '../api/client';
 import {
   clearSession,
   getStoredToken,
@@ -20,10 +20,13 @@ interface AuthState {
   loading: boolean;
   initError: string | null;
   networkIssue: boolean;
+  dataReloadToken: number;
+  requestDataReload: () => void;
   signIn: (email: string, password: string) => Promise<User>;
   signUp: (payload: {
     email: string;
     password: string;
+    confirm_password?: string;
     full_name?: string;
     phone?: string;
     license_number?: string;
@@ -45,7 +48,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [initError, setInitError] = useState<string | null>(null);
   const [networkIssue, setNetworkIssue] = useState(false);
+  const [dataReloadToken, setDataReloadToken] = useState(0);
   const appStateRef = useRef<AppStateStatus>(AppState.currentState);
+  const lastRefreshAtRef = useRef(0);
 
   const applySession = useCallback(async (nextUser: User, nextDriver: Driver | null) => {
     setUser(nextUser);
@@ -56,6 +61,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const clearLocalSession = useCallback(async () => {
     await clearSession();
+    clearApiClientCache();
     setUser(null);
     setDriver(null);
   }, []);
@@ -95,16 +101,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setLoading(true);
     try {
       void logStartup('auth_bootstrap_start');
-      const token = await getStoredToken();
+      const [token, baseUrl] = await Promise.all([getStoredToken(), getApiBaseUrl()]);
+      primeApiClientCache(baseUrl, token);
       void logStartup('auth_token_read', token ? 'present' : 'empty');
+
       if (token) {
         const snapshot = await getUserSnapshot();
         if (snapshot) {
           setUser(snapshot.user);
           setDriver(snapshot.driver);
           void logStartup('auth_snapshot_restored');
+          setLoading(false);
+          void refresh();
+          void logStartup('auth_bootstrap_done');
+          return;
         }
       }
+
       await refresh();
       void logStartup('auth_bootstrap_done');
     } catch (e: unknown) {
@@ -134,7 +147,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const wasBackground = appStateRef.current.match(/inactive|background/);
       appStateRef.current = nextState;
       if (wasBackground && nextState === 'active') {
-        void refresh();
+        const now = Date.now();
+        if (now - lastRefreshAtRef.current > 60_000) {
+          lastRefreshAtRef.current = now;
+          void refresh();
+        }
       }
     });
     return () => subscription.remove();
@@ -144,6 +161,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     async (email: string, password: string) => {
       const res = await login(email, password);
       await setStoredToken(res.token);
+      primeApiClientCache(await getApiBaseUrl(), res.token);
       setUser(res.user);
       await refresh();
       return res.user;
@@ -154,6 +172,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signUp = useCallback<AuthState['signUp']>(
     async (payload) => {
       const res = await registerDriver(payload);
+      if ('pending' in res && res.pending) {
+        const err = new Error(res.message) as Error & { pending?: boolean };
+        err.pending = true;
+        throw err;
+      }
       await setStoredToken(res.token);
       setUser(res.user);
       await refresh();
@@ -168,6 +191,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const clearNetworkIssue = useCallback(() => setNetworkIssue(false), []);
 
+  const requestDataReload = useCallback(() => {
+    setDataReloadToken((token) => token + 1);
+  }, []);
+
   const retryInit = useCallback(async () => {
     await bootstrap();
   }, [bootstrap]);
@@ -179,6 +206,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       loading,
       initError,
       networkIssue,
+      dataReloadToken,
+      requestDataReload,
       signIn,
       signUp,
       signOut,
@@ -192,6 +221,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       loading,
       initError,
       networkIssue,
+      dataReloadToken,
+      requestDataReload,
       signIn,
       signUp,
       signOut,

@@ -118,7 +118,7 @@ export function OrderEditScreen({ route, navigation }: Props) {
   return (
     <View style={screenUi.container}>
       <ScrollView contentContainerStyle={[screenUi.content, { paddingBottom: 32 }]} keyboardShouldPersistTaps="handled">
-        <ScreenHeader title={`✏️ Заказ #${id}`} />
+        <ScreenHeader title={`✏️ Заказ #${id}`} showPageTitle={false} />
 
         <View style={screenUi.card}>
           <Text style={screenUi.fieldLabel}>👤 Водитель</Text>

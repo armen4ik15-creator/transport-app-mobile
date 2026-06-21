@@ -14,6 +14,7 @@ import { createContractor, deleteContractor, listContractors, updateContractor }
 import { apiErrorMessage } from '../api/client';
 import type { RootStackParamList } from '../navigation/types';
 import { screenUi } from '../styles/screenUi';
+import { colors } from '../theme';
 import {
   apiTypeFromFormRole,
   CONTRACTOR_ROLE_FILTER_ITEMS,
@@ -216,17 +217,17 @@ export function ContractorsScreen() {
           >
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
               <View style={{ flex: 1, paddingRight: 8 }}>
-                <Text style={{ fontSize: 17, fontWeight: '800', color: '#111827' }}>{item.name}</Text>
+                <Text style={screenUi.cardTitle}>{item.name}</Text>
                 {debtStatus ? (
-                  <Text style={{ fontSize: 12, color: '#6b7280', marginTop: 4 }}>
+                  <Text style={screenUi.cardMeta}>
                     {debtStatus}
                     {finance && finance.paid > 0 ? ` · ${finance.paid.toFixed(0)} ₽` : ''}
                   </Text>
                 ) : null}
                 {item.phone ? (
-                  <Text style={{ fontSize: 14, color: '#4b5563', marginTop: 6 }}>📞 {item.phone}</Text>
+                  <Text style={screenUi.cardBody}>📞 {item.phone}</Text>
                 ) : (
-                  <Text style={{ fontSize: 13, color: '#9ca3af', marginTop: 6 }}>Телефон не указан</Text>
+                  <Text style={[screenUi.cardBodySm, { color: colors.textMuted }]}>Телефон не указан</Text>
                 )}
                 <View style={{ marginTop: 8 }}>
                   <StatusBadge
@@ -236,10 +237,10 @@ export function ContractorsScreen() {
                 </View>
               </View>
               <Pressable onPress={() => onDelete(item)} hitSlop={8}>
-                <Text style={{ color: '#ef4444', fontSize: 16 }}>🗑</Text>
+                <Text style={screenUi.dangerIcon}>🗑</Text>
               </Pressable>
             </View>
-            <Text style={{ fontSize: 12, color: '#2563eb', marginTop: 10 }}>💳 Оплаты и долг →</Text>
+            <Text style={screenUi.cardLink}>💳 Оплаты и долг →</Text>
           </Pressable>
           );
         }}

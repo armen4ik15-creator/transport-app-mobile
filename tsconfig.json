@@ -8,5 +8,6 @@
     "esModuleInterop": true,
     "resolveJsonModule": true
   },
-  "include": ["**/*.ts", "**/*.tsx", "App.tsx", "index.ts", "config.js"]
+  "include": ["**/*.ts", "**/*.tsx", "App.tsx", "index.ts", "config.js"],
+  "exclude": ["design/v0-reference"]
 }

@@ -6,11 +6,20 @@ export interface AuthResponse {
   user: User;
 }
 
+export interface RegistrationPendingResponse {
+  pending: true;
+  message: string;
+}
+
+export type RegisterDriverResult = AuthResponse | RegistrationPendingResponse;
+
 export interface SecurityConfig {
   registration_open: boolean;
   registration_requires_invite: boolean;
   registration_available: boolean;
+  admin_registration_available: boolean;
   password_reset_available: boolean;
+  password_reset_requires_code: boolean;
 }
 
 export async function getSecurityConfig(): Promise<SecurityConfig> {
@@ -26,20 +35,36 @@ export async function login(email: string, password: string): Promise<AuthRespon
 export async function registerDriver(payload: {
   email: string;
   password: string;
+  confirm_password?: string;
+  role?: 'driver';
   full_name?: string;
   phone?: string;
   license_number?: string;
   license_expiry?: string;
   medical_check_expiry?: string;
   invite_code?: string;
-}): Promise<AuthResponse> {
-  const { data } = await api.post<AuthResponse>('/auth/register', payload);
+}): Promise<RegisterDriverResult> {
+  const { data } = await api.post<RegisterDriverResult>('/auth/register', { ...payload, role: 'driver' });
+  return data;
+}
+
+export async function registerAdmin(payload: {
+  email: string;
+  password: string;
+  confirm_password: string;
+  full_name: string;
+  phone?: string;
+}): Promise<RegistrationPendingResponse> {
+  const { data } = await api.post<RegistrationPendingResponse>('/auth/register', {
+    ...payload,
+    role: 'admin',
+  });
   return data;
 }
 
 export async function forgotPassword(payload: {
   email: string;
-  reset_code: string;
+  reset_code?: string;
   new_password: string;
 }): Promise<{ ok: boolean; message: string }> {
   const { data } = await api.post<{ ok: boolean; message: string }>('/auth/forgot-password', payload);

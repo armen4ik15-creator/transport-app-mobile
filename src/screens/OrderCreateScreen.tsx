@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useState } from 'react';
-import { Alert, ScrollView, Text, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, Alert, Pressable, ScrollView, Text, View } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { ScreenHeader } from '../components/ScreenHeader';
 import { ErrorText, Field, LoadingScreen, MenuButton, PrimaryButton } from '../components/ui';
@@ -9,19 +10,63 @@ import { createOrder, createOrdersBulk } from '../api/orders';
 import { createOrderTemplate, listOrderTemplates } from '../api/orderTemplates';
 import { apiErrorMessage } from '../api/client';
 import { listMaterials } from '../api/materials';
+import { useAuth } from '../auth/AuthContext';
+import { invalidateCache } from '../utils/apiCache';
 import { screenUi } from '../styles/screenUi';
-import { withFallback } from '../utils/safeRequest';
 import type { Contractor, Driver, Material, OrderTemplate } from '../types';
 import type { RootStackParamList } from '../navigation/RootNavigator';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'OrderCreate'>;
 
+type ListLoadState = 'loading' | 'ready' | 'error';
+
+function ListStatusMessage({
+  state,
+  error,
+  emptyMessage,
+  onRetry,
+}: {
+  state: ListLoadState;
+  error: string | null;
+  emptyMessage: string;
+  onRetry: () => void;
+}) {
+  if (state === 'loading') {
+    return (
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 4 }}>
+        <ActivityIndicator size="small" color="#2563eb" />
+        <Text style={{ fontSize: 13, color: '#6b7280' }}>Загрузка…</Text>
+      </View>
+    );
+  }
+  if (state === 'error') {
+    return (
+      <View style={{ gap: 8 }}>
+        <Text style={{ fontSize: 13, color: '#dc2626' }}>
+          {error ?? 'Не удалось загрузить данные с сервера'}
+        </Text>
+        <MenuButton label="🔄 Повторить загрузку" onPress={onRetry} variant="secondary" />
+      </View>
+    );
+  }
+  return <Text style={{ fontSize: 13, color: '#6b7280' }}>{emptyMessage}</Text>;
+}
+
 export function OrderCreateScreen({ navigation, route }: Props) {
   const templateId = route.params?.templateId;
+  const { dataReloadToken } = useAuth();
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [contractors, setContractors] = useState<Contractor[]>([]);
   const [templates, setTemplates] = useState<OrderTemplate[]>([]);
   const [materials, setMaterials] = useState<Material[]>([]);
+  const [driversState, setDriversState] = useState<ListLoadState>('loading');
+  const [contractorsState, setContractorsState] = useState<ListLoadState>('loading');
+  const [templatesState, setTemplatesState] = useState<ListLoadState>('loading');
+  const [materialsState, setMaterialsState] = useState<ListLoadState>('loading');
+  const [driversError, setDriversError] = useState<string | null>(null);
+  const [contractorsError, setContractorsError] = useState<string | null>(null);
+  const [templatesError, setTemplatesError] = useState<string | null>(null);
+  const [materialsError, setMaterialsError] = useState<string | null>(null);
   const [selectedTemplateId, setSelectedTemplateId] = useState<number | null>(templateId ?? null);
   const [driverId, setDriverId] = useState<number | null>(null);
   const [createForAllDrivers, setCreateForAllDrivers] = useState(false);
@@ -42,32 +87,85 @@ export function OrderCreateScreen({ navigation, route }: Props) {
   const [distanceKm, setDistanceKm] = useState('');
   const [saveAsTemplate, setSaveAsTemplate] = useState(false);
   const [templateName, setTemplateName] = useState('');
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  const load = useCallback(async () => {
-    try {
-      const [ds, cs, ts, ms] = await Promise.all([
-        withFallback(() => listDrivers(), []),
-        withFallback(() => listContractors(), []),
-        withFallback(() => listOrderTemplates(), []),
-        withFallback(() => listMaterials(), []),
-      ]);
-      setDrivers(ds);
-      setContractors(cs);
-      setTemplates(ts);
-      setMaterials(ms);
-    } catch (e) {
-      setError(apiErrorMessage(e));
-    } finally {
-      setLoading(false);
+  const activeDrivers = useMemo(
+    () => drivers.filter((item) => item.is_active),
+    [drivers]
+  );
+
+  const load = useCallback(async (options?: { silent?: boolean }) => {
+    if (!options?.silent) {
+      setInitialLoading(true);
     }
+    setDriversState('loading');
+    setContractorsState('loading');
+    setTemplatesState('loading');
+    setMaterialsState('loading');
+    setDriversError(null);
+    setContractorsError(null);
+    setTemplatesError(null);
+    setMaterialsError(null);
+
+    const [driversResult, contractorsResult, templatesResult, materialsResult] =
+      await Promise.allSettled([
+        listDrivers(),
+        listContractors(),
+        listOrderTemplates(),
+        listMaterials(),
+      ]);
+
+    if (driversResult.status === 'fulfilled') {
+      setDrivers(driversResult.value);
+      setDriversState('ready');
+    } else {
+      setDrivers([]);
+      setDriversState('error');
+      setDriversError(apiErrorMessage(driversResult.reason, 'Не удалось загрузить водителей'));
+    }
+
+    if (contractorsResult.status === 'fulfilled') {
+      setContractors(contractorsResult.value);
+      setContractorsState('ready');
+    } else {
+      setContractors([]);
+      setContractorsState('error');
+      setContractorsError(apiErrorMessage(contractorsResult.reason, 'Не удалось загрузить контрагентов'));
+    }
+
+    if (templatesResult.status === 'fulfilled') {
+      setTemplates(templatesResult.value);
+      setTemplatesState('ready');
+    } else {
+      setTemplates([]);
+      setTemplatesState('error');
+      setTemplatesError(apiErrorMessage(templatesResult.reason, 'Не удалось загрузить шаблоны'));
+    }
+
+    if (materialsResult.status === 'fulfilled') {
+      setMaterials(materialsResult.value);
+      setMaterialsState('ready');
+    } else {
+      setMaterials([]);
+      setMaterialsState('error');
+      setMaterialsError(apiErrorMessage(materialsResult.reason, 'Не удалось загрузить материалы'));
+    }
+
+    setInitialLoading(false);
   }, []);
 
+  useFocusEffect(
+    useCallback(() => {
+      void load();
+    }, [load])
+  );
+
   useEffect(() => {
-    void load();
-  }, [load]);
+    if (dataReloadToken > 0) {
+      void load({ silent: true });
+    }
+  }, [dataReloadToken, load]);
 
   useEffect(() => {
     if (!templateId || templates.length === 0) return;
@@ -88,15 +186,23 @@ export function OrderCreateScreen({ navigation, route }: Props) {
   }, [templateId, templates]);
 
   const onSubmit = async () => {
-    if (!driverId || !contractorId) {
-      if (!createForAllDrivers) {
-        Alert.alert('Заполните', 'Выберите водителя и контрагента');
-        return;
-      }
+    if (!createForAllDrivers && !driverId) {
+      Alert.alert('Заполните', 'Выберите водителя');
+      return;
     }
     if (!contractorId) {
       Alert.alert('Заполните', 'Выберите контрагента');
       return;
+    }
+    if (createForAllDrivers) {
+      if (driversState === 'loading') {
+        Alert.alert('Подождите', 'Список водителей ещё загружается');
+        return;
+      }
+      if (driversState === 'error') {
+        Alert.alert('Ошибка', driversError ?? 'Не удалось загрузить водителей. Нажмите «Повторить загрузку».');
+        return;
+      }
     }
     setSaving(true);
     try {
@@ -123,29 +229,60 @@ export function OrderCreateScreen({ navigation, route }: Props) {
         unload_address: unloadAddress.trim() || undefined,
       };
       if (createForAllDrivers) {
-        await createOrdersBulk({ ...payload, driver_ids: drivers.map((item) => item.id) });
+        const activeDriverIds = activeDrivers.map((item) => item.id);
+        if (activeDriverIds.length === 0) {
+          Alert.alert('Нет водителей', 'Нет активных водителей для назначения');
+          setSaving(false);
+          return;
+        }
+        const created = await createOrdersBulk({ ...payload, driver_ids: activeDriverIds });
+        if (saveAsTemplate && templateName.trim()) {
+          await createOrderTemplate({
+            name: templateName.trim(),
+            contractor_id: contractorId,
+            material: material.trim() || undefined,
+            unit: unit.trim() || undefined,
+            default_quantity: Number.isFinite(qty as number) ? qty : null,
+            driver_rate: Number.isFinite(parsedDriverRate as number) ? parsedDriverRate : null,
+            company_rate: Number.isFinite(parsedCompanyRate as number) ? parsedCompanyRate : null,
+            distance_km: Number.isFinite(parsedDistance as number) ? parsedDistance : null,
+            notes: notes.trim() || undefined,
+            description: description.trim() || undefined,
+            load_address: loadAddress.trim() || undefined,
+            unload_address: unloadAddress.trim() || undefined,
+          });
+        }
+        Alert.alert(
+          'Готово',
+          `Создано ${created.length} заказов — по одному на каждого активного водителя`,
+          [{ text: 'OK', onPress: () => navigation.goBack() }]
+        );
+        invalidateCache('admin:');
+        invalidateCache('dashboard:');
+        invalidateCache('driver:');
       } else {
         await createOrder({ ...payload, driver_id: driverId as number });
+        if (saveAsTemplate && templateName.trim()) {
+          await createOrderTemplate({
+            name: templateName.trim(),
+            contractor_id: contractorId,
+            material: material.trim() || undefined,
+            unit: unit.trim() || undefined,
+            default_quantity: Number.isFinite(qty as number) ? qty : null,
+            driver_rate: Number.isFinite(parsedDriverRate as number) ? parsedDriverRate : null,
+            company_rate: Number.isFinite(parsedCompanyRate as number) ? parsedCompanyRate : null,
+            distance_km: Number.isFinite(parsedDistance as number) ? parsedDistance : null,
+            notes: notes.trim() || undefined,
+            description: description.trim() || undefined,
+            load_address: loadAddress.trim() || undefined,
+            unload_address: unloadAddress.trim() || undefined,
+          });
+        }
+        Alert.alert('Готово', 'Заказ создан', [{ text: 'OK', onPress: () => navigation.goBack() }]);
+        invalidateCache('admin:');
+        invalidateCache('dashboard:');
+        invalidateCache('driver:');
       }
-      if (saveAsTemplate && templateName.trim()) {
-        await createOrderTemplate({
-          name: templateName.trim(),
-          contractor_id: contractorId,
-          material: material.trim() || undefined,
-          unit: unit.trim() || undefined,
-          default_quantity: Number.isFinite(qty as number) ? qty : null,
-          driver_rate: Number.isFinite(parsedDriverRate as number) ? parsedDriverRate : null,
-          company_rate: Number.isFinite(parsedCompanyRate as number) ? parsedCompanyRate : null,
-          distance_km: Number.isFinite(parsedDistance as number) ? parsedDistance : null,
-          notes: notes.trim() || undefined,
-          description: description.trim() || undefined,
-          load_address: loadAddress.trim() || undefined,
-          unload_address: unloadAddress.trim() || undefined,
-        });
-      }
-      Alert.alert('Готово', createForAllDrivers ? 'Задачи созданы для всех водителей' : 'Заказ создан', [
-        { text: 'OK', onPress: () => navigation.goBack() },
-      ]);
     } catch (e) {
       Alert.alert('Ошибка', apiErrorMessage(e));
     } finally {
@@ -153,16 +290,56 @@ export function OrderCreateScreen({ navigation, route }: Props) {
     }
   };
 
-  if (loading) return <LoadingScreen label="Загрузка формы…" />;
+  const reloadDrivers = () => {
+    setDriversState('loading');
+    setDriversError(null);
+    void listDrivers()
+      .then((items) => {
+        setDrivers(items);
+        setDriversState('ready');
+      })
+      .catch((e) => {
+        setDrivers([]);
+        setDriversState('error');
+        setDriversError(apiErrorMessage(e, 'Не удалось загрузить водителей'));
+      });
+  };
+
+  const reloadContractors = () => {
+    setContractorsState('loading');
+    setContractorsError(null);
+    void listContractors()
+      .then((items) => {
+        setContractors(items);
+        setContractorsState('ready');
+      })
+      .catch((e) => {
+        setContractors([]);
+        setContractorsState('error');
+        setContractorsError(apiErrorMessage(e, 'Не удалось загрузить контрагентов'));
+      });
+  };
+
+  const formLoadError =
+    driversState === 'error' || contractorsState === 'error'
+      ? [driversError, contractorsError].filter(Boolean).join(' · ')
+      : null;
+
+  if (initialLoading && drivers.length === 0 && contractors.length === 0) {
+    return <LoadingScreen label="Загрузка формы…" />;
+  }
 
   return (
     <View style={screenUi.container}>
-      <ScrollView contentContainerStyle={[screenUi.content, { paddingBottom: 32 }]} keyboardShouldPersistTaps="handled">
-        <ScreenHeader title="➕ Новый заказ" />
-        <ErrorText message={error} />
+      <ScrollView contentContainerStyle={[screenUi.content, { paddingBottom: 32 }]} keyboardShouldPersistTaps="always">
+        <ScreenHeader title="➕ Новый заказ" showPageTitle={false} />
+        <ErrorText message={formLoadError} />
 
         <View style={screenUi.card}>
           <Text style={screenUi.fieldLabel}>📋 Шаблон заказа</Text>
+          {templatesState === 'error' ? (
+            <ErrorText message={templatesError} />
+          ) : null}
           <MenuButton
             label={selectedTemplateId ? 'Сбросить шаблон' : 'Без шаблона'}
             onPress={() => {
@@ -210,8 +387,46 @@ export function OrderCreateScreen({ navigation, route }: Props) {
             onPress={() => setCreateForAllDrivers((prev) => !prev)}
             variant={createForAllDrivers ? 'default' : 'secondary'}
           />
-          {drivers.length === 0 ? (
-            <Text style={{ fontSize: 13, color: '#6b7280' }}>Нет водителей — создайте в разделе «Водители»</Text>
+          {createForAllDrivers ? (
+            driversState === 'loading' ? (
+              <ListStatusMessage
+                state="loading"
+                error={null}
+                emptyMessage=""
+                onRetry={reloadDrivers}
+              />
+            ) : driversState === 'error' ? (
+              <ListStatusMessage
+                state="error"
+                error={driversError}
+                emptyMessage=""
+                onRetry={reloadDrivers}
+              />
+            ) : activeDrivers.length === 0 ? (
+              <Text style={{ fontSize: 13, color: '#6b7280' }}>
+                Нет активных водителей — добавьте или активируйте водителей в разделе «Водители»
+              </Text>
+            ) : (
+              <Text style={{ fontSize: 13, color: '#16a34a' }}>
+                Будет создано {activeDrivers.length}{' '}
+                {activeDrivers.length === 1 ? 'заказ' : activeDrivers.length < 5 ? 'заказа' : 'заказов'} для{' '}
+                {activeDrivers.length}{' '}
+                {activeDrivers.length === 1 ? 'активного водителя' : 'активных водителей'}
+              </Text>
+            )
+          ) : driversState === 'loading' ? (
+            <ListStatusMessage state="loading" error={null} emptyMessage="" onRetry={reloadDrivers} />
+          ) : driversState === 'error' ? (
+            <ListStatusMessage
+              state="error"
+              error={driversError}
+              emptyMessage=""
+              onRetry={reloadDrivers}
+            />
+          ) : drivers.length === 0 ? (
+            <Text style={{ fontSize: 13, color: '#6b7280' }}>
+              Нет водителей — создайте в разделе «Водители»
+            </Text>
           ) : (
             drivers.map((d) => (
               <MenuButton
@@ -229,8 +444,19 @@ export function OrderCreateScreen({ navigation, route }: Props) {
 
         <View style={screenUi.card}>
           <Text style={screenUi.fieldLabel}>🏢 Контрагент</Text>
-          {contractors.length === 0 ? (
-            <Text style={{ fontSize: 13, color: '#6b7280' }}>Нет контрагентов — создайте в разделе «Контрагенты»</Text>
+          {contractorsState === 'loading' ? (
+            <ListStatusMessage state="loading" error={null} emptyMessage="" onRetry={reloadContractors} />
+          ) : contractorsState === 'error' ? (
+            <ListStatusMessage
+              state="error"
+              error={contractorsError}
+              emptyMessage=""
+              onRetry={reloadContractors}
+            />
+          ) : contractors.length === 0 ? (
+            <Text style={{ fontSize: 13, color: '#6b7280' }}>
+              Нет контрагентов — создайте в разделе «Контрагенты»
+            </Text>
           ) : (
             contractors.map((c) => (
               <MenuButton
@@ -253,17 +479,41 @@ export function OrderCreateScreen({ navigation, route }: Props) {
 
         <View style={screenUi.card}>
           <Text style={screenUi.fieldLabel}>Справочник материалов</Text>
-          {materials.slice(0, 10).map((m) => (
-            <MenuButton
-              key={m.id}
-              label={`${material === m.name ? '✅ ' : ''}${m.name}`}
-              onPress={() => {
-                setMaterial(m.name);
-                setUnit(m.unit);
-              }}
-              variant={material === m.name ? 'default' : 'secondary'}
-            />
-          ))}
+          {materialsState === 'error' ? <ErrorText message={materialsError} /> : null}
+          {materialsState === 'loading' ? (
+            <ListStatusMessage state="loading" error={null} emptyMessage="" onRetry={() => void load({ silent: true })} />
+          ) : materials.length === 0 ? (
+            <Text style={{ fontSize: 13, color: '#9ca3af' }}>
+              Справочник пуст. Добавьте материалы в разделе «Ещё → Материалы».
+            </Text>
+          ) : (
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+              {materials.map((m) => {
+                const active = material === m.name;
+                return (
+                  <Pressable
+                    key={m.id}
+                    onPress={() => {
+                      setMaterial(m.name);
+                      setUnit(m.unit);
+                    }}
+                    style={{
+                      backgroundColor: active ? '#2563eb' : '#374151',
+                      paddingHorizontal: 12,
+                      paddingVertical: 10,
+                      borderRadius: 20,
+                      borderWidth: 1,
+                      borderColor: active ? '#2563eb' : '#4b5563',
+                    }}
+                  >
+                    <Text style={{ color: '#ffffff', fontSize: 14, fontWeight: active ? '700' : '500' }}>
+                      {m.name}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          )}
         </View>
 
         <Field label="Количество (м3/т)" value={quantity} onChangeText={setQuantity} keyboardType="decimal-pad" />

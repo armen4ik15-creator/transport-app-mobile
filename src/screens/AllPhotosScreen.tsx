@@ -11,27 +11,34 @@ import {
   Text,
   View,
 } from 'react-native';
-import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { CollapsiblePanel } from '../components/CollapsiblePanel';
+import { DateRangePicker } from '../components/DateRangePicker';
 import { FilterChipRow } from '../components/FilterChipRow';
+import { RemoteImage } from '../components/RemoteImage';
 import { ScreenHeader } from '../components/ScreenHeader';
-import { ScreenHero } from '../components/ScreenHero';
-import { ErrorText, Field, LoadingScreen, MenuButton } from '../components/ui';
+import { ErrorText, LoadingScreen, MenuButton } from '../components/ui';
 import { getAllPhotos, type GetAllPhotosParams } from '../api/photos';
-import { apiErrorMessage, getServerHost } from '../api/client';
-import { getStoredToken } from '../storage/sessionStorage';
+import { apiErrorMessage } from '../api/client';
 import { listDrivers } from '../api/drivers';
 import { listOrders } from '../api/orders';
 import type { RootStackParamList } from '../navigation/types';
 import { screenUi } from '../styles/screenUi';
+import { colors } from '../theme';
+import { downloadPhotoForShare, resolvePhotoLocalUri } from '../utils/photoUrl';
 import { withFallback } from '../utils/safeRequest';
 import type { Driver, Order, TtnPhotoRecord } from '../types';
 
 const PAGE_SIZE = 40;
 const GRID_GAP = 8;
 const HORIZONTAL_PADDING = 16;
+
+function yearBounds(): { from: string; to: string } {
+  const year = new Date().getFullYear();
+  return { from: `${year}-01-01`, to: `${year}-12-31` };
+}
 
 function formatPhotoDate(value: string | null): string {
   if (!value) return '—';
@@ -44,61 +51,28 @@ function photoKey(photo: TtnPhotoRecord): string {
 
 export function AllPhotosScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const initialBounds = yearBounds();
   const [photos, setPhotos] = useState<TtnPhotoRecord[]>([]);
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [driverId, setDriverId] = useState<number | null>(null);
   const [orderId, setOrderId] = useState<number | null>(null);
-  const [dateFrom, setDateFrom] = useState('');
-  const [dateTo, setDateTo] = useState('');
+  const [dateFrom, setDateFrom] = useState(initialBounds.from);
+  const [dateTo, setDateTo] = useState(initialBounds.to);
   const [appliedFilters, setAppliedFilters] = useState<GetAllPhotosParams>({});
-  const [fileHost, setFileHost] = useState('http://localhost:3000');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [previewPhoto, setPreviewPhoto] = useState<TtnPhotoRecord | null>(null);
+  const [previewUri, setPreviewUri] = useState<string | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
   const [savingPhoto, setSavingPhoto] = useState(false);
-
-  const onSharePhoto = async () => {
-    if (!previewPhoto) return;
-    setSavingPhoto(true);
-    try {
-      const token = await getStoredToken();
-      const url = `${fileHost}${previewPhoto.file_path}`;
-      const ext = previewPhoto.file_path.split('.').pop() ?? 'jpg';
-      const targetUri = `${FileSystem.cacheDirectory ?? ''}ttn_${previewPhoto.id}.${ext}`;
-      const result = await FileSystem.downloadAsync(url, targetUri, {
-        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-      });
-      if (result.status !== 200) {
-        throw new Error(`Сервер вернул код ${result.status}`);
-      }
-      const canShare = await Sharing.isAvailableAsync();
-      if (!canShare) {
-        Alert.alert('Готово', `Файл сохранён:\n${result.uri}`);
-        return;
-      }
-      await Sharing.shareAsync(result.uri, {
-        mimeType: 'image/jpeg',
-        dialogTitle: `ТТН заказ #${previewPhoto.order_id}`,
-      });
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Не удалось сохранить фото';
-      Alert.alert('Ошибка', message);
-    } finally {
-      setSavingPhoto(false);
-    }
-  };
 
   const itemWidth = useMemo(() => {
     const screenWidth = Dimensions.get('window').width;
     return (screenWidth - HORIZONTAL_PADDING * 2 - GRID_GAP) / 2;
-  }, []);
-
-  useEffect(() => {
-    getServerHost().then(setFileHost).catch(() => setFileHost('http://localhost:3000'));
   }, []);
 
   const loadMeta = useCallback(async () => {
@@ -143,6 +117,51 @@ export function AllPhotosScreen() {
       cancelled = true;
     };
   }, [fetchPhotos, loadMeta]);
+
+  useEffect(() => {
+    if (!previewPhoto) {
+      setPreviewUri(null);
+      return;
+    }
+    let cancelled = false;
+    setPreviewLoading(true);
+    resolvePhotoLocalUri(previewPhoto.file_path)
+      .then((uri) => {
+        if (!cancelled) setPreviewUri(uri);
+      })
+      .catch(() => {
+        if (!cancelled) setPreviewUri(null);
+      })
+      .finally(() => {
+        if (!cancelled) setPreviewLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [previewPhoto]);
+
+  const onSharePhoto = async () => {
+    if (!previewPhoto) return;
+    setSavingPhoto(true);
+    try {
+      const localUri = await downloadPhotoForShare(previewPhoto.file_path, previewPhoto.id);
+      const canShare = await Sharing.isAvailableAsync();
+      if (!canShare) {
+        Alert.alert('Готово', `Файл сохранён:\n${localUri}`);
+        return;
+      }
+      await Sharing.shareAsync(localUri, {
+        mimeType: 'image/jpeg',
+        dialogTitle: `ТТН заказ #${previewPhoto.order_id}`,
+      });
+    } catch (shareError) {
+      const message =
+        shareError instanceof Error ? shareError.message : 'Не удалось сохранить фото';
+      Alert.alert('Ошибка', message);
+    } finally {
+      setSavingPhoto(false);
+    }
+  };
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -227,61 +246,49 @@ export function AllPhotosScreen() {
           paddingBottom: 24,
           flexGrow: 1,
         }}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
         onEndReached={onLoadMore}
         onEndReachedThreshold={0.4}
         ListHeaderComponent={
           <View style={[screenUi.content, { paddingHorizontal: 0 }]}>
             <ScreenHeader
-              title="🖼 Фото ТТН"
+              title="Фото ТТН"
               showBack
               onBack={() => navigation.goBack()}
               showPageTitle={false}
             />
-            <ScreenHero title="🖼 Все накладные" subtitle="Фильтр по водителю и заказу · сохранение" />
 
-            <Text style={screenUi.filterLabel}>Водитель:</Text>
-            <FilterChipRow
-              items={driverChips}
-              activeId={driverId == null ? 'all' : String(driverId)}
-              onSelect={(id) => setDriverId(id === 'all' ? null : Number(id))}
-            />
-
-            <Text style={screenUi.filterLabel}>Заказ:</Text>
-            <Pressable
-              onPress={pickOrder}
-              style={{
-                borderWidth: 1,
-                borderColor: '#bfdbfe',
-                backgroundColor: '#ffffff',
-                borderRadius: 10,
-                paddingHorizontal: 12,
-                paddingVertical: 12,
-                marginBottom: 10,
-              }}
+            <CollapsiblePanel
+              title="Фильтры"
+              subtitle={`${photos.length} фото · ${dateFrom} — ${dateTo}`}
+              defaultExpanded
             >
-              <Text style={{ fontSize: 14, color: '#111827' }}>📦 {orderFilterLabel}</Text>
-            </Pressable>
+              <Text style={screenUi.filterLabel}>Водитель:</Text>
+              <FilterChipRow
+                items={driverChips}
+                activeId={driverId == null ? 'all' : String(driverId)}
+                onSelect={(id) => setDriverId(id === 'all' ? null : Number(id))}
+              />
 
-            <Field
-              label="Дата С (ГГГГ-ММ-ДД)"
-              value={dateFrom}
-              onChangeText={setDateFrom}
-              placeholder="2026-01-01"
-            />
-            <Field
-              label="Дата ПО (ГГГГ-ММ-ДД)"
-              value={dateTo}
-              onChangeText={setDateTo}
-              placeholder="2026-12-31"
-            />
+              <Text style={screenUi.filterLabel}>Заказ:</Text>
+              <Pressable onPress={pickOrder} style={screenUi.selectField}>
+                <Text style={{ fontSize: 14, color: colors.text }}>📦 {orderFilterLabel}</Text>
+              </Pressable>
 
-            <MenuButton label="🔍 Применить фильтр" onPress={onApplyFilters} variant="secondary" />
+              <DateRangePicker
+                from={dateFrom}
+                to={dateTo}
+                onChangeFrom={setDateFrom}
+                onChangeTo={setDateTo}
+              />
+
+              <MenuButton label="🔍 Применить фильтр" onPress={onApplyFilters} variant="secondary" />
+            </CollapsiblePanel>
 
             <View style={screenUi.summaryBar}>
               <View style={screenUi.sumItem}>
                 <Text style={screenUi.sumLabel}>Найдено</Text>
-                <Text style={[screenUi.sumValue, { color: '#2563eb' }]}>{photos.length}</Text>
+                <Text style={[screenUi.sumValue, { color: colors.primary }]}>{photos.length}</Text>
               </View>
             </View>
 
@@ -293,26 +300,26 @@ export function AllPhotosScreen() {
             onPress={() => setPreviewPhoto(item)}
             style={{
               width: itemWidth,
-              backgroundColor: '#ffffff',
+              backgroundColor: colors.surface,
               borderRadius: 10,
               borderWidth: 1,
-              borderColor: '#e5e7eb',
+              borderColor: colors.border,
               overflow: 'hidden',
             }}
           >
-            <Image
-              source={{ uri: `${fileHost}${item.file_path}` }}
+            <RemoteImage
+              filePath={item.file_path}
               style={{ width: '100%', height: itemWidth * 0.75 }}
               resizeMode="cover"
             />
             <View style={{ padding: 8 }}>
-              <Text style={{ fontSize: 11, color: '#6b7280' }}>
+              <Text style={{ fontSize: 11, color: colors.textMuted }}>
                 {formatPhotoDate(item.uploaded_at)}
               </Text>
-              <Text numberOfLines={1} style={{ fontSize: 12, fontWeight: '600', color: '#111827' }}>
+              <Text numberOfLines={1} style={{ fontSize: 12, fontWeight: '600', color: colors.text }}>
                 {item.driver_name ?? '—'}
               </Text>
-              <Text numberOfLines={1} style={{ fontSize: 11, color: '#4b5563', marginTop: 2 }}>
+              <Text numberOfLines={1} style={{ fontSize: 11, color: colors.textMuted, marginTop: 2 }}>
                 Заказ #{item.order_id}
               </Text>
             </View>
@@ -320,13 +327,13 @@ export function AllPhotosScreen() {
         )}
         ListEmptyComponent={
           loading ? (
-            <ActivityIndicator style={{ marginTop: 40 }} color="#2563eb" />
+            <ActivityIndicator style={{ marginTop: 40 }} color={colors.primary} />
           ) : (
             <Text style={screenUi.emptyText}>Фотографии ТТН не найдены</Text>
           )
         }
         ListFooterComponent={
-          loadingMore ? <ActivityIndicator style={{ marginVertical: 16 }} color="#2563eb" /> : null
+          loadingMore ? <ActivityIndicator style={{ marginVertical: 16 }} color={colors.primary} /> : null
         }
       />
 
@@ -334,7 +341,7 @@ export function AllPhotosScreen() {
         <View
           style={{
             flex: 1,
-            backgroundColor: 'rgba(0,0,0,0.92)',
+            backgroundColor: colors.overlay,
             justifyContent: 'center',
           }}
         >
@@ -342,45 +349,37 @@ export function AllPhotosScreen() {
             onPress={() => setPreviewPhoto(null)}
             style={{ position: 'absolute', top: 48, right: 20, zIndex: 2, padding: 8 }}
           >
-            <Text style={{ color: '#ffffff', fontSize: 28 }}>✕</Text>
+            <Text style={{ color: colors.text, fontSize: 28 }}>✕</Text>
           </Pressable>
 
           {previewPhoto ? (
             <>
-              <Image
-                source={{ uri: `${fileHost}${previewPhoto.file_path}` }}
-                style={{ width: '100%', height: '70%' }}
-                resizeMode="contain"
-              />
+              {previewLoading ? (
+                <ActivityIndicator color={colors.primary} size="large" />
+              ) : previewUri ? (
+                <Image
+                  source={{ uri: previewUri }}
+                  style={{ width: '100%', height: '70%' }}
+                  resizeMode="contain"
+                />
+              ) : (
+                <Text style={{ color: colors.textMuted, textAlign: 'center', padding: 24 }}>
+                  Не удалось загрузить превью
+                </Text>
+              )}
               <View style={{ padding: 20 }}>
-                <Text style={{ color: '#ffffff', fontSize: 16, fontWeight: '600' }}>
+                <Text style={{ color: colors.text, fontSize: 16, fontWeight: '600' }}>
                   Заказ #{previewPhoto.order_id}
                 </Text>
-                <Text style={{ color: '#d1d5db', marginTop: 4 }}>
+                <Text style={{ color: colors.textMuted, marginTop: 4 }}>
                   {previewPhoto.driver_name ?? '—'} · {formatPhotoDate(previewPhoto.uploaded_at)}
-                </Text>
-                {previewPhoto.contractor_name ? (
-                  <Text style={{ color: '#d1d5db', marginTop: 4 }}>
-                    {previewPhoto.contractor_name}
-                    {previewPhoto.material ? ` · ${previewPhoto.material}` : ''}
-                  </Text>
-                ) : null}
-                <Text style={{ color: '#9ca3af', marginTop: 4, fontSize: 12 }}>
-                  {previewPhoto.source === 'trip' ? 'Фото рейса' : 'Фото заказа'}
                 </Text>
                 <Pressable
                   onPress={() => void onSharePhoto()}
                   disabled={savingPhoto}
-                  style={{
-                    marginTop: 16,
-                    backgroundColor: '#2563eb',
-                    borderRadius: 10,
-                    paddingVertical: 12,
-                    alignItems: 'center',
-                    opacity: savingPhoto ? 0.7 : 1,
-                  }}
+                  style={[screenUi.saveBtn, { marginTop: 16 }, savingPhoto && { opacity: 0.7 }]}
                 >
-                  <Text style={{ color: '#ffffff', fontWeight: '700', fontSize: 15 }}>
+                  <Text style={screenUi.saveBtnText}>
                     {savingPhoto ? 'Сохранение…' : '📤 Сохранить / Поделиться'}
                   </Text>
                 </Pressable>

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Alert, ScrollView, Text, View } from 'react-native';
 import axios from 'axios';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { ErrorText, Field, PrimaryButton } from '../components/ui';
+import { ErrorText, Field, MenuButton, PrimaryButton } from '../components/ui';
 import { ScreenHero } from '../components/ScreenHero';
 import {
   DEFAULT_PRODUCTION_HOST,
@@ -15,7 +15,11 @@ import {
   clearServerUrl,
   SERVER_URL_KEY,
 } from '../api/client';
-import type { RootStackParamList } from '../navigation/RootNavigator';
+import {
+  getCurrentProductionHost,
+  isDeprecatedServerHost,
+} from '../constants/deprecatedServers';
+import type { RootStackParamList } from '../navigation/types';
 import { screenUi } from '../styles/screenUi';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ServerSetup'>;
@@ -57,6 +61,11 @@ export function ServerSetupScreen({ route, onConfigured }: ComponentProps) {
       setError('Введите IP-адрес сервера');
       return;
     }
+    if (isDeprecatedServerHost(cleanIp)) {
+      setIp(getCurrentProductionHost());
+      setError('Этот сервер устарел. Нажмите «Подключиться» ещё раз — подставлен актуальный адрес.');
+      return;
+    }
     if (!/^\d+$/.test(cleanPort)) {
       setError('Порт должен быть числом');
       return;
@@ -67,8 +76,9 @@ export function ServerSetupScreen({ route, onConfigured }: ComponentProps) {
     const apiUrl = buildApiUrl(cleanIp, cleanPort);
 
     try {
-      const response = await axios.get(`${apiUrl}/health`, { timeout: 15000 });
-      if (response.data?.status !== 'ok') {
+      const response = await axios.get(`${apiUrl}/health/live`, { timeout: 15000 });
+      const status = response.data?.status;
+      if (status !== 'ok' && status !== 'degraded') {
         throw new Error('Некорректный ответ health');
       }
       await setServerUrl(apiUrl);
@@ -102,6 +112,14 @@ export function ServerSetupScreen({ route, onConfigured }: ComponentProps) {
           <Field label="Порт" value={port} onChangeText={setPort} keyboardType="number-pad" placeholder="443" />
           <ErrorText message={error} />
           <PrimaryButton label="🔗 Подключиться" onPress={onConnect} loading={busy} />
+          <MenuButton
+            label="☁️ Использовать продакшен-сервер"
+            onPress={() => {
+              setIp(DEFAULT_PRODUCTION_HOST);
+              setPort(DEFAULT_PRODUCTION_PORT);
+            }}
+            variant="secondary"
+          />
         </View>
       </ScrollView>
     </View>

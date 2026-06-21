@@ -1,4 +1,5 @@
 import { Pressable, Text, View } from 'react-native';
+import { colors } from '../theme';
 
 interface FilterDropdownProps {
   icon: string;
@@ -17,8 +18,8 @@ export function FilterDropdown({ icon, label, active, onPress }: FilterDropdownP
         alignItems: 'center',
         justifyContent: 'space-between',
         borderWidth: 1.5,
-        borderColor: active ? '#2563eb' : '#bfdbfe',
-        backgroundColor: active ? '#eff6ff' : '#ffffff',
+        borderColor: active ? colors.primary : colors.border,
+        backgroundColor: active ? 'rgba(26,115,232,0.15)' : colors.surface,
         borderRadius: 10,
         paddingHorizontal: 12,
         paddingVertical: 12,
@@ -28,12 +29,12 @@ export function FilterDropdown({ icon, label, active, onPress }: FilterDropdownP
         <Text style={{ fontSize: 16 }}>{icon}</Text>
         <Text
           numberOfLines={1}
-          style={{ fontSize: 14, color: '#111827', fontWeight: '500', flex: 1 }}
+          style={{ fontSize: 14, color: colors.text, fontWeight: '500', flex: 1 }}
         >
           {label}
         </Text>
       </View>
-      <Text style={{ color: '#6b7280', fontSize: 12 }}>▾</Text>
+      <Text style={{ color: colors.textMuted, fontSize: 12 }}>▾</Text>
     </Pressable>
   );
 }

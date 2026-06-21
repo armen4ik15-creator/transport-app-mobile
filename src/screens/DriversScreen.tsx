@@ -21,6 +21,7 @@ import { createDriver, deleteDriver, listDrivers, updateDriver } from '../api/dr
 import { apiErrorMessage } from '../api/client';
 import type { RootStackParamList } from '../navigation/types';
 import { screenUi } from '../styles/screenUi';
+import { colors } from '../theme';
 import type { Driver } from '../types';
 
 type DriverStatusFilter = 'all' | 'active' | 'inactive';
@@ -137,6 +138,10 @@ export function DriversScreen() {
           Alert.alert('Заполните', 'Email и пароль обязательны для нового водителя');
           return;
         }
+        if (!form.email.includes('@')) {
+          Alert.alert('Заполните', 'Укажите корректный email (например driver@mail.ru)');
+          return;
+        }
         await createDriver({
           email: form.email.trim().toLowerCase(),
           password: form.password,
@@ -214,24 +219,22 @@ export function DriversScreen() {
             >
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <View style={{ flex: 1, paddingRight: 8 }}>
-                  <Text style={{ fontSize: 17, fontWeight: '800', color: '#111827' }}>
-                    {item.full_name ?? 'Без имени'}
-                  </Text>
+                  <Text style={screenUi.cardTitle}>{item.full_name ?? 'Без имени'}</Text>
                   {item.phone ? (
-                    <Text style={{ fontSize: 14, color: '#4b5563', marginTop: 6 }}>📞 {item.phone}</Text>
+                    <Text style={screenUi.cardBody}>📞 {item.phone}</Text>
                   ) : null}
-                  <Text style={{ fontSize: 13, color: '#6b7280', marginTop: 4 }}>
+                  <Text style={screenUi.cardBodySm}>
                     🚚 {item.car_number || 'без номера'}
                   </Text>
                   <View style={{ marginTop: 8 }}>
                     <StatusBadge
                       label={active ? 'Активен' : 'Неактивен'}
-                      color={active ? '#16a34a' : '#ef4444'}
+                      color={active ? colors.profit : colors.loss}
                     />
                   </View>
                 </View>
                 <Pressable onPress={() => onDelete(item)} hitSlop={8}>
-                  <Text style={{ color: '#ef4444', fontSize: 16 }}>🗑</Text>
+                  <Text style={screenUi.dangerIcon}>🗑</Text>
                 </Pressable>
               </View>
             </Pressable>
@@ -239,7 +242,7 @@ export function DriversScreen() {
         }}
         ListEmptyComponent={
           loading || refreshing ? (
-            <ActivityIndicator style={{ marginTop: 48 }} color="#2563eb" />
+            <ActivityIndicator style={{ marginTop: 48 }} color={colors.primary} />
           ) : (
             <Text style={screenUi.emptyText}>Водителей пока нет</Text>
           )

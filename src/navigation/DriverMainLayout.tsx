@@ -35,14 +35,14 @@ function DriverMainLayout({ activeTab, children }: DriverMainLayoutProps) {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#f4f6f8' }} edges={['top']}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#121212' }} edges={['top']}>
       <View style={{ flex: 1 }}>{children}</View>
       <CustomBottomTabBar
         items={DRIVER_TABS}
         activeId={activeTab}
         onSelect={(id) => {
           if (id === activeTab) return;
-          navigation.replace(DRIVER_TAB_ROUTE[id] as DriverTabRouteName);
+          navigation.navigate(DRIVER_TAB_ROUTE[id] as DriverTabRouteName);
         }}
       />
     </SafeAreaView>

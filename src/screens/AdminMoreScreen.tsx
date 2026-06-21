@@ -1,15 +1,41 @@
-import { Alert } from 'react-native';
+import { useCallback, useEffect, useState } from 'react';
+import { Alert, Pressable, ScrollView, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { HubMenuScreen } from '../components/HubMenuScreen';
+import { HubListRow, PrimaryBanner, SectionTitle } from '../components/ui-kit';
 import { useAuth } from '../auth/AuthContext';
 import type { RootStackParamList } from '../navigation/types';
+import { listNotifications } from '../api/notifications';
+import { countPendingAdminRegistrations } from '../api/adminRegistrations';
+import { countPendingDriverRegistrations } from '../api/driverRegistrations';
+import { colors, radii, spacing } from '../theme';
 import { checkAndApplyUpdate, getCurrentUpdateLabel } from '../utils/appUpdate';
+import { withFallback } from '../utils/safeRequest';
 
 export function AdminMoreScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const { signOut } = useAuth();
+  const { user, signOut } = useAuth();
   const updateLabel = getCurrentUpdateLabel();
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
+  const [pendingRegistrationRequests, setPendingRegistrationRequests] = useState(0);
+
+  const loadNotifications = useCallback(async () => {
+    const items = await withFallback(() => listNotifications(), []);
+    setUnreadNotifications(items.filter((item) => !item.read).length);
+  }, []);
+
+  const loadRegistrationRequests = useCallback(async () => {
+    const [founders, drivers] = await Promise.all([
+      withFallback(() => countPendingAdminRegistrations(), 0),
+      withFallback(() => countPendingDriverRegistrations(), 0),
+    ]);
+    setPendingRegistrationRequests(founders + drivers);
+  }, []);
+
+  useEffect(() => {
+    void loadNotifications();
+    void loadRegistrationRequests();
+  }, [loadNotifications, loadRegistrationRequests]);
 
   const onLogout = () => {
     Alert.alert('Выход', 'Выйти из аккаунта?', [
@@ -18,134 +44,180 @@ export function AdminMoreScreen() {
     ]);
   };
 
+  const companyName = user?.full_name?.trim() || 'ReestrPro';
+
   return (
-    <HubMenuScreen
-      title="🏢 Компания"
-      subtitle="Справочники, документы, отчёты и настройки"
-      sections={[
-        {
-          title: '📦 Заказы и логистика',
-          items: [
-            {
-              icon: '🗂',
-              title: 'Шаблоны заказов',
-              subtitle: 'Готовые шаблоны для быстрого создания',
-              accentColor: '#2563eb',
-              onPress: () => navigation.navigate('OrderTemplates'),
-            },
-            {
-              icon: '🖼',
-              title: 'Фото ТТН',
-              subtitle: 'Все накладные по рейсам',
-              accentColor: '#0891b2',
-              onPress: () => navigation.navigate('AllPhotos'),
-            },
-          ],
-        },
-        {
-          title: '📚 Справочники',
-          items: [
-            {
-              icon: '🚛',
-              title: 'Автомобили',
-              subtitle: 'Госномера и грузоподъёмность',
-              accentColor: '#16a34a',
-              onPress: () => navigation.navigate('Vehicles'),
-            },
-            {
-              icon: '🧱',
-              title: 'Материалы',
-              subtitle: 'Виды грузов и материалов',
-              accentColor: '#f59e0b',
-              onPress: () => navigation.navigate('Materials'),
-            },
-          ],
-        },
-        {
-          title: '📑 Документы и отчёты',
-          items: [
-            {
-              icon: '📁',
-              title: 'Документы',
-              subtitle: 'Путевые, счета, акты',
-              accentColor: '#6366f1',
-              onPress: () => navigation.navigate('Documents'),
-            },
-            {
-              icon: '🧾',
-              title: 'Путевые листы',
-              subtitle: 'Создание и просмотр',
-              accentColor: '#7c3aed',
-              onPress: () => navigation.navigate('Waybills'),
-            },
-            {
-              icon: '🧮',
-              title: 'Счета',
-              subtitle: 'Выставление и учёт',
-              accentColor: '#0d9488',
-              onPress: () => navigation.navigate('Invoices'),
-            },
-            {
-              icon: '📄',
-              title: 'Шаблоны документов',
-              subtitle: 'Word-шаблоны для печати',
-              accentColor: '#64748b',
-              onPress: () => navigation.navigate('Templates'),
-            },
-            {
-              icon: '📊',
-              title: 'Отчёты',
-              subtitle: 'Сводка доходов и рейсов',
-              accentColor: '#2563eb',
-              onPress: () => navigation.navigate('Reports'),
-            },
-            {
-              icon: '📝',
-              title: 'Журнал действий',
-              subtitle: 'История операций в системе',
-              accentColor: '#475569',
-              onPress: () => navigation.navigate('ActivityLog'),
-            },
-            {
-              icon: '🔔',
-              title: 'Уведомления',
-              subtitle: 'Рассылка водителям',
-              accentColor: '#ea580c',
-              onPress: () => navigation.navigate('Notifications'),
-            },
-          ],
-        },
-        {
-          title: '⚙️ Настройки',
-          items: [
-            {
-              icon: '🔄',
-              title: 'Проверить обновление',
-              subtitle: `Текущая версия: ${updateLabel}`,
-              accentColor: '#0891b2',
-              onPress: () => void checkAndApplyUpdate(true),
-            },
-            {
-              icon: '🌐',
-              title: 'Настройки сервера',
-              subtitle: 'Адрес API и порт HTTPS',
-              accentColor: '#6b7280',
-              onPress: () =>
+    <ScrollView style={{ flex: 1, backgroundColor: colors.bg }} contentContainerStyle={{ paddingBottom: 32 }}>
+      <PrimaryBanner
+        icon="🏢"
+        title={companyName}
+        subtitle={`${user?.email ?? ''} · Администратор`}
+      />
+
+      <View style={{ paddingHorizontal: spacing.md, paddingTop: spacing.md, gap: spacing.lg }}>
+        <View>
+          <SectionTitle>Операции</SectionTitle>
+          <View style={hubCardStyle}>
+            <HubListRow
+              icon="👤"
+              title="Водители"
+              subtitle="Автопарк и контакты"
+              tone="info"
+              onPress={() => navigation.navigate('Drivers')}
+            />
+            <HubListRow
+              icon="📑"
+              title="Реестр рейсов"
+              subtitle="ТТН и выгрузка Excel"
+              tone="positive"
+              onPress={() => navigation.navigate('RegistryReport')}
+            />
+            <HubListRow
+              icon="💼"
+              title="Финансы"
+              subtitle="Отчёты и зарплаты"
+              tone="warning"
+              onPress={() => navigation.navigate('FinancesHub')}
+            />
+            <HubListRow
+              icon="📋"
+              title="Заявки на регистрацию"
+              subtitle="Водители и учредители"
+              tone="warning"
+              badge={pendingRegistrationRequests}
+              onPress={() => navigation.navigate('AdminRegistrationRequests')}
+            />
+            <HubListRow
+              icon="🔔"
+              title="Уведомления"
+              subtitle="События и долги"
+              tone="danger"
+              badge={unreadNotifications}
+              onPress={() => navigation.navigate('Notifications')}
+            />
+          </View>
+        </View>
+
+        <View>
+          <SectionTitle>Справочники</SectionTitle>
+          <View style={hubCardStyle}>
+            <HubListRow
+              icon="🚛"
+              title="Автомобили"
+              subtitle="Техника и госномера"
+              tone="neutral"
+              onPress={() => navigation.navigate('Vehicles')}
+            />
+            <HubListRow
+              icon="🧱"
+              title="Материалы"
+              subtitle="Песок, щебень, ПГС"
+              tone="neutral"
+              onPress={() => navigation.navigate('Materials')}
+            />
+            <HubListRow
+              icon="📁"
+              title="Документы и ТТН"
+              subtitle="Шаблоны и сканы"
+              tone="neutral"
+              onPress={() => navigation.navigate('Documents')}
+            />
+          </View>
+        </View>
+
+        <View>
+          <SectionTitle>Заказы и логистика</SectionTitle>
+          <View style={hubCardStyle}>
+            <HubListRow
+              icon="🗂"
+              title="Шаблоны заказов"
+              subtitle="Быстрое создание заказов"
+              tone="info"
+              onPress={() => navigation.navigate('OrderTemplates')}
+            />
+            <HubListRow
+              icon="🖼"
+              title="Фото ТТН"
+              subtitle="Все накладные по рейсам"
+              tone="info"
+              onPress={() => navigation.navigate('AllPhotos')}
+            />
+            <HubListRow
+              icon="📊"
+              title="Отчёты"
+              subtitle="Сводка доходов и рейсов"
+              tone="info"
+              onPress={() => navigation.navigate('Reports')}
+            />
+          </View>
+        </View>
+
+        <View>
+          <SectionTitle>Система</SectionTitle>
+          <View style={hubCardStyle}>
+            <HubListRow
+              icon="🔄"
+              title="Проверить обновление"
+              subtitle={`Версия: ${updateLabel}`}
+              tone="info"
+              onPress={() => void checkAndApplyUpdate(true)}
+            />
+            <HubListRow
+              icon="🌐"
+              title="Настройки сервера"
+              subtitle="Адрес API"
+              tone="info"
+              onPress={() =>
                 navigation.navigate('ServerSetup', {
                   reason: 'Измените адрес сервера при необходимости',
-                }),
-            },
-            {
-              icon: '🚪',
-              title: 'Выйти',
-              subtitle: 'Завершить сеанс администратора',
-              accentColor: '#ef4444',
-              onPress: onLogout,
-              danger: true,
-            },
-          ],
-        },
-      ]}
-    />
+                })
+              }
+            />
+            <HubListRow
+              icon="💾"
+              title="Резервные копии"
+              subtitle="БД, ТТН, документы — скачать архив"
+              tone="positive"
+              onPress={() => navigation.navigate('Backups')}
+            />
+            <HubListRow
+              icon="📝"
+              title="Журнал действий"
+              subtitle="История изменений"
+              tone="neutral"
+              onPress={() => navigation.navigate('ActivityLog')}
+            />
+          </View>
+        </View>
+
+        <Pressable
+          onPress={onLogout}
+          style={{
+            minHeight: 48,
+            borderRadius: radii.md,
+            backgroundColor: colors.surfaceElevated,
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexDirection: 'row',
+            gap: 8,
+          }}
+        >
+          <Text style={{ fontSize: 14, fontWeight: '700', color: colors.loss }}>Выйти из аккаунта</Text>
+        </Pressable>
+
+        <Text style={{ textAlign: 'center', fontSize: 11, color: colors.textMuted }}>
+          ReestrPro · {updateLabel}
+        </Text>
+      </View>
+    </ScrollView>
   );
 }
+
+const hubCardStyle = {
+  backgroundColor: colors.surface,
+  borderRadius: radii.lg,
+  borderWidth: 1,
+  borderColor: colors.border,
+  paddingHorizontal: spacing.sm,
+  paddingVertical: 4,
+};

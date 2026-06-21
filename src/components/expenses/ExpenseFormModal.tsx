@@ -15,6 +15,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { ExpenseDatePicker } from '../ExpenseDatePicker';
 import { ALL_EXPENSE_TYPES } from '../../constants/expenseTypes';
 import { screenUi } from '../../styles/screenUi';
+import { colors } from '../../theme';
 import { todayIso } from '../../utils/datePeriods';
 import type { ExpenseMethod, ExpenseRecord } from '../../types';
 
@@ -165,33 +166,17 @@ export function ExpenseFormModal({
             <View style={{ flexDirection: 'row', gap: 10, marginBottom: 8 }}>
               <Pressable
                 onPress={pickFromGallery}
-                style={{
-                  flex: 1,
-                  backgroundColor: '#f3f4f6',
-                  borderWidth: 1.5,
-                  borderColor: '#e5e7eb',
-                  borderRadius: 8,
-                  padding: 10,
-                  alignItems: 'center',
-                }}
+                style={[screenUi.secondaryBtn, { flex: 1, marginBottom: 0 }]}
               >
-                <Text style={{ fontSize: 13, color: '#374151', fontWeight: '500' }}>
+                <Text style={{ fontSize: 13, color: colors.text, fontWeight: '500' }}>
                   📁 Галерея
                 </Text>
               </Pressable>
               <Pressable
                 onPress={takePhoto}
-                style={{
-                  flex: 1,
-                  backgroundColor: '#f3f4f6',
-                  borderWidth: 1.5,
-                  borderColor: '#e5e7eb',
-                  borderRadius: 8,
-                  padding: 10,
-                  alignItems: 'center',
-                }}
+                style={[screenUi.secondaryBtn, { flex: 1, marginBottom: 0 }]}
               >
-                <Text style={{ fontSize: 13, color: '#374151', fontWeight: '500' }}>
+                <Text style={{ fontSize: 13, color: colors.text, fontWeight: '500' }}>
                   📷 Камера
                 </Text>
               </Pressable>
@@ -217,25 +202,17 @@ export function ExpenseFormModal({
                   <Pressable
                     key={value}
                     onPress={() => setForm((prev) => ({ ...prev, exp_type: value }))}
-                    style={{
-                      width: '30%',
-                      backgroundColor: active ? '#eff6ff' : '#f3f4f6',
-                      paddingVertical: 10,
-                      paddingHorizontal: 6,
-                      borderRadius: 10,
-                      alignItems: 'center',
-                      borderWidth: 1.5,
-                      borderColor: active ? '#2563eb' : '#e5e7eb',
-                      minHeight: 60,
-                      justifyContent: 'center',
-                    }}
+                    style={[
+                      screenUi.typeTile,
+                      active ? screenUi.typeTileActive : screenUi.typeTileIdle,
+                    ]}
                   >
                     <Text style={{ fontSize: 18, marginBottom: 3 }}>{icon}</Text>
                     <Text
                       numberOfLines={2}
                       style={{
                         fontSize: 11,
-                        color: active ? '#2563eb' : '#374151',
+                        color: active ? colors.primary : colors.textMuted,
                         textAlign: 'center',
                         lineHeight: 14,
                         fontWeight: active ? '600' : '400',
@@ -261,20 +238,20 @@ export function ExpenseFormModal({
                   <Pressable
                     key={value}
                     onPress={() => setForm((prev) => ({ ...prev, method: value }))}
-                    style={{
-                      flex: 1,
-                      backgroundColor: active ? '#2563eb' : '#f3f4f6',
-                      paddingVertical: 12,
-                      borderRadius: 8,
-                      alignItems: 'center',
-                      borderWidth: 1,
-                      borderColor: active ? '#2563eb' : '#e5e7eb',
-                    }}
+                    style={[
+                      screenUi.actionBtn,
+                      {
+                        backgroundColor: active ? colors.primary : colors.surfaceElevated,
+                        borderWidth: 1,
+                        borderColor: active ? colors.primary : colors.border,
+                        paddingVertical: 12,
+                      },
+                    ]}
                   >
                     <Text
                       style={{
                         fontSize: 14,
-                        color: active ? '#ffffff' : '#374151',
+                        color: active ? colors.text : colors.textMuted,
                         fontWeight: active ? '600' : '400',
                       }}
                     >
@@ -292,7 +269,7 @@ export function ExpenseFormModal({
               keyboardType="decimal-pad"
               value={form.amount}
               onChangeText={(value) => setForm((prev) => ({ ...prev, amount: value }))}
-              placeholderTextColor="#9ca3af"
+              placeholderTextColor={colors.textMuted}
             />
 
             {isAdmin ? (
@@ -300,17 +277,12 @@ export function ExpenseFormModal({
                 <Text style={screenUi.fieldLabel}>Машина</Text>
                 <Pressable
                   onPress={() => setForm((prev) => ({ ...prev, car_number: '' }))}
-                  style={{
-                    paddingVertical: 10,
-                    paddingHorizontal: 14,
-                    borderRadius: 8,
-                    borderWidth: 1,
-                    borderColor: form.car_number === '' ? '#2563eb' : '#e5e7eb',
-                    backgroundColor: form.car_number === '' ? '#eff6ff' : '#ffffff',
-                    marginBottom: 6,
-                  }}
+                  style={[
+                    screenUi.optionTile,
+                    form.car_number === '' ? screenUi.optionTileActive : screenUi.optionTileIdle,
+                  ]}
                 >
-                  <Text>Общие (без машины)</Text>
+                  <Text style={{ color: colors.text }}>Общие (без машины)</Text>
                 </Pressable>
                 {vehicles.map((vehicle) => {
                   const active = form.car_number === vehicle.carNumber;
@@ -320,17 +292,12 @@ export function ExpenseFormModal({
                       onPress={() =>
                         setForm((prev) => ({ ...prev, car_number: vehicle.carNumber }))
                       }
-                      style={{
-                        paddingVertical: 10,
-                        paddingHorizontal: 14,
-                        borderRadius: 8,
-                        borderWidth: 1,
-                        borderColor: active ? '#2563eb' : '#e5e7eb',
-                        backgroundColor: active ? '#eff6ff' : '#ffffff',
-                        marginBottom: 6,
-                      }}
+                      style={[
+                        screenUi.optionTile,
+                        active ? screenUi.optionTileActive : screenUi.optionTileIdle,
+                      ]}
                     >
-                      <Text>
+                      <Text style={{ color: colors.text }}>
                         🚗 {vehicle.carNumber} ({vehicle.driverName})
                       </Text>
                     </Pressable>
@@ -346,7 +313,7 @@ export function ExpenseFormModal({
               multiline
               value={form.comment}
               onChangeText={(value) => setForm((prev) => ({ ...prev, comment: value }))}
-              placeholderTextColor="#9ca3af"
+              placeholderTextColor={colors.textMuted}
             />
           </ScrollView>
 

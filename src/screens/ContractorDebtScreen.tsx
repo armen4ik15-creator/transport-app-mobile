@@ -19,6 +19,7 @@ import {
 } from '../api/contractorPayments';
 import type { RootStackParamList } from '../navigation/types';
 import { screenUi } from '../styles/screenUi';
+import { colors } from '../theme';
 import { formatDateTimeRu, formatMoney, todayIso } from '../utils/datePeriods';
 import { withFallback } from '../utils/safeRequest';
 import type { Contractor, ContractorDebtSummary, ContractorPaymentRecord } from '../types';
@@ -33,9 +34,9 @@ const initialForm = {
 type ContractorDebtRoute = RouteProp<RootStackParamList, 'ContractorDebt'>;
 
 function paymentStatusLabel(debt: number, paid: number): { text: string; color: string } {
-  if (debt <= 0 && paid > 0) return { text: '✅ Оплачено', color: '#16a34a' };
-  if (paid > 0 && debt > 0) return { text: '⏳ Частично', color: '#d97706' };
-  return { text: '❌ Не оплачено', color: '#ef4444' };
+  if (debt <= 0 && paid > 0) return { text: '✅ Оплачено', color: colors.profit };
+  if (paid > 0 && debt > 0) return { text: '⏳ Частично', color: colors.warning };
+  return { text: '❌ Не оплачено', color: colors.loss };
 }
 
 function paymentButtonLabel(debt: number, paid: number): string {
@@ -221,7 +222,7 @@ export function ContractorDebtScreen() {
                 {statusInfo.text}
               </Text>
               {selectedSummary && selectedSummary.paid > 0 ? (
-                <Text style={{ fontSize: 13, color: '#6b7280' }}>
+                <Text style={{ fontSize: 13, color: colors.textMuted }}>
                   Последняя оплата: {formatMoney(selectedSummary.paid)} ₽
                 </Text>
               ) : null}
@@ -245,9 +246,7 @@ export function ContractorDebtScreen() {
 
             {summary.length > 0 ? (
               <View style={[screenUi.card, { marginBottom: 12 }]}>
-                <Text style={{ fontSize: 14, fontWeight: '700', color: '#111827', marginBottom: 8 }}>
-                  📋 По контрагентам
-                </Text>
+                <Text style={screenUi.sectionTitle}>📋 По контрагентам</Text>
                 {summary.map((item) => {
                   const rowStatus = paymentStatusLabel(item.debt, item.paid);
                   const rowButtonLabel = paymentButtonLabel(item.debt, item.paid);
@@ -257,11 +256,11 @@ export function ContractorDebtScreen() {
                       style={{
                         paddingVertical: 10,
                         borderTopWidth: 1,
-                        borderTopColor: '#f3f4f6',
+                        borderTopColor: colors.border,
                       }}
                     >
                       <Pressable onPress={() => setSelectedContractorId(item.contractor_id)}>
-                        <Text style={{ fontSize: 14, fontWeight: '600', color: '#111827', marginBottom: 4 }}>
+                        <Text style={[screenUi.cardTitleSm, { marginBottom: 4 }]}>
                           {item.contractor_name}
                         </Text>
                         <Text style={{ fontSize: 12, color: rowStatus.color, marginBottom: 6 }}>
@@ -280,7 +279,7 @@ export function ContractorDebtScreen() {
                         style={{
                           marginTop: 8,
                           alignSelf: 'flex-start',
-                          backgroundColor: item.debt > 0 ? '#2563eb' : '#f3f4f6',
+                          backgroundColor: item.debt > 0 ? colors.primary : colors.surfaceElevated,
                           paddingHorizontal: 12,
                           paddingVertical: 8,
                           borderRadius: 8,
@@ -290,7 +289,7 @@ export function ContractorDebtScreen() {
                           style={{
                             fontSize: 13,
                             fontWeight: '700',
-                            color: item.debt > 0 ? '#ffffff' : '#374151',
+                            color: item.debt > 0 ? colors.text : colors.textMuted,
                           }}
                         >
                           {rowButtonLabel}
@@ -302,7 +301,7 @@ export function ContractorDebtScreen() {
               </View>
             ) : null}
 
-            <Text style={{ fontSize: 14, fontWeight: '700', color: '#111827', marginBottom: 8 }}>
+            <Text style={screenUi.sectionTitle}>
               🧾 История оплат
               {selectedSummary ? ` · ${selectedSummary.contractor_name}` : ''}
             </Text>
@@ -313,24 +312,20 @@ export function ContractorDebtScreen() {
           <Pressable style={screenUi.card} onLongPress={() => onDelete(item.id)}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
               <View style={{ flex: 1, paddingRight: 8 }}>
-                <Text style={{ fontSize: 15, fontWeight: '600', color: '#111827' }}>
-                  {item.contractor_name}
-                </Text>
-                <Text style={{ fontSize: 13, color: '#6b7280', marginTop: 4 }}>
+                <Text style={screenUi.cardTitleSm}>{item.contractor_name}</Text>
+                <Text style={screenUi.cardBodySm}>
                   📅 {item.payment_date ?? formatDateTimeRu(item.created_at).slice(0, 10)}
                 </Text>
               </View>
-              <Text style={{ fontSize: 17, fontWeight: '700', color: '#16a34a' }}>
+              <Text style={[screenUi.sumValue, { color: colors.profit }]}>
                 +{formatMoney(item.amount)} ₽
               </Text>
             </View>
             {item.note ? (
-              <Text style={{ fontSize: 13, color: '#4b5563', marginTop: 6, fontStyle: 'italic' }}>
-                {item.note}
-              </Text>
+              <Text style={screenUi.cardComment}>{item.note}</Text>
             ) : null}
             <Pressable onPress={() => onDelete(item.id)} style={{ marginTop: 8 }}>
-              <Text style={{ color: '#ef4444', fontSize: 13 }}>🗑 Удалить</Text>
+              <Text style={{ color: colors.loss, fontSize: 13 }}>🗑 Удалить</Text>
             </Pressable>
           </Pressable>
         )}
@@ -341,28 +336,18 @@ export function ContractorDebtScreen() {
         }
       />
 
-      <View
-        style={{
-          position: 'absolute',
-          left: 0,
-          right: 0,
-          bottom: 0,
-          padding: 16,
-          backgroundColor: '#ffffff',
-          borderTopWidth: 1,
-          borderTopColor: '#e5e7eb',
-        }}
-      >
+      <View style={screenUi.footerBar}>
         <Pressable
           onPress={() => openPaymentForm()}
-          style={{
-            backgroundColor: displaySummary.debt > 0 ? '#2563eb' : '#16a34a',
-            borderRadius: 12,
-            paddingVertical: 14,
-            alignItems: 'center',
-          }}
+          style={[
+            screenUi.saveBtn,
+            {
+              marginTop: 0,
+              backgroundColor: displaySummary.debt > 0 ? colors.primary : colors.profit,
+            },
+          ]}
         >
-          <Text style={{ color: '#ffffff', fontSize: 16, fontWeight: '700' }}>{footerButtonLabel}</Text>
+          <Text style={screenUi.saveBtnText}>{footerButtonLabel}</Text>
         </Pressable>
       </View>
 

@@ -1,6 +1,7 @@
 import { Pressable, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { screenUi } from '../styles/screenUi';
+import { colors } from '../theme';
 
 interface ScreenHeaderProps {
   title: string;
@@ -41,7 +42,7 @@ export function ScreenHeader({
           style={{
             fontSize: 26,
             fontWeight: '700',
-            color: '#111827',
+            color: colors.text,
             marginBottom: 8,
           }}
         >

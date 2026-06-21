@@ -1,4 +1,5 @@
 import { Text, View, type ViewProps } from 'react-native';
+import { colors } from '../theme';
 
 interface ScreenHeroProps extends ViewProps {
   title: string;
@@ -10,7 +11,7 @@ export function ScreenHero({ title, subtitle, style, ...rest }: ScreenHeroProps)
     <View
       style={[
         {
-          backgroundColor: '#1e3a5f',
+          backgroundColor: colors.primaryMuted,
           borderRadius: 14,
           padding: 18,
           marginBottom: 14,
@@ -19,9 +20,9 @@ export function ScreenHero({ title, subtitle, style, ...rest }: ScreenHeroProps)
       ]}
       {...rest}
     >
-      <Text style={{ fontSize: 22, fontWeight: '700', color: '#ffffff' }}>{title}</Text>
+      <Text style={{ fontSize: 22, fontWeight: '700', color: colors.text }}>{title}</Text>
       {subtitle ? (
-        <Text style={{ fontSize: 14, color: '#cbd5e1', marginTop: 4 }}>{subtitle}</Text>
+        <Text style={{ fontSize: 14, color: colors.textMuted, marginTop: 4 }}>{subtitle}</Text>
       ) : null}
     </View>
   );

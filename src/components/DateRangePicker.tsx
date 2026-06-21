@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { screenUi } from '../styles/screenUi';
+import { colors } from '../theme';
 
 interface DateRangePickerProps {
   from: string;
@@ -65,25 +66,23 @@ function MiniCalendar({
   };
 
   return (
-    <View
-      style={{
-        marginTop: 8,
-        borderRadius: 12,
-        backgroundColor: '#ffffff',
-        borderWidth: 1,
-        borderColor: '#e5e7eb',
-        padding: 10,
-      }}
-    >
+    <View style={screenUi.calendarContainer}>
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
         <Pressable onPress={() => shiftMonth(-1)} hitSlop={8}>
-          <Text style={{ fontSize: 18, color: '#2563eb' }}>‹</Text>
+          <Text style={{ fontSize: 18, color: colors.primary }}>‹</Text>
         </Pressable>
-        <Text style={{ fontSize: 14, fontWeight: '600', color: '#111827', textTransform: 'capitalize' }}>
+        <Text
+          style={{
+            fontSize: 14,
+            fontWeight: '600',
+            color: colors.text,
+            textTransform: 'capitalize',
+          }}
+        >
           {monthLabel}
         </Text>
         <Pressable onPress={() => shiftMonth(1)} hitSlop={8}>
-          <Text style={{ fontSize: 18, color: '#2563eb' }}>›</Text>
+          <Text style={{ fontSize: 18, color: colors.primary }}>›</Text>
         </Pressable>
       </View>
 
@@ -91,7 +90,13 @@ function MiniCalendar({
         {WEEKDAY_LABELS.map((label) => (
           <Text
             key={label}
-            style={{ flex: 1, textAlign: 'center', fontSize: 11, color: '#9ca3af', fontWeight: '600' }}
+            style={{
+              flex: 1,
+              textAlign: 'center',
+              fontSize: 11,
+              color: colors.textMuted,
+              fontWeight: '600',
+            }}
           >
             {label}
           </Text>
@@ -121,10 +126,12 @@ function MiniCalendar({
                     borderRadius: 16,
                     alignItems: 'center',
                     justifyContent: 'center',
-                    backgroundColor: selected ? '#2563eb' : 'transparent',
+                    backgroundColor: selected ? colors.primary : 'transparent',
                   }}
                 >
-                  <Text style={{ color: selected ? '#ffffff' : '#111827', fontSize: 13 }}>{cell.day}</Text>
+                  <Text style={{ color: selected ? colors.text : colors.text, fontSize: 13 }}>
+                    {cell.day}
+                  </Text>
                 </View>
               ) : null}
             </Pressable>
@@ -144,35 +151,25 @@ export function DateRangePicker({ from, to, onChangeFrom, onChangeTo, onDaySelec
       <View style={{ flexDirection: 'row', gap: 8 }}>
         <Pressable
           onPress={() => setActiveField((prev) => (prev === 'from' ? null : 'from'))}
-          style={{
-            flex: 1,
-            borderWidth: 1,
-            borderColor: activeField === 'from' ? '#2563eb' : '#d1d5db',
-            backgroundColor: '#ffffff',
-            borderRadius: 10,
-            paddingHorizontal: 12,
-            paddingVertical: 12,
-          }}
+          style={[
+            screenUi.dateField,
+            { borderColor: activeField === 'from' ? colors.primary : colors.border },
+          ]}
         >
-          <Text style={{ fontSize: 11, color: '#6b7280' }}>С</Text>
-          <Text style={{ fontSize: 14, color: '#111827', fontWeight: '600', marginTop: 2 }}>
+          <Text style={{ fontSize: 11, color: colors.textMuted }}>С</Text>
+          <Text style={{ fontSize: 14, color: colors.text, fontWeight: '600', marginTop: 2 }}>
             {from || 'Выберите'}
           </Text>
         </Pressable>
         <Pressable
           onPress={() => setActiveField((prev) => (prev === 'to' ? null : 'to'))}
-          style={{
-            flex: 1,
-            borderWidth: 1,
-            borderColor: activeField === 'to' ? '#2563eb' : '#d1d5db',
-            backgroundColor: '#ffffff',
-            borderRadius: 10,
-            paddingHorizontal: 12,
-            paddingVertical: 12,
-          }}
+          style={[
+            screenUi.dateField,
+            { borderColor: activeField === 'to' ? colors.primary : colors.border },
+          ]}
         >
-          <Text style={{ fontSize: 11, color: '#6b7280' }}>По</Text>
-          <Text style={{ fontSize: 14, color: '#111827', fontWeight: '600', marginTop: 2 }}>
+          <Text style={{ fontSize: 11, color: colors.textMuted }}>По</Text>
+          <Text style={{ fontSize: 14, color: colors.text, fontWeight: '600', marginTop: 2 }}>
             {to || 'Выберите'}
           </Text>
         </Pressable>

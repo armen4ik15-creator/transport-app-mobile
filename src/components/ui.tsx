@@ -10,19 +10,9 @@ import {
   type ViewStyle,
 } from 'react-native';
 import type { ReactNode } from 'react';
+import { colors, radii, spacing } from '../theme';
 
-const colors = {
-  bg: '#f5f5f5',
-  card: '#ffffff',
-  primary: '#2563eb',
-  primaryDark: '#1d4ed8',
-  text: '#111827',
-  muted: '#6b7280',
-  border: '#e5e7eb',
-  danger: '#ef4444',
-};
-
-export const theme = colors;
+export { colors as theme };
 
 export function Screen({
   children,
@@ -71,7 +61,7 @@ export function Field({ label, ...props }: { label: string } & TextInputProps) {
   return (
     <View style={styles.field}>
       <Text style={styles.fieldLabel}>{label}</Text>
-      <TextInput style={styles.input} placeholderTextColor={colors.muted} {...props} />
+      <TextInput style={styles.input} placeholderTextColor={colors.textMuted} {...props} />
     </View>
   );
 }
@@ -98,7 +88,7 @@ export function PrimaryButton({
       ]}
     >
       {loading ? (
-        <ActivityIndicator color="#fff" />
+        <ActivityIndicator color={colors.text} />
       ) : (
         <Text style={styles.primaryBtnText}>{label}</Text>
       )}
@@ -125,7 +115,7 @@ export function MenuButton({
         pressed && { opacity: 0.85 },
       ]}
     >
-      <Text style={[styles.menuBtnText, variant === 'danger' && { color: colors.danger }]}>
+      <Text style={[styles.menuBtnText, variant === 'danger' && { color: colors.loss }]}>
         {label}
       </Text>
     </Pressable>
@@ -138,24 +128,24 @@ export const EmptyText = ({ text = 'Нет данных' }: { text?: string }) =
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
-  scrollContent: { padding: 16, paddingBottom: 32 },
+  scrollContent: { padding: spacing.md, paddingBottom: 32 },
   title: { fontSize: 22, fontWeight: '700', color: colors.text, marginBottom: 4 },
-  subtitle: { fontSize: 14, color: colors.muted, marginBottom: 16 },
+  subtitle: { fontSize: 14, color: colors.textMuted, marginBottom: spacing.md },
   card: {
-    backgroundColor: colors.card,
-    borderRadius: 12,
+    backgroundColor: colors.surface,
+    borderRadius: radii.lg,
     padding: 14,
     marginBottom: 10,
     borderWidth: 1,
     borderColor: colors.border,
   },
   field: { marginBottom: 12 },
-  fieldLabel: { fontSize: 13, color: colors.muted, marginBottom: 4 },
+  fieldLabel: { fontSize: 13, color: colors.textMuted, marginBottom: 4 },
   input: {
-    backgroundColor: colors.card,
+    backgroundColor: colors.surfaceElevated,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 10,
+    borderRadius: radii.md,
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: 16,
@@ -163,33 +153,33 @@ const styles = StyleSheet.create({
   },
   primaryBtn: {
     backgroundColor: colors.primary,
-    borderRadius: 12,
+    borderRadius: radii.md,
     paddingVertical: 14,
     alignItems: 'center',
     marginTop: 8,
   },
-  primaryBtnPressed: { backgroundColor: colors.primaryDark },
+  primaryBtnPressed: { opacity: 0.9 },
   primaryBtnDisabled: { opacity: 0.5 },
-  primaryBtnText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  primaryBtnText: { color: colors.text, fontSize: 16, fontWeight: '600' },
   menuBtn: {
-    backgroundColor: colors.card,
-    borderRadius: 12,
+    backgroundColor: colors.surfaceElevated,
+    borderRadius: radii.md,
     paddingVertical: 16,
     paddingHorizontal: 16,
     marginBottom: 10,
     borderWidth: 1,
     borderColor: colors.border,
   },
-  menuBtnSecondary: { backgroundColor: '#eef2ff' },
-  menuBtnDanger: { backgroundColor: '#fef2f2', borderColor: '#fecaca' },
+  menuBtnSecondary: { backgroundColor: colors.surface },
+  menuBtnDanger: { backgroundColor: `${colors.loss}22`, borderColor: `${colors.loss}55` },
   menuBtnText: { fontSize: 16, color: colors.text, fontWeight: '500' },
-  error: { color: colors.danger, marginTop: 8, fontSize: 14 },
+  error: { color: colors.loss, marginTop: 8, fontSize: 14 },
   loading: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: colors.bg,
   },
-  loadingText: { marginTop: 12, color: colors.muted },
-  empty: { color: colors.muted, textAlign: 'center', marginTop: 24, fontSize: 15 },
+  loadingText: { marginTop: 12, color: colors.textMuted },
+  empty: { color: colors.textMuted, textAlign: 'center', marginTop: 24, fontSize: 15 },
 });

@@ -1,11 +1,8 @@
 export type AdminTabParamList = {
   AdminHome: undefined;
-  Contractors: undefined;
-  Drivers: undefined;
-  Expenses: undefined;
   Orders: undefined;
-  RegistryReport: undefined;
-  FinancesHub: undefined;
+  Expenses: undefined;
+  Contractors: undefined;
   AdminMore: undefined;
 };
 
@@ -48,6 +45,7 @@ export type RootStackParamList = {
   Waybills: undefined;
   Invoices: undefined;
   Notifications: undefined;
+  AdminRegistrationRequests: undefined;
   ActivityLog: undefined;
   FinanceReport: undefined;
   CompleteProfile: undefined;
@@ -57,4 +55,5 @@ export type RootStackParamList = {
   TripPhotos: undefined;
   AllPhotos: undefined;
   ServerSetup: { reason?: string } | undefined;
+  Backups: undefined;
 };

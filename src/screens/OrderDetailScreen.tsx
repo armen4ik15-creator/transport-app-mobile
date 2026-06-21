@@ -6,12 +6,13 @@ import { useFocusEffect } from '@react-navigation/native';
 import { ScreenHeader } from '../components/ScreenHeader';
 import { DriverTripActionCard } from '../components/DriverTripActionCard';
 import { ErrorText, LoadingScreen, MenuButton, PrimaryButton } from '../components/ui';
-import { getOrder, updateOrderStatus, uploadOrderPhoto } from '../api/orders';
+import { getOrder, deleteOrder, updateOrderStatus, uploadOrderPhoto } from '../api/orders';
 import { apiErrorMessage, getServerHost } from '../api/client';
 import { STATUS_LABEL, TRIP_STAGE_LABEL, type OrderStatus, type OrderWithPhotos } from '../types';
 import type { RootStackParamList } from '../navigation/RootNavigator';
 import { useAuth } from '../auth/AuthContext';
 import { createOrderTemplateFromOrder } from '../api/orderTemplates';
+import { invalidateCache } from '../utils/apiCache';
 import { screenUi } from '../styles/screenUi';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'OrderDetail'>;
@@ -126,6 +127,33 @@ export function OrderDetailScreen({ route, navigation }: Props) {
         {isAdmin ? (
           <View style={screenUi.card}>
             <MenuButton label="✏️ Редактировать заказ" onPress={() => navigation.navigate('OrderEdit', { id: order.id })} />
+            <MenuButton
+              label="🗑 Удалить заказ"
+              variant="danger"
+              onPress={() => {
+                Alert.alert('Удалить заказ?', `Заказ #${order.id} будет удалён безвозвратно`, [
+                  { text: 'Отмена', style: 'cancel' },
+                  {
+                    text: 'Удалить',
+                    style: 'destructive',
+                    onPress: async () => {
+                      setBusy(true);
+                      try {
+                        await deleteOrder(id);
+                        invalidateCache('admin:');
+                        invalidateCache('dashboard:');
+                        invalidateCache('driver:');
+                        navigation.goBack();
+                      } catch (e) {
+                        Alert.alert('Ошибка', apiErrorMessage(e, 'Не удалось удалить заказ'));
+                      } finally {
+                        setBusy(false);
+                      }
+                    },
+                  },
+                ]);
+              }}
+            />
             <MenuButton
               label="💾 Сохранить как шаблон"
               onPress={async () => {

@@ -2,6 +2,7 @@ import { ScrollView, Text, View } from 'react-native';
 import { HubMenuCard } from './HubMenuCard';
 import { ScreenHero } from './ScreenHero';
 import { screenUi } from '../styles/screenUi';
+import { colors } from '../theme';
 
 export interface HubMenuItem {
   icon: string;
@@ -33,7 +34,7 @@ export function HubMenuScreen({ title, subtitle, sections }: HubMenuScreenProps)
       <ScreenHero title={title} subtitle={subtitle} />
       {sections.map((section) => (
         <View key={section.title} style={{ marginBottom: 8 }}>
-          <Text style={{ fontSize: 14, fontWeight: '700', color: '#374151', marginBottom: 8, marginLeft: 2 }}>
+          <Text style={{ fontSize: 14, fontWeight: '700', color: colors.textMuted, marginBottom: 8, marginLeft: 2 }}>
             {section.title}
           </Text>
           {section.items.map((item) => (

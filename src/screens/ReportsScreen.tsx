@@ -16,6 +16,7 @@ import { useAuth } from '../auth/AuthContext';
 import { listDrivers } from '../api/drivers';
 import type { RootStackParamList } from '../navigation/types';
 import { screenUi } from '../styles/screenUi';
+import { colors } from '../theme';
 import { buildExportQuery, downloadAndShareExcel } from '../utils/exportUtils';
 import { formatMoney, getReportPeriodBounds } from '../utils/datePeriods';
 import { withFallback } from '../utils/safeRequest';
@@ -59,30 +60,21 @@ function formatDayTitle(iso: string): string {
 
 function SelectedDayPanel({ row }: { row: ReportDailyRow }) {
   return (
-    <View
-      style={[
-        screenUi.card,
-        {
-          borderRadius: 14,
-          borderWidth: 2,
-          borderColor: '#2563eb',
-          backgroundColor: '#eff6ff',
-          marginBottom: 14,
-        },
-      ]}
-    >
-      <Text style={{ fontSize: 13, fontWeight: '600', color: '#2563eb', marginBottom: 6 }}>
+    <View style={[screenUi.card, screenUi.selectedCard, { borderRadius: 14, marginBottom: 14 }]}>
+      <Text style={{ fontSize: 13, fontWeight: '600', color: colors.primary, marginBottom: 6 }}>
         📅 Выбранный день
       </Text>
-      <Text style={{ fontSize: 17, fontWeight: '800', color: '#111827', marginBottom: 12 }}>
-        {formatDayTitle(row.date)}
-      </Text>
+      <Text style={[screenUi.cardTitle, { marginBottom: 12 }]}>{formatDayTitle(row.date)}</Text>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-        <DayMetric label="Выручка" value={row.revenue} color="#16a34a" />
-        <DayMetric label="Расходы учёт" value={row.expenses} color="#ef4444" />
-        <DayMetric label="Зарплата рейсов" value={row.driver_pay} color="#f59e0b" />
-        <DayMetric label="Рейсов" value={row.trips_count} color="#2563eb" suffix="" />
-        <DayMetric label="Прибыль" value={row.profit} color={row.profit >= 0 ? '#16a34a' : '#ef4444'} />
+        <DayMetric label="Выручка" value={row.revenue} accentColor={colors.profit} />
+        <DayMetric label="Расходы учёт" value={row.expenses} accentColor={colors.loss} />
+        <DayMetric label="Зарплата рейсов" value={row.driver_pay} accentColor={colors.warning} />
+        <DayMetric label="Рейсов" value={row.trips_count} accentColor={colors.primary} suffix="" />
+        <DayMetric
+          label="Прибыль"
+          value={row.profit}
+          accentColor={row.profit >= 0 ? colors.profit : colors.loss}
+        />
       </View>
     </View>
   );
@@ -91,28 +83,19 @@ function SelectedDayPanel({ row }: { row: ReportDailyRow }) {
 function DayMetric({
   label,
   value,
-  color,
+  accentColor,
   suffix = ' ₽',
 }: {
   label: string;
   value: number;
-  color: string;
+  accentColor: string;
   suffix?: string;
 }) {
   const display = suffix === '' ? String(value) : `${formatMoney(value)}${suffix}`;
   return (
-    <View
-      style={{
-        width: '48%',
-        backgroundColor: '#ffffff',
-        borderRadius: 10,
-        padding: 10,
-        borderWidth: 1,
-        borderColor: '#dbeafe',
-      }}
-    >
-      <Text style={{ fontSize: 11, color: '#6b7280' }}>{label}</Text>
-      <Text style={{ fontSize: 16, fontWeight: '800', color, marginTop: 2 }}>{display}</Text>
+    <View style={screenUi.metricCard}>
+      <Text style={screenUi.sumLabel}>{label}</Text>
+      <Text style={[screenUi.sumValue, { color: accentColor, marginTop: 2 }]}>{display}</Text>
     </View>
   );
 }
@@ -222,19 +205,24 @@ export function ReportsScreen() {
   const profit = summary.profit ?? summary.balance;
 
   const widgetCards = [
-    { label: 'Выручка (рейсы)', value: `${formatMoney(revenue)} ₽`, color: '#16a34a', icon: '💰' },
-    { label: 'Расходы всего', value: `${formatMoney(totalCosts)} ₽`, color: '#ef4444', icon: '💸' },
-    { label: 'Рейсов', value: String(tripsCount), color: '#2563eb', icon: '🚛' },
-    { label: 'Прибыль', value: `${formatMoney(profit)} ₽`, color: profit >= 0 ? '#7c3aed' : '#ef4444', icon: '⚖️' },
+    { label: 'Выручка (рейсы)', value: `${formatMoney(revenue)} ₽`, color: colors.profit, icon: '💰' },
+    { label: 'Расходы всего', value: `${formatMoney(totalCosts)} ₽`, color: colors.loss, icon: '💸' },
+    { label: 'Рейсов', value: String(tripsCount), color: colors.primary, icon: '🚛' },
+    {
+      label: 'Прибыль',
+      value: `${formatMoney(profit)} ₽`,
+      color: profit >= 0 ? colors.accent : colors.loss,
+      icon: '⚖️',
+    },
   ];
 
   const quickLinks: QuickAccessItem[] =
     user?.role === 'admin'
       ? [
-          { icon: '📑', title: 'Реестр', subtitle: 'Все рейсы', color: '#2563eb', onPress: () => navigation.replace('RegistryReport') },
-          { icon: '📊', title: 'Фин. отчёт', subtitle: 'Excel 3 листа', color: '#16a34a', onPress: () => navigation.navigate('FinanceReport') },
-          { icon: '💵', title: 'Зарплаты', subtitle: 'Выплаты', color: '#f59e0b', onPress: () => navigation.navigate('Salary') },
-          { icon: '💸', title: 'Расходы', subtitle: 'Учёт', color: '#ef4444', onPress: () => navigation.replace('Expenses') },
+          { icon: '📑', title: 'Реестр', subtitle: 'Все рейсы', color: colors.primary, onPress: () => navigation.replace('RegistryReport') },
+          { icon: '📊', title: 'Фин. отчёт', subtitle: 'Excel 3 листа', color: colors.profit, onPress: () => navigation.navigate('FinanceReport') },
+          { icon: '💵', title: 'Зарплаты', subtitle: 'Выплаты', color: colors.warning, onPress: () => navigation.navigate('Salary') },
+          { icon: '💸', title: 'Расходы', subtitle: 'Учёт', color: colors.loss, onPress: () => navigation.replace('Expenses') },
         ]
       : [];
 
@@ -268,40 +256,20 @@ export function ReportsScreen() {
             />
           </>
         ) : null}
-        <Pressable
-          onPress={() => void load()}
-          style={{
-            backgroundColor: '#eef2ff',
-            borderRadius: 10,
-            paddingVertical: 12,
-            alignItems: 'center',
-            marginTop: 8,
-          }}
-        >
-          <Text style={{ color: '#2563eb', fontWeight: '600' }}>🔍 Обновить сводку</Text>
+        <Pressable onPress={() => void load()} style={[screenUi.secondaryBtn, { marginTop: 8 }]}>
+          <Text style={screenUi.secondaryBtnText}>🔍 Обновить сводку</Text>
         </Pressable>
         <ExcelExportButton loading={exporting} onPress={() => void onExportExcel()} />
       </View>
 
       {selectedDayRow ? <SelectedDayPanel row={selectedDayRow} /> : null}
 
-      <Text style={{ fontSize: 14, fontWeight: '700', color: '#374151', marginBottom: 8 }}>
-        📆 Итого за период
-      </Text>
+      <Text style={screenUi.sectionTitle}>📆 Итого за период</Text>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 16 }}>
         {widgetCards.map((card) => (
           <View
             key={card.label}
-            style={{
-              width: '48%',
-              backgroundColor: '#ffffff',
-              borderRadius: 14,
-              borderWidth: 1,
-              borderColor: '#e5e7eb',
-              borderLeftWidth: 4,
-              borderLeftColor: card.color,
-              padding: 14,
-            }}
+            style={[screenUi.widgetCard, { borderLeftWidth: 4, borderLeftColor: card.color }]}
           >
             <Text style={{ fontSize: 22 }}>{card.icon}</Text>
             <Text style={screenUi.sumLabel}>{card.label}</Text>
@@ -310,9 +278,7 @@ export function ReportsScreen() {
         ))}
       </View>
 
-      <Text style={{ fontSize: 15, fontWeight: '700', color: '#111827', marginBottom: 10 }}>
-        📅 По дням ({dailyRows.length})
-      </Text>
+      <Text style={screenUi.sectionTitleLg}>📅 По дням ({dailyRows.length})</Text>
       {dailyRows.length === 0 ? (
         <Text style={screenUi.emptyText}>
           За выбранный период нет данных. Выберите день в календаре или расширьте период.
@@ -330,9 +296,7 @@ export function ReportsScreen() {
 
       {quickLinks.length > 0 ? (
         <>
-          <Text style={{ fontSize: 15, fontWeight: '700', color: '#111827', marginTop: 16, marginBottom: 10 }}>
-            Быстрые отчёты
-          </Text>
+          <Text style={[screenUi.sectionTitleLg, { marginTop: 16 }]}>Быстрые отчёты</Text>
           <QuickAccessGrid items={quickLinks} />
         </>
       ) : null}

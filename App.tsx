@@ -56,10 +56,10 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#f4f6f8',
+    backgroundColor: '#121212',
   },
   bootText: {
     fontSize: 16,
-    color: '#1c1c1e',
+    color: '#FFFFFF',
   },
 });

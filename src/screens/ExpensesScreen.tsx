@@ -15,7 +15,7 @@ import { ExcelExportButton } from '../components/ExcelExportButton';
 import { ExpenseFormModal, type VehicleOption } from '../components/expenses/ExpenseFormModal';
 import { FilterChipRow } from '../components/FilterChipRow';
 import { ScreenHeader } from '../components/ScreenHeader';
-import { ScreenHero } from '../components/ScreenHero';
+import { Fab, Pill } from '../components/ui-kit';
 import { LoadingScreen } from '../components/ui';
 import {
   ALL_EXPENSE_TYPES,
@@ -29,6 +29,7 @@ import { createExpense, deleteExpense, listExpenses } from '../api/expenses';
 import { listDrivers } from '../api/drivers';
 import { apiErrorMessage } from '../api/client';
 import { screenUi } from '../styles/screenUi';
+import { colors } from '../theme';
 import { formatMoney, getPeriodBounds, todayIso } from '../utils/datePeriods';
 import { buildExportQuery, downloadAndShareExcel } from '../utils/exportUtils';
 import { withFallback } from '../utils/safeRequest';
@@ -256,15 +257,10 @@ export function ExpensesScreen() {
             />
 
             <CollapsiblePanel
-              title="Фильтры и экспорт"
+              title="Фильтры"
               subtitle={`${displayedRecords.length} записей · ${formatMoney(totalAmount)} ₽`}
               defaultExpanded
             >
-              <ScreenHero
-                title="💸 Учёт расходов"
-                subtitle={isAdmin ? 'Топливо, ремонт, штрафы · экспорт Excel' : 'Ваши расходы по рейсам'}
-              />
-
               <FilterChipRow items={periodChips} activeId={periodFilter} onSelect={setPeriodFilter} />
               <DateRangePicker
                 from={dateFrom}
@@ -280,14 +276,14 @@ export function ExpensesScreen() {
               <View style={screenUi.summaryBar}>
                 <View style={screenUi.sumItem}>
                   <Text style={screenUi.sumLabel}>Записей</Text>
-                  <Text style={[screenUi.sumValue, { color: '#2563eb' }]}>
+                  <Text style={[screenUi.sumValue, { color: colors.primary }]}>
                     {displayedRecords.length}
                   </Text>
                 </View>
                 <View style={screenUi.sumDivider} />
                 <View style={screenUi.sumItem}>
                   <Text style={screenUi.sumLabel}>Итого расходы</Text>
-                  <Text style={[screenUi.sumValue, { color: '#ef4444' }]}>
+                  <Text style={[screenUi.sumValue, { color: colors.loss }]}>
                     {formatMoney(totalAmount)} ₽
                   </Text>
                 </View>
@@ -299,19 +295,8 @@ export function ExpensesScreen() {
                 loading={exporting}
                 onPress={() => void onExportExcel()}
               />
-              <Pressable
-                onPress={openBatchExport}
-                style={{
-                  marginTop: 8,
-                  backgroundColor: '#f3f4f6',
-                  borderRadius: 10,
-                  paddingVertical: 12,
-                  alignItems: 'center',
-                  borderWidth: 1,
-                  borderColor: '#e5e7eb',
-                }}
-              >
-                <Text style={{ fontSize: 14, fontWeight: '600', color: '#2563eb' }}>
+              <Pressable onPress={openBatchExport} style={[screenUi.secondaryBtn, { marginTop: 8 }]}>
+                <Text style={screenUi.secondaryBtnText}>
                   📅 Пакетный экспорт (сегодня / период)
                 </Text>
               </Pressable>
@@ -322,9 +307,6 @@ export function ExpensesScreen() {
           <Text style={screenUi.emptyText}>Нет расходов за выбранный период</Text>
         }
         renderItem={({ item }) => {
-          const methodText =
-            item.method === 'cash' ? '💵 Нал' : item.method === 'noncash' ? '💳 Безнал' : '—';
-          const carInfo = item.car_number ? `🚗 ${item.car_number}` : 'Общие';
           return (
             <Pressable
               style={screenUi.card}
@@ -335,25 +317,34 @@ export function ExpensesScreen() {
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
                   <Text style={{ fontSize: 22 }}>{getExpenseTypeIcon(item.exp_type)}</Text>
                   <View style={{ flex: 1 }}>
-                    <Text style={{ fontSize: 15, fontWeight: '600', color: '#111827' }}>
+                    <Text style={screenUi.cardTitleSm}>
                       {getExpenseTypeLabel(item.exp_type)}
                     </Text>
-                    <Text style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>
-                      {item.exp_date} · {methodText} · {carInfo}
+                    <Text style={screenUi.cardMeta}>
+                      {item.exp_date}
                     </Text>
+                    <View style={{ flexDirection: 'row', gap: 6, marginTop: 6, flexWrap: 'wrap' }}>
+                      <Pill tone="neutral">{getExpenseTypeLabel(item.exp_type)}</Pill>
+                      <Pill tone={item.method === 'cash' ? 'warning' : 'info'}>
+                        {item.method === 'cash' ? '💵 Нал' : '💳 Безнал'}
+                      </Pill>
+                      {item.car_number ? (
+                        <Pill tone="neutral">🚗 {item.car_number}</Pill>
+                      ) : null}
+                    </View>
                   </View>
                 </View>
                 <View style={{ alignItems: 'flex-end', gap: 4 }}>
-                  <Text style={{ fontSize: 17, fontWeight: '700', color: '#ef4444' }}>
+                  <Text style={[screenUi.sumValue, { color: colors.loss }]}>
                     {formatMoney(item.amount)} ₽
                   </Text>
                   <Pressable onPress={() => onDelete(item)} hitSlop={8}>
-                    <Text style={{ color: '#ef4444', fontSize: 16 }}>🗑</Text>
+                    <Text style={screenUi.dangerIcon}>🗑</Text>
                   </Pressable>
                 </View>
               </View>
               {item.comment ? (
-                <Text style={{ fontSize: 12, color: '#4b5563', marginTop: 6, fontStyle: 'italic' }}>
+                <Text style={screenUi.cardComment}>
                   📝 {item.comment}
                 </Text>
               ) : null}
@@ -361,6 +352,8 @@ export function ExpensesScreen() {
           );
         }}
       />
+
+      <Fab label="Расход" icon="➕" onPress={openCreate} />
 
       <ExpenseFormModal
         visible={formVisible}

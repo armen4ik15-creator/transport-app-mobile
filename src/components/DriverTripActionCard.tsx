@@ -3,17 +3,29 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useOrderTripState } from '../hooks/useOrderTripState';
 import type { RootStackParamList } from '../navigation/types';
+import type { OrderTripSnapshot } from '../utils/orderTripMap';
 import { screenUi } from '../styles/screenUi';
+import { colors } from '../theme';
 
 interface DriverTripActionCardProps {
   orderId: number;
   taskLabel?: string;
   compact?: boolean;
+  tripSnapshot?: OrderTripSnapshot;
 }
 
-export function DriverTripActionCard({ orderId, taskLabel, compact = false }: DriverTripActionCardProps) {
+export function DriverTripActionCard({
+  orderId,
+  taskLabel,
+  compact = false,
+  tripSnapshot,
+}: DriverTripActionCardProps) {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const { activeTrip, completedCount, nextAction, loading } = useOrderTripState(orderId);
+  const hookState = useOrderTripState(orderId, { enabled: !tripSnapshot });
+  const activeTrip = tripSnapshot?.activeTrip ?? hookState.activeTrip;
+  const completedCount = tripSnapshot?.completedCount ?? hookState.completedCount;
+  const nextAction = tripSnapshot?.nextAction ?? hookState.nextAction;
+  const loading = tripSnapshot ? false : hookState.loading;
 
   const openTrip = (action: 'loading' | 'unloading') => {
     navigation.navigate('TripCreate', { orderId, openAction: action });
@@ -22,7 +34,7 @@ export function DriverTripActionCard({ orderId, taskLabel, compact = false }: Dr
   if (loading) {
     return (
       <View style={[screenUi.card, { alignItems: 'center', paddingVertical: 16 }]}>
-        <ActivityIndicator color="#2563eb" />
+        <ActivityIndicator color={colors.primary} />
       </View>
     );
   }
@@ -38,26 +50,26 @@ export function DriverTripActionCard({ orderId, taskLabel, compact = false }: Dr
         screenUi.card,
         {
           borderWidth: 2,
-          borderColor: isUnloading ? '#f59e0b' : '#2563eb',
-          backgroundColor: isUnloading ? '#fffbeb' : '#eff6ff',
+          borderColor: isUnloading ? colors.warning : colors.primary,
+          backgroundColor: isUnloading ? 'rgba(251,140,0,0.12)' : 'rgba(26,115,232,0.12)',
         },
       ]}
     >
       {!compact ? (
         <>
-          <Text style={{ fontSize: 13, fontWeight: '700', color: '#374151', marginBottom: 4 }}>
+          <Text style={{ fontSize: 13, fontWeight: '700', color: colors.text, marginBottom: 4 }}>
             🚛 Рейс по заказу #{orderId}
           </Text>
           {taskLabel ? (
-            <Text style={{ fontSize: 14, color: '#4b5563', marginBottom: 8 }}>{taskLabel}</Text>
+            <Text style={{ fontSize: 14, color: colors.textMuted, marginBottom: 8 }}>{taskLabel}</Text>
           ) : null}
         </>
       ) : null}
 
-      <Text style={{ fontSize: 13, color: '#6b7280', marginBottom: 10 }}>{stepHint}</Text>
+      <Text style={{ fontSize: 13, color: colors.textMuted, marginBottom: 10 }}>{stepHint}</Text>
 
       {activeTrip ? (
-        <Text style={{ fontSize: 13, fontWeight: '600', color: '#b45309', marginBottom: 10 }}>
+        <Text style={{ fontSize: 13, fontWeight: '600', color: colors.warning, marginBottom: 10 }}>
           ⏳ Рейс #{activeTrip.id} — ожидает разгрузку
         </Text>
       ) : null}
@@ -65,7 +77,7 @@ export function DriverTripActionCard({ orderId, taskLabel, compact = false }: Dr
       <Pressable
         onPress={() => openTrip(isUnloading ? 'unloading' : 'loading')}
         style={{
-          backgroundColor: isUnloading ? '#16a34a' : '#2563eb',
+          backgroundColor: isUnloading ? colors.profit : colors.primary,
           borderRadius: 12,
           paddingVertical: compact ? 12 : 16,
           alignItems: 'center',
@@ -80,7 +92,7 @@ export function DriverTripActionCard({ orderId, taskLabel, compact = false }: Dr
         onPress={() => navigation.navigate('TripCreate', { orderId })}
         style={{ paddingVertical: 10, alignItems: 'center' }}
       >
-        <Text style={{ color: '#2563eb', fontSize: 13, fontWeight: '600' }}>
+        <Text style={{ color: colors.primary, fontSize: 13, fontWeight: '600' }}>
           📋 История рейсов ({completedCount})
         </Text>
       </Pressable>

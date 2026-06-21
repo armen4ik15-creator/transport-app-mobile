@@ -1,4 +1,5 @@
 import { Pressable, Text, View } from 'react-native';
+import { colors, radii, spacing } from '../theme';
 
 export interface QuickAccessItem {
   icon: string;
@@ -12,29 +13,51 @@ interface QuickAccessGridProps {
   items: QuickAccessItem[];
 }
 
+/** v0-style 4-column quick access grid with card tiles. */
 export function QuickAccessGrid({ items }: QuickAccessGridProps) {
   return (
-    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
+    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
       {items.map((item) => (
         <Pressable
           key={item.title}
           onPress={item.onPress}
           style={{
-            width: '48%',
-            backgroundColor: '#ffffff',
-            borderRadius: 14,
-            padding: 14,
+            width: '23%',
+            minWidth: 76,
+            alignItems: 'center',
+            backgroundColor: colors.surface,
+            borderRadius: radii.lg,
+            paddingVertical: spacing.sm,
+            paddingHorizontal: 4,
             borderWidth: 1,
-            borderColor: '#e5e7eb',
-            borderLeftWidth: 4,
-            borderLeftColor: item.color,
+            borderColor: colors.border,
+            marginBottom: spacing.sm,
           }}
         >
-          <Text style={{ fontSize: 26, marginBottom: 6 }}>{item.icon}</Text>
-          <Text style={{ fontSize: 14, fontWeight: '700', color: '#111827' }}>{item.title}</Text>
-          {item.subtitle ? (
-            <Text style={{ fontSize: 11, color: '#6b7280', marginTop: 3 }}>{item.subtitle}</Text>
-          ) : null}
+          <View
+            style={{
+              width: 36,
+              height: 36,
+              borderRadius: radii.md,
+              backgroundColor: `${item.color}26`,
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginBottom: 6,
+            }}
+          >
+            <Text style={{ fontSize: 18 }}>{item.icon}</Text>
+          </View>
+          <Text
+            style={{
+              fontSize: 10,
+              fontWeight: '600',
+              color: colors.textMuted,
+              textAlign: 'center',
+            }}
+            numberOfLines={2}
+          >
+            {item.title}
+          </Text>
         </Pressable>
       ))}
     </View>

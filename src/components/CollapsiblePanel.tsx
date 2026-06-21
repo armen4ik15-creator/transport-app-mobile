@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import { Pressable, Text, View } from 'react-native';
+import { colors } from '../theme';
 
 interface CollapsiblePanelProps {
   title: string;
@@ -29,12 +30,12 @@ export function CollapsiblePanel({
         }}
       >
         <View style={{ flex: 1, paddingRight: 8 }}>
-          <Text style={{ fontSize: 15, fontWeight: '700', color: '#111827' }}>{title}</Text>
+          <Text style={{ fontSize: 15, fontWeight: '700', color: colors.text }}>{title}</Text>
           {subtitle ? (
-            <Text style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>{subtitle}</Text>
+            <Text style={{ fontSize: 12, color: colors.textMuted, marginTop: 2 }}>{subtitle}</Text>
           ) : null}
         </View>
-        <Text style={{ fontSize: 16, color: '#2563eb', fontWeight: '700' }}>
+        <Text style={{ fontSize: 14, color: colors.primary, fontWeight: '700' }}>
           {expanded ? '▲' : '▼'}
         </Text>
       </Pressable>

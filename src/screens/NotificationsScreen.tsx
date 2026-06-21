@@ -7,11 +7,23 @@ import { ScreenHero } from '../components/ScreenHero';
 import { ErrorText, Field, LoadingScreen, MenuButton } from '../components/ui';
 import { apiErrorMessage } from '../api/client';
 import { createNotification, deleteNotification, listNotifications, markNotificationRead } from '../api/notifications';
+import {
+  approveAdminRegistration,
+  rejectAdminRegistration,
+} from '../api/adminRegistrations';
+import {
+  approveDriverRegistration,
+  rejectDriverRegistration,
+} from '../api/driverRegistrations';
 import { useAuth } from '../auth/AuthContext';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { RootStackParamList } from '../navigation/types';
 import { screenUi } from '../styles/screenUi';
 import type { NotificationItem } from '../types';
 
 export function NotificationsScreen() {
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
   const [rows, setRows] = useState<NotificationItem[]>([]);
@@ -22,6 +34,7 @@ export function NotificationsScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [actingRefId, setActingRefId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -85,6 +98,38 @@ export function NotificationsScreen() {
     }
   };
 
+  const onApproveRegistration = async (refId: number, kind?: NotificationItem['kind']) => {
+    setActingRefId(refId);
+    try {
+      const result =
+        kind === 'driver_registration'
+          ? await approveDriverRegistration(refId)
+          : await approveAdminRegistration(refId);
+      Alert.alert('Готово', result.message);
+      await load();
+    } catch (e) {
+      Alert.alert('Ошибка', apiErrorMessage(e, 'Не удалось одобрить заявку'));
+    } finally {
+      setActingRefId(null);
+    }
+  };
+
+  const onRejectRegistration = async (refId: number, kind?: NotificationItem['kind']) => {
+    setActingRefId(refId);
+    try {
+      const result =
+        kind === 'driver_registration'
+          ? await rejectDriverRegistration(refId)
+          : await rejectAdminRegistration(refId);
+      Alert.alert('Готово', result.message);
+      await load();
+    } catch (e) {
+      Alert.alert('Ошибка', apiErrorMessage(e, 'Не удалось отклонить заявку'));
+    } finally {
+      setActingRefId(null);
+    }
+  };
+
   useEffect(() => {
     setVisibleCount(20);
   }, [rows]);
@@ -145,6 +190,31 @@ export function NotificationsScreen() {
               <Text style={{ fontSize: 12, color: '#6b7280', marginTop: 4 }}>👤 {item.user_email}</Text>
             ) : null}
             <View style={{ flexDirection: 'row', gap: 12, marginTop: 8 }}>
+              {isAdmin &&
+              (item.kind === 'admin_registration' || item.kind === 'driver_registration') &&
+              item.ref_id ? (
+                <>
+                  <Pressable
+                    onPress={() => onApproveRegistration(item.ref_id!, item.kind)}
+                    disabled={actingRefId === item.ref_id}
+                  >
+                    <Text style={{ color: '#16a34a', fontSize: 13 }}>
+                      {actingRefId === item.ref_id ? '…' : '✓ Одобрить'}
+                    </Text>
+                  </Pressable>
+                  <Pressable
+                    onPress={() => onRejectRegistration(item.ref_id!, item.kind)}
+                    disabled={actingRefId === item.ref_id}
+                  >
+                    <Text style={{ color: '#ef4444', fontSize: 13 }}>
+                      {actingRefId === item.ref_id ? '…' : '✕ Отклонить'}
+                    </Text>
+                  </Pressable>
+                  <Pressable onPress={() => navigation.navigate('AdminRegistrationRequests')}>
+                    <Text style={{ color: '#2563eb', fontSize: 13 }}>Все заявки</Text>
+                  </Pressable>
+                </>
+              ) : null}
               {!item.read ? (
                 <Pressable onPress={() => onMarkRead(item.id)}>
                   <Text style={{ color: '#2563eb', fontSize: 13 }}>✓ Прочитано</Text>

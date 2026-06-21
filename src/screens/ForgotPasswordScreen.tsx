@@ -16,6 +16,7 @@ export function ForgotPasswordScreen({ navigation }: Props) {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [available, setAvailable] = useState<boolean | null>(null);
+  const [resetCodeOptional, setResetCodeOptional] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -24,15 +25,21 @@ export function ForgotPasswordScreen({ navigation }: Props) {
       try {
         const config = await getSecurityConfig();
         setAvailable(config.password_reset_available);
+        setResetCodeOptional(true);
       } catch {
-        setAvailable(false);
+        setAvailable(true);
+        setResetCodeOptional(true);
       }
     })();
   }, []);
 
   const onSubmit = async () => {
-    if (!email.trim() || !resetCode.trim() || !newPassword) {
-      setError('Заполните все поля');
+    if (!email.trim() || !newPassword) {
+      setError('Укажите email и новый пароль');
+      return;
+    }
+    if (!resetCodeOptional && !resetCode.trim()) {
+      setError('Введите код восстановления');
       return;
     }
     if (newPassword.length < 6) {
@@ -48,7 +55,7 @@ export function ForgotPasswordScreen({ navigation }: Props) {
     try {
       const result = await forgotPassword({
         email: email.trim().toLowerCase(),
-        reset_code: resetCode.trim(),
+        reset_code: resetCode.trim() || undefined,
         new_password: newPassword,
       });
       Alert.alert('Готово', result.message, [
@@ -63,11 +70,18 @@ export function ForgotPasswordScreen({ navigation }: Props) {
     }
   };
 
+  const resetCodeLabel = resetCodeOptional
+    ? 'Код восстановления (необязательно)'
+    : 'Код восстановления *';
+
   return (
     <View style={screenUi.container}>
       <ScrollView contentContainerStyle={{ flexGrow: 1, padding: 16, paddingBottom: 32 }} keyboardShouldPersistTaps="handled">
         <View style={[screenUi.card, { padding: 24, borderRadius: 16 }]}>
-          <ScreenHero title="🔐 Восстановление пароля" subtitle="Код выдаёт администратор компании" />
+          <ScreenHero
+            title="🔐 Восстановление пароля"
+            subtitle="Для одобренных аккаунтов код не нужен — только email и новый пароль"
+          />
 
           {available === false ? (
             <ErrorText message="Сброс пароля не настроен на сервере. Обратитесь к администратору." />
@@ -82,11 +96,11 @@ export function ForgotPasswordScreen({ navigation }: Props) {
             placeholder="driver@mail.ru"
           />
           <Field
-            label="Код восстановления *"
+            label={resetCodeLabel}
             value={resetCode}
             onChangeText={setResetCode}
             autoCapitalize="none"
-            placeholder="Код от администратора"
+            placeholder={resetCodeOptional ? 'Только для старых аккаунтов' : 'Код от администратора'}
           />
           <Field
             label="Новый пароль *"

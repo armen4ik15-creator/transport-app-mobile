@@ -1,6 +1,7 @@
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { TabBarIcon } from './TabBarIcon';
+import { colors } from '../theme';
 
 export interface BottomTabItem<T extends string> {
   id: T;
@@ -14,6 +15,7 @@ interface CustomBottomTabBarProps<T extends string> {
   onSelect: (id: T) => void;
 }
 
+/** v0-style bottom navigation: equal-width tabs, primary accent on active. */
 export function CustomBottomTabBar<T extends string>({
   items,
   activeId,
@@ -24,46 +26,41 @@ export function CustomBottomTabBar<T extends string>({
   return (
     <View
       style={{
-        backgroundColor: '#ffffff',
+        backgroundColor: colors.tabBar,
         borderTopWidth: 1,
-        borderTopColor: '#e5e7eb',
-        paddingBottom: Math.max(insets.bottom, 6),
-        paddingTop: 4,
+        borderTopColor: colors.border,
+        paddingBottom: Math.max(insets.bottom, 8),
+        paddingTop: 8,
+        flexDirection: 'row',
       }}
     >
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 4 }}>
-        {items.map((item) => {
-          const focused = item.id === activeId;
-          return (
-            <Pressable
-              key={item.id}
-              onPress={() => onSelect(item.id)}
+      {items.map((item) => {
+        const focused = item.id === activeId;
+        return (
+          <Pressable
+            key={item.id}
+            onPress={() => onSelect(item.id)}
+            style={{
+              flex: 1,
+              alignItems: 'center',
+              paddingVertical: 4,
+              gap: 4,
+            }}
+          >
+            <TabBarIcon emoji={item.emoji} focused={focused} />
+            <Text
+              numberOfLines={1}
               style={{
-                minWidth: 72,
-                alignItems: 'center',
-                paddingHorizontal: 8,
-                paddingVertical: 6,
-                borderRadius: 12,
-                backgroundColor: focused ? '#eff6ff' : 'transparent',
+                fontSize: 10,
+                fontWeight: focused ? '700' : '500',
+                color: focused ? colors.primary : colors.textMuted,
               }}
             >
-              <TabBarIcon emoji={item.emoji} focused={focused} />
-              <Text
-                numberOfLines={1}
-                style={{
-                  fontSize: 10,
-                  fontWeight: focused ? '700' : '600',
-                  marginTop: 2,
-                  color: focused ? '#1e3a5f' : '#6b7280',
-                  maxWidth: 68,
-                }}
-              >
-                {item.label}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </ScrollView>
+              {item.label}
+            </Text>
+          </Pressable>
+        );
+      })}
     </View>
   );
 }

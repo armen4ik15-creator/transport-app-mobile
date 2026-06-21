@@ -13,10 +13,18 @@ export interface OrderTripState {
   reload: () => Promise<void>;
 }
 
-export function useOrderTripState(orderId: number): OrderTripState {
+interface UseOrderTripStateOptions {
+  enabled?: boolean;
+}
+
+export function useOrderTripState(
+  orderId: number,
+  options: UseOrderTripStateOptions = {}
+): OrderTripState {
+  const { enabled = true } = options;
   const [activeTrip, setActiveTrip] = useState<TripRecord | null>(null);
   const [completedCount, setCompletedCount] = useState(0);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(enabled);
 
   const reload = useCallback(async () => {
     const trips = await listTrips({ order_id: orderId });
@@ -26,6 +34,7 @@ export function useOrderTripState(orderId: number): OrderTripState {
 
   useFocusEffect(
     useCallback(() => {
+      if (!enabled) return undefined;
       let cancelled = false;
       setLoading(true);
       reload()
@@ -41,7 +50,7 @@ export function useOrderTripState(orderId: number): OrderTripState {
       return () => {
         cancelled = true;
       };
-    }, [reload])
+    }, [enabled, reload])
   );
 
   const nextAction: DriverTripNextAction = activeTrip ? 'unloading' : 'loading';

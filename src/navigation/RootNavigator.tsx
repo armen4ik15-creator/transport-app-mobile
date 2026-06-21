@@ -3,7 +3,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useAuth } from '../auth/AuthContext';
 import { BootstrapErrorScreen } from '../components/BootstrapErrorScreen';
-import { LoadingScreen } from '../components/ui';
+import { SplashScreen } from '../components/SplashScreen';
 import { NetworkIssueBanner } from '../components/NetworkIssueBanner';
 import { LoginScreen } from '../screens/LoginScreen';
 import { RegisterScreen } from '../screens/RegisterScreen';
@@ -30,27 +30,31 @@ import { VehiclesScreen } from '../screens/VehiclesScreen';
 import { WaybillsScreen } from '../screens/WaybillsScreen';
 import { InvoicesScreen } from '../screens/InvoicesScreen';
 import { NotificationsScreen } from '../screens/NotificationsScreen';
+import { AdminRegistrationRequestsScreen } from '../screens/AdminRegistrationRequestsScreen';
 import { ActivityLogScreen } from '../screens/ActivityLogScreen';
+import { BackupsScreen } from '../screens/BackupsScreen';
 import { CompleteProfileScreen } from '../screens/CompleteProfileScreen';
 import { OrderEditScreen } from '../screens/OrderEditScreen';
 import { FinanceReportScreen } from '../screens/FinanceReportScreen';
 import {
-  AdminFinancesHubTabScreen,
   AdminHomeTabScreen,
   AdminMoreTabScreen,
   ContractorsTabScreen,
-  DriversTabScreen,
   ExpensesTabScreen,
   OrdersTabScreen,
-  RegistryReportTabScreen,
 } from './AdminMainLayout';
+import {
+  DriversStackScreen,
+  FinancesHubStackScreen,
+  RegistryReportStackScreen,
+} from './AdminStackScreens';
 import {
   DriverFinancesHubTabScreen,
   DriverHomeTabScreen,
   DriverMoreTabScreen,
   DriverOrdersTabScreen,
 } from './DriverMainLayout';
-import { ensureDefaultServerUrl, getServerUrl, setServerIssueHandler } from '../api/client';
+import { ensureDefaultServerUrl, getServerUrl, setServerIssueHandler, setServerIssueClearHandler } from '../api/client';
 import { logStartup } from '../utils/startupLogger';
 import type { RootStackParamList } from './types';
 
@@ -59,8 +63,17 @@ export type { AdminTabParamList, DriverTabParamList, RootStackParamList } from '
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export function RootNavigator() {
-  const { user, driver, loading, initError, networkIssue, refresh, clearNetworkIssue, retryInit } =
-    useAuth();
+  const {
+    user,
+    driver,
+    loading,
+    initError,
+    networkIssue,
+    refresh,
+    clearNetworkIssue,
+    requestDataReload,
+    retryInit,
+  } = useAuth();
   const [serverReady, setServerReady] = useState<boolean | null>(null);
   const [showNetworkBanner, setShowNetworkBanner] = useState(false);
 
@@ -86,8 +99,15 @@ export function RootNavigator() {
     setServerIssueHandler(() => {
       setShowNetworkBanner(true);
     });
-    return () => setServerIssueHandler(null);
-  }, []);
+    setServerIssueClearHandler(() => {
+      setShowNetworkBanner(false);
+      clearNetworkIssue();
+    });
+    return () => {
+      setServerIssueHandler(null);
+      setServerIssueClearHandler(null);
+    };
+  }, [clearNetworkIssue]);
 
   useEffect(() => {
     if (networkIssue) setShowNetworkBanner(true);
@@ -103,12 +123,13 @@ export function RootNavigator() {
   const onRetryConnection = useCallback(() => {
     setShowNetworkBanner(false);
     clearNetworkIssue();
+    requestDataReload();
     void refresh();
     checkServerConfigured();
-  }, [checkServerConfigured, clearNetworkIssue, refresh]);
+  }, [checkServerConfigured, clearNetworkIssue, refresh, requestDataReload]);
 
   if (loading || serverReady === null) {
-    return <LoadingScreen label="Загрузка…" />;
+    return <SplashScreen />;
   }
 
   if (initError) {
@@ -124,7 +145,14 @@ export function RootNavigator() {
   return (
     <NavigationContainer>
       <NetworkIssueBanner visible={showNetworkBanner} onRetry={onRetryConnection} />
-      <Stack.Navigator screenOptions={{ headerStyle: { backgroundColor: '#f4f6f8' } }}>
+      <Stack.Navigator
+        screenOptions={{
+          headerStyle: { backgroundColor: '#121212' },
+          headerTintColor: '#FFFFFF',
+          headerTitleStyle: { fontWeight: '600' },
+          contentStyle: { backgroundColor: '#121212' },
+        }}
+      >
         {!serverReady ? (
           <Stack.Screen name="ServerSetup" options={{ title: 'Настройки сервера' }}>
             {(props) => <ServerSetupScreen {...props} onConfigured={onServerConfigured} />}
@@ -142,14 +170,14 @@ export function RootNavigator() {
           <>
             <Stack.Screen name="AdminHome" component={AdminHomeTabScreen} options={{ headerShown: false }} />
             <Stack.Screen name="Contractors" component={ContractorsTabScreen} options={{ headerShown: false }} />
-            <Stack.Screen name="Drivers" component={DriversTabScreen} options={{ headerShown: false }} />
+            <Stack.Screen name="Drivers" component={DriversStackScreen} options={{ headerShown: false }} />
             <Stack.Screen name="Expenses" component={ExpensesTabScreen} options={{ headerShown: false }} />
             <Stack.Screen name="Orders" component={OrdersTabScreen} options={{ headerShown: false }} />
-            <Stack.Screen name="RegistryReport" component={RegistryReportTabScreen} options={{ headerShown: false }} />
-            <Stack.Screen name="FinancesHub" component={AdminFinancesHubTabScreen} options={{ headerShown: false }} />
+            <Stack.Screen name="RegistryReport" component={RegistryReportStackScreen} options={{ headerShown: false }} />
+            <Stack.Screen name="FinancesHub" component={FinancesHubStackScreen} options={{ headerShown: false }} />
             <Stack.Screen name="AdminMore" component={AdminMoreTabScreen} options={{ headerShown: false }} />
-            <Stack.Screen name="OrderCreate" component={OrderCreateScreen} options={{ title: 'Новый заказ' }} />
-            <Stack.Screen name="OrderEdit" component={OrderEditScreen} options={{ title: 'Редактировать заказ' }} />
+            <Stack.Screen name="OrderCreate" component={OrderCreateScreen} options={{ headerShown: false }} />
+            <Stack.Screen name="OrderEdit" component={OrderEditScreen} options={{ headerShown: false }} />
             <Stack.Screen name="Templates" component={TemplatesScreen} options={{ title: 'Шаблоны документов' }} />
             <Stack.Screen name="OrderTemplates" component={OrderTemplatesScreen} options={{ title: 'Шаблоны заказов' }} />
             <Stack.Screen name="Materials" component={MaterialsScreen} options={{ title: 'Материалы' }} />
@@ -157,7 +185,13 @@ export function RootNavigator() {
             <Stack.Screen name="Waybills" component={WaybillsScreen} options={{ title: 'Путевые листы' }} />
             <Stack.Screen name="Invoices" component={InvoicesScreen} options={{ title: 'Счета' }} />
             <Stack.Screen name="Notifications" component={NotificationsScreen} options={{ title: 'Уведомления' }} />
+            <Stack.Screen
+              name="AdminRegistrationRequests"
+              component={AdminRegistrationRequestsScreen}
+              options={{ title: 'Заявки учредителей' }}
+            />
             <Stack.Screen name="ActivityLog" component={ActivityLogScreen} options={{ title: 'Журнал действий' }} />
+            <Stack.Screen name="Backups" component={BackupsScreen} options={{ title: 'Резервные копии' }} />
             <Stack.Screen name="FinanceReport" component={FinanceReportScreen} options={{ title: 'Финансовый отчёт' }} />
             <Stack.Screen name="OrderDetail" component={OrderDetailScreen} options={{ title: 'Заказ' }} />
             <Stack.Screen name="Finances" component={FinancesScreen} options={{ title: 'Финансы' }} />

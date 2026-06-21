@@ -1,5 +1,6 @@
 import { Pressable, Text, TextInput, View } from 'react-native';
 import { screenUi } from '../styles/screenUi';
+import { colors } from '../theme';
 
 interface SearchBarProps {
   value: string;
@@ -20,11 +21,11 @@ export function SearchBar({
         placeholder={placeholder}
         value={value}
         onChangeText={onChangeText}
-        placeholderTextColor="#9ca3af"
+        placeholderTextColor={colors.textMuted}
       />
       {value ? (
         <Pressable onPress={() => onChangeText('')} hitSlop={8}>
-          <Text style={{ fontSize: 16, color: '#9ca3af' }}>✕</Text>
+          <Text style={{ fontSize: 16, color: colors.textMuted }}>✕</Text>
         </Pressable>
       ) : null}
     </View>
