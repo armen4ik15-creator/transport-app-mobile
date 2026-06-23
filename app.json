@@ -1,37 +1,33 @@
 {
   "expo": {
-    "name": "Р РµРµСЃС‚СЂРџСЂРѕ",
-    "slug": "reestrpro-mobile",
-    "version": "1.2.3",
+    "name": "ReestrPro Экспериментальный",
+    "slug": "reestrpro-experimental",
+    "version": "0.1.0",
     "orientation": "portrait",
-    "scheme": "reestrpro",
+    "scheme": "reestrpro-experimental",
     "userInterfaceStyle": "dark",
     "newArchEnabled": false,
     "runtimeVersion": {
       "policy": "appVersion"
     },
     "updates": {
-      "url": "https://u.expo.dev/55c1448c-d923-4b4a-9214-ba474b5a951e",
-      "enabled": true,
-      "checkAutomatically": "ON_LOAD",
-      "fallbackToCacheTimeout": 0,
-      "requestHeaders": {
-        "expo-channel-name": "production"
-      }
+      "enabled": false,
+      "checkAutomatically": "NEVER"
     },
     "cli": {
       "appVersionSource": "local"
     },
     "ios": {
       "supportsTablet": true,
+      "bundleIdentifier": "com.reestrpro.experimental",
       "infoPlist": {
-        "NSCameraUsageDescription": "Р”РѕСЃС‚СѓРї Рє РєР°РјРµСЂРµ РЅСѓР¶РµРЅ РґР»СЏ С„РѕС‚Рѕ РўРўРќ РїРѕ Р·Р°РєР°Р·Сѓ.",
-        "NSPhotoLibraryUsageDescription": "Р”РѕСЃС‚СѓРї Рє С„РѕС‚Рѕ РЅСѓР¶РµРЅ РґР»СЏ РїСЂРёРєСЂРµРїР»РµРЅРёСЏ РўРўРќ."
+        "NSCameraUsageDescription": "Доступ к камере нужен для фото ТТН по заказу.",
+        "NSPhotoLibraryUsageDescription": "Доступ к фото нужен для прикрепления ТТН."
       }
     },
     "android": {
-      "package": "com.reestrpro.mobile",
-      "versionCode": 23,
+      "package": "com.reestrpro.experimental",
+      "versionCode": 1,
       "permissions": [
         "android.permission.CAMERA",
         "android.permission.READ_EXTERNAL_STORAGE",
@@ -43,16 +39,13 @@
       [
         "expo-image-picker",
         {
-          "cameraPermission": "Р Р°Р·СЂРµС€РёС‚Рµ РґРѕСЃС‚СѓРї Рє РєР°РјРµСЂРµ РґР»СЏ С„РѕС‚Рѕ РўРўРќ.",
-          "photosPermission": "Р Р°Р·СЂРµС€РёС‚Рµ РґРѕСЃС‚СѓРї Рє С„РѕС‚РѕРіР°Р»РµСЂРµРµ РґР»СЏ РїСЂРёРєСЂРµРїР»РµРЅРёСЏ РўРўРќ."
+          "cameraPermission": "Разрешите доступ к камере для фото ТТН.",
+          "photosPermission": "Разрешите доступ к фотогалерее для прикрепления ТТН."
         }
-      ],
-      "expo-updates"
+      ]
     ],
     "extra": {
-      "eas": {
-        "projectId": "55c1448c-d923-4b4a-9214-ba474b5a951e"
-      }
+      "isExperimentalBuild": true
     }
   }
 }

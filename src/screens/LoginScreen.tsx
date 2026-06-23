@@ -60,6 +60,19 @@ export function LoginScreen({ navigation }: Props) {
             <Text style={{ fontSize: 36 }}>🚛</Text>
           </View>
           <Text style={{ fontSize: 26, fontWeight: '700', color: colors.text }}>ReestrPro</Text>
+          <View
+            style={{
+              marginTop: 8,
+              paddingHorizontal: 10,
+              paddingVertical: 4,
+              borderRadius: radii.sm,
+              backgroundColor: `${colors.warning}33`,
+              borderWidth: 1,
+              borderColor: colors.warning,
+            }}
+          >
+            <Text style={{ fontSize: 12, fontWeight: '700', color: colors.warning }}>ЭКСПЕРИМЕНТАЛЬНАЯ СБОРКА</Text>
+          </View>
           <Text style={{ fontSize: 14, color: colors.textMuted, marginTop: 8, textAlign: 'center' }}>
             Управление перевозками и автопарком
           </Text>
