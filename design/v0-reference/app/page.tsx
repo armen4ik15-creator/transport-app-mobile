@@ -1,5 +1,5 @@
-import { MobileApp } from "@/components/mobile-app"
+import { UiKitApp } from "@/components/uikit-app"
 
 export default function Page() {
-  return <MobileApp />
+  return <UiKitApp />
 }
