@@ -16,6 +16,7 @@ import type { RootStackParamList } from '../navigation/RootNavigator';
 import { useAuth } from '../auth/AuthContext';
 import { screenUi } from '../styles/screenUi';
 import { buildExportQuery, downloadAndShareExcel } from '../utils/exportUtils';
+import { colors } from '../theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Earnings'>;
 
@@ -133,22 +134,22 @@ export function EarningsScreen({ navigation }: Props) {
   const totalEarnings = summary.total_earnings ?? summary.estimated_income + compensations;
 
   const statCards = [
-    { label: 'Рейсов', value: String(summary.total_trips), color: '#2563eb' },
-    { label: 'Объём', value: summary.total_volume.toFixed(2), color: '#7c3aed' },
+    { label: 'Рейсов', value: String(summary.total_trips), color: colors.primary },
+    { label: 'Объём', value: summary.total_volume.toFixed(2), color: colors.accent },
     {
       label: 'Заработок (рейсы)',
       value: `${summary.estimated_income.toFixed(2)} ₽`,
-      color: '#16a34a',
+      color: colors.profit,
     },
     {
       label: 'Компенсации',
       value: `${compensations.toFixed(2)} ₽`,
-      color: '#0891b2',
+      color: colors.primary,
     },
     {
       label: 'Итого начислено',
       value: `${totalEarnings.toFixed(2)} ₽`,
-      color: '#15803d',
+      color: colors.profit,
     },
     {
       label: 'На проверке',
@@ -158,11 +159,11 @@ export function EarningsScreen({ navigation }: Props) {
     {
       label: 'Отклонено',
       value: `${(summary.expenses_rejected ?? 0).toFixed(2)} ₽`,
-      color: '#ef4444',
+      color: colors.loss,
     },
-    { label: 'Факт. доход', value: `${summary.actual_income.toFixed(2)} ₽`, color: '#16a34a' },
-    { label: 'Факт. расход', value: `${summary.actual_expense.toFixed(2)} ₽`, color: '#ef4444' },
-    { label: 'Факт. баланс', value: `${summary.actual_balance.toFixed(2)} ₽`, color: '#2563eb' },
+    { label: 'Факт. доход', value: `${summary.actual_income.toFixed(2)} ₽`, color: colors.profit },
+    { label: 'Факт. расход', value: `${summary.actual_expense.toFixed(2)} ₽`, color: colors.loss },
+    { label: 'Факт. баланс', value: `${summary.actual_balance.toFixed(2)} ₽`, color: colors.primary },
   ];
 
   if (loading) return <LoadingScreen label="Загрузка аналитики…" />;
@@ -178,7 +179,7 @@ export function EarningsScreen({ navigation }: Props) {
         title="💵 Начисления водителям"
         subtitle="Ставка за рейс + одобренные компенсации личных расходов"
       />
-      <Text style={{ fontSize: 13, color: '#6b7280', marginBottom: 12 }}>
+      <Text style={{ fontSize: 13, color: colors.textMuted, marginBottom: 12 }}>
         {user?.role === 'admin'
           ? 'Сумма ставок и одобренных компенсаций водителя за период'
           : `${driver?.full_name ?? user?.email}: рейсы и личные расходы`}
@@ -218,10 +219,10 @@ export function EarningsScreen({ navigation }: Props) {
             key={card.label}
             style={{
               width: '48%',
-              backgroundColor: '#ffffff',
+              backgroundColor: colors.surface,
               borderRadius: 12,
               borderWidth: 1,
-              borderColor: '#e5e7eb',
+              borderColor: colors.border,
               padding: 12,
             }}
           >

@@ -26,6 +26,7 @@ import {
 } from '../utils/datePeriods';
 import { withFallback } from '../utils/safeRequest';
 import type { Driver, ExpenseRecord, TripRecord, Vehicle } from '../types';
+import { colors } from '../theme';
 
 function tripRevenue(row: TripRecord): number {
   return (row.volume ?? 0) * (row.company_rate ?? 0);
@@ -158,7 +159,7 @@ export function FinanceReportScreen() {
         />
         <ScreenHero title="📊 Сводный отчёт" subtitle="День · неделя · месяц · Excel 3 листа" />
 
-        <Text style={{ fontSize: 14, fontWeight: '600', color: '#374151', marginBottom: 8 }}>
+        <Text style={{ fontSize: 14, fontWeight: '600', color: colors.textMuted, marginBottom: 8 }}>
           Быстрый выбор периода
         </Text>
         <QuickPeriodRow
@@ -209,23 +210,23 @@ export function FinanceReportScreen() {
             borderColor: '#bfdbfe',
           }}
         >
-          <Text style={{ color: '#2563eb', fontWeight: '600' }}>🔍 Применить фильтр</Text>
+          <Text style={{ color: colors.primary, fontWeight: '600' }}>🔍 Применить фильтр</Text>
         </Pressable>
 
         <ErrorText message={error} />
 
         {loading ? (
-          <ActivityIndicator style={{ marginTop: 24 }} color="#2563eb" />
+          <ActivityIndicator style={{ marginTop: 24 }} color={colors.primary} />
         ) : (
           <View style={{ marginTop: 16, gap: 10 }}>
             {[
-              { label: 'Выручка (из рейсов)', value: totals.revenue, color: '#16a34a' },
-              { label: 'Расходы (учёт)', value: totals.expenseTotal, color: '#ef4444' },
-              { label: 'Зарплата водителей', value: totals.driverPay, color: '#f59e0b' },
-              { label: 'Прибыль', value: totals.profit, color: '#2563eb' },
+              { label: 'Выручка (из рейсов)', value: totals.revenue, color: colors.profit },
+              { label: 'Расходы (учёт)', value: totals.expenseTotal, color: colors.loss },
+              { label: 'Зарплата водителей', value: totals.driverPay, color: colors.warning },
+              { label: 'Прибыль', value: totals.profit, color: colors.primary },
             ].map((item) => (
               <View key={item.label} style={screenUi.card}>
-                <Text style={{ fontSize: 14, color: '#6b7280' }}>{item.label}</Text>
+                <Text style={{ fontSize: 14, color: colors.textMuted }}>{item.label}</Text>
                 <Text style={{ fontSize: 22, fontWeight: '700', color: item.color, marginTop: 4 }}>
                   {formatMoney(item.value)} ₽
                 </Text>

@@ -24,11 +24,11 @@ export function StatSummaryCard({
     <>
       <IconBadge icon={icon} tone={tone} />
       <View style={{ flex: 1, minWidth: 0 }}>
-        <Text style={{ fontSize: 17, fontWeight: '700', color: accentColor }} numberOfLines={1}>
-          {value}
-        </Text>
-        <Text style={{ fontSize: 11, color: colors.textMuted, marginTop: 2 }} numberOfLines={2}>
+        <Text style={{ fontSize: 11, color: colors.textMuted }} numberOfLines={2}>
           {label}
+        </Text>
+        <Text style={{ fontSize: 18, fontWeight: '700', color: accentColor, marginTop: 4 }} numberOfLines={1}>
+          {value}
         </Text>
       </View>
     </>
@@ -44,6 +44,7 @@ export function StatSummaryCard({
     padding: spacing.md,
     borderWidth: 1,
     borderColor: colors.border,
+    minHeight: 76,
   };
 
   if (onPress) {

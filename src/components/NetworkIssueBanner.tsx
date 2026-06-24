@@ -1,4 +1,5 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { colors } from '../theme';
 
 interface NetworkIssueBannerProps {
   visible: boolean;
@@ -34,7 +35,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   button: {
-    backgroundColor: '#dc2626',
+    backgroundColor: colors.loss,
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 6,

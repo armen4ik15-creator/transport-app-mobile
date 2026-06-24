@@ -7,6 +7,7 @@ import { getSecurityConfig, registerAdmin, registerDriver } from '../api/auth';
 import { apiErrorMessage } from '../api/client';
 import type { RootStackParamList } from '../navigation/types';
 import { screenUi } from '../styles/screenUi';
+import { colors } from '../theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Register'>;
 type RegisterRole = 'driver' | 'founder';
@@ -112,7 +113,7 @@ export function RegisterScreen({ navigation }: Props) {
             }
           />
 
-          <Text style={{ fontSize: 13, fontWeight: '600', color: '#374151', marginBottom: 8 }}>Роль</Text>
+          <Text style={{ fontSize: 13, fontWeight: '600', color: colors.textMuted, marginBottom: 8 }}>Роль</Text>
           <View style={{ flexDirection: 'row', gap: 8, marginBottom: 16 }}>
             <RoleChip label="Водитель" active={!isFounder} onPress={() => setRole('driver')} />
             <RoleChip label="Учредитель" active={isFounder} onPress={() => setRole('founder')} />
@@ -177,12 +178,12 @@ function RoleChip({
         paddingVertical: 10,
         borderRadius: 10,
         borderWidth: 1,
-        borderColor: active ? '#2563eb' : '#d1d5db',
-        backgroundColor: active ? '#eff6ff' : '#fff',
+        borderColor: active ? colors.primary : '#d1d5db',
+        backgroundColor: active ? colors.primaryMuted : colors.surface,
         alignItems: 'center',
       }}
     >
-      <Text style={{ fontWeight: '600', color: active ? '#2563eb' : '#6b7280' }}>{label}</Text>
+      <Text style={{ fontWeight: '600', color: active ? colors.primary : colors.textMuted }}>{label}</Text>
     </Pressable>
   );
 }

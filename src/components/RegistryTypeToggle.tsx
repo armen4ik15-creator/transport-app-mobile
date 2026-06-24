@@ -1,4 +1,5 @@
 import { Pressable, Text, View } from 'react-native';
+import { colors } from '../theme';
 
 export type RegistryReportType = 'general' | 'by_vehicle';
 
@@ -10,7 +11,7 @@ interface RegistryTypeToggleProps {
 export function RegistryTypeToggle({ value, onChange }: RegistryTypeToggleProps) {
   return (
     <View style={{ marginBottom: 16 }}>
-      <Text style={{ fontSize: 14, fontWeight: '600', color: '#374151', marginBottom: 8 }}>
+      <Text style={{ fontSize: 14, fontWeight: '600', color: colors.textMuted, marginBottom: 8 }}>
         Тип реестра
       </Text>
       <View style={{ flexDirection: 'row', gap: 8 }}>
@@ -24,7 +25,7 @@ export function RegistryTypeToggle({ value, onChange }: RegistryTypeToggleProps)
             gap: 6,
             paddingVertical: 14,
             borderRadius: 10,
-            backgroundColor: value === 'general' ? '#2563eb' : '#e5e7eb',
+            backgroundColor: value === 'general' ? colors.primary : colors.border,
           }}
         >
           <Text style={{ fontSize: 16 }}>📊</Text>
@@ -32,7 +33,7 @@ export function RegistryTypeToggle({ value, onChange }: RegistryTypeToggleProps)
             style={{
               fontSize: 15,
               fontWeight: '600',
-              color: value === 'general' ? '#ffffff' : '#374151',
+              color: value === 'general' ? '#ffffff' : colors.textMuted,
             }}
           >
             Общий
@@ -48,7 +49,7 @@ export function RegistryTypeToggle({ value, onChange }: RegistryTypeToggleProps)
             gap: 6,
             paddingVertical: 14,
             borderRadius: 10,
-            backgroundColor: value === 'by_vehicle' ? '#2563eb' : '#e5e7eb',
+            backgroundColor: value === 'by_vehicle' ? colors.primary : colors.border,
           }}
         >
           <Text style={{ fontSize: 16 }}>🚚</Text>
@@ -56,7 +57,7 @@ export function RegistryTypeToggle({ value, onChange }: RegistryTypeToggleProps)
             style={{
               fontSize: 15,
               fontWeight: '600',
-              color: value === 'by_vehicle' ? '#ffffff' : '#374151',
+              color: value === 'by_vehicle' ? '#ffffff' : colors.textMuted,
             }}
           >
             По машине

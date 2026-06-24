@@ -19,6 +19,7 @@ import {
 } from '../api/driverRegistrations';
 import { screenUi } from '../styles/screenUi';
 import type { AdminRegistrationRequest, DriverRegistrationRequest } from '../types';
+import { colors } from '../theme';
 
 type Tab = 'founder' | 'driver';
 
@@ -170,7 +171,7 @@ export function AdminRegistrationRequestsScreen() {
             <View style={screenUi.summaryBar}>
               <View style={screenUi.sumItem}>
                 <Text style={screenUi.sumLabel}>Ожидают</Text>
-                <Text style={[screenUi.sumValue, { color: '#ef4444' }]}>{pendingCount}</Text>
+                <Text style={[screenUi.sumValue, { color: colors.loss }]}>{pendingCount}</Text>
               </View>
             </View>
             <ErrorText message={error} />
@@ -190,22 +191,22 @@ export function AdminRegistrationRequestsScreen() {
         renderItem={({ item }) => {
           const driverItem = tab === 'driver' ? (item as DriverRegistrationRequest) : null;
           return (
-            <View style={[screenUi.card, item.status === 'pending' && { borderColor: '#f59e0b' }]}>
-              <Text style={{ fontSize: 16, fontWeight: '700', color: '#111827' }}>{item.full_name}</Text>
-              <Text style={{ fontSize: 14, color: '#4b5563', marginTop: 4 }}>{item.email}</Text>
+            <View style={[screenUi.card, item.status === 'pending' && { borderColor: colors.warning }]}>
+              <Text style={{ fontSize: 16, fontWeight: '700', color: colors.text }}>{item.full_name}</Text>
+              <Text style={{ fontSize: 14, color: colors.textMuted, marginTop: 4 }}>{item.email}</Text>
               {item.phone ? (
-                <Text style={{ fontSize: 13, color: '#6b7280', marginTop: 2 }}>📞 {item.phone}</Text>
+                <Text style={{ fontSize: 13, color: colors.textMuted, marginTop: 2 }}>📞 {item.phone}</Text>
               ) : null}
               {driverItem?.license_number ? (
-                <Text style={{ fontSize: 13, color: '#6b7280', marginTop: 2 }}>
+                <Text style={{ fontSize: 13, color: colors.textMuted, marginTop: 2 }}>
                   ВУ: {driverItem.license_number}
                 </Text>
               ) : null}
-              <Text style={{ fontSize: 12, color: '#9ca3af', marginTop: 6 }}>
+              <Text style={{ fontSize: 12, color: colors.textMuted, marginTop: 6 }}>
                 {STATUS_LABELS[item.status]} · {item.created_at}
               </Text>
               {item.reviewed_by_name ? (
-                <Text style={{ fontSize: 12, color: '#6b7280', marginTop: 4 }}>
+                <Text style={{ fontSize: 12, color: colors.textMuted, marginTop: 4 }}>
                   Решение: {item.reviewed_by_name}
                   {item.rejection_reason ? ` — ${item.rejection_reason}` : ''}
                 </Text>
@@ -213,12 +214,12 @@ export function AdminRegistrationRequestsScreen() {
               {item.status === 'pending' ? (
                 <View style={{ flexDirection: 'row', gap: 12, marginTop: 12 }}>
                   <Pressable onPress={() => onApprove(item)} disabled={actingId === item.id} style={{ paddingVertical: 6 }}>
-                    <Text style={{ color: '#16a34a', fontWeight: '600' }}>
+                    <Text style={{ color: colors.profit, fontWeight: '600' }}>
                       {actingId === item.id ? '…' : '✓ Одобрить'}
                     </Text>
                   </Pressable>
                   <Pressable onPress={() => onReject(item)} disabled={actingId === item.id} style={{ paddingVertical: 6 }}>
-                    <Text style={{ color: '#ef4444', fontWeight: '600' }}>
+                    <Text style={{ color: colors.loss, fontWeight: '600' }}>
                       {actingId === item.id ? '…' : '✕ Отклонить'}
                     </Text>
                   </Pressable>
@@ -255,12 +256,12 @@ function TabChip({
         paddingVertical: 10,
         borderRadius: 10,
         borderWidth: 1,
-        borderColor: active ? '#2563eb' : '#d1d5db',
-        backgroundColor: active ? '#eff6ff' : '#fff',
+        borderColor: active ? colors.primary : '#d1d5db',
+        backgroundColor: active ? colors.primaryMuted : colors.surface,
         alignItems: 'center',
       }}
     >
-      <Text style={{ fontWeight: '600', color: active ? '#2563eb' : '#6b7280' }}>{label}</Text>
+      <Text style={{ fontWeight: '600', color: active ? colors.primary : colors.textMuted }}>{label}</Text>
     </Pressable>
   );
 }

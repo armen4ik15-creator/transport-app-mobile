@@ -18,6 +18,7 @@ import type { Driver, FuelCardRecord, FuelDataSourceType } from '../types';
 import { screenUi } from '../styles/screenUi';
 import { formatFuelSyncLabel } from '../utils/fuelSyncLabel';
 import { withFallback } from '../utils/safeRequest';
+import { colors } from '../theme';
 
 interface FuelSettingsScreenProps {
   navigation: { goBack: () => void };
@@ -177,8 +178,8 @@ export function FuelSettingsScreen({ navigation }: FuelSettingsScreenProps) {
                 textAlign: 'center',
                 paddingVertical: 10,
                 borderRadius: 10,
-                backgroundColor: dataSource === source ? '#2563eb' : '#e5e7eb',
-                color: dataSource === source ? '#fff' : '#111827',
+                backgroundColor: dataSource === source ? colors.primary : colors.border,
+                color: dataSource === source ? '#fff' : colors.text,
                 fontWeight: '600',
               }}
             >
@@ -232,8 +233,8 @@ export function FuelSettingsScreen({ navigation }: FuelSettingsScreenProps) {
                     paddingHorizontal: 12,
                     paddingVertical: 8,
                     borderRadius: 20,
-                    backgroundColor: newCardDriverId === driver.id ? '#16a34a' : '#e5e7eb',
-                    color: newCardDriverId === driver.id ? '#fff' : '#111827',
+                    backgroundColor: newCardDriverId === driver.id ? colors.profit : colors.border,
+                    color: newCardDriverId === driver.id ? '#fff' : colors.text,
                   }}
                 >
                   {driver.full_name || driver.car_number}
@@ -252,7 +253,7 @@ export function FuelSettingsScreen({ navigation }: FuelSettingsScreenProps) {
               borderRadius: 10,
               backgroundColor: '#f9fafb',
               borderWidth: 1,
-              borderColor: '#e5e7eb',
+              borderColor: colors.border,
             }}
           >
             <Text style={{ fontWeight: '700' }}>{card.card_number}</Text>

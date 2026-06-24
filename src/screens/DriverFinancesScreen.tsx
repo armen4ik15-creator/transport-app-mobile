@@ -9,6 +9,7 @@ import { screenUi } from '../styles/screenUi';
 import { withFallback } from '../utils/safeRequest';
 import { useAuth } from '../auth/AuthContext';
 import type { FinanceRecord } from '../types';
+import { colors } from '../theme';
 
 export function DriverFinancesScreen() {
   const { driver } = useAuth();
@@ -69,21 +70,21 @@ export function DriverFinancesScreen() {
         ListHeaderComponent={
           <View style={screenUi.content}>
             <ScreenHeader title="💼 Мои финансы" />
-            <Text style={{ fontSize: 13, color: '#6b7280', marginBottom: 8 }}>👤 {title}</Text>
+            <Text style={{ fontSize: 13, color: colors.textMuted, marginBottom: 8 }}>👤 {title}</Text>
             <View style={screenUi.summaryBar}>
               <View style={screenUi.sumItem}>
                 <Text style={screenUi.sumLabel}>Доход</Text>
-                <Text style={[screenUi.sumValue, { color: '#16a34a' }]}>{balance?.income ?? 0} ₽</Text>
+                <Text style={[screenUi.sumValue, { color: colors.profit }]}>{balance?.income ?? 0} ₽</Text>
               </View>
               <View style={screenUi.sumDivider} />
               <View style={screenUi.sumItem}>
                 <Text style={screenUi.sumLabel}>Расход</Text>
-                <Text style={[screenUi.sumValue, { color: '#ef4444' }]}>{balance?.expense ?? 0} ₽</Text>
+                <Text style={[screenUi.sumValue, { color: colors.loss }]}>{balance?.expense ?? 0} ₽</Text>
               </View>
               <View style={screenUi.sumDivider} />
               <View style={screenUi.sumItem}>
                 <Text style={screenUi.sumLabel}>Баланс</Text>
-                <Text style={[screenUi.sumValue, { color: '#2563eb' }]}>{balance?.balance ?? 0} ₽</Text>
+                <Text style={[screenUi.sumValue, { color: colors.primary }]}>{balance?.balance ?? 0} ₽</Text>
               </View>
             </View>
             <ErrorText message={error} />
@@ -92,27 +93,27 @@ export function DriverFinancesScreen() {
         renderItem={({ item }) => (
           <Pressable style={screenUi.card}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Text style={{ fontSize: 14, fontWeight: '600', color: '#111827' }}>
+              <Text style={{ fontSize: 14, fontWeight: '600', color: colors.text }}>
                 {item.type === 'income' ? '💵 Доход' : '💸 Расход'}
               </Text>
               <Text
                 style={{
                   fontSize: 17,
                   fontWeight: '700',
-                  color: item.type === 'income' ? '#16a34a' : '#ef4444',
+                  color: item.type === 'income' ? colors.profit : colors.loss,
                 }}
               >
                 {item.type === 'income' ? '+' : '−'}{item.amount} ₽
               </Text>
             </View>
-            <Text style={{ fontSize: 12, color: '#6b7280', marginTop: 4 }}>
+            <Text style={{ fontSize: 12, color: colors.textMuted, marginTop: 4 }}>
               #{item.id} · {item.created_at}
             </Text>
             {item.order_id ? (
-              <Text style={{ fontSize: 13, color: '#4b5563', marginTop: 2 }}>📦 Заказ #{item.order_id}</Text>
+              <Text style={{ fontSize: 13, color: colors.textMuted, marginTop: 2 }}>📦 Заказ #{item.order_id}</Text>
             ) : null}
             {item.description ? (
-              <Text style={{ fontSize: 13, color: '#4b5563', marginTop: 2, fontStyle: 'italic' }}>
+              <Text style={{ fontSize: 13, color: colors.textMuted, marginTop: 2, fontStyle: 'italic' }}>
                 {item.description}
               </Text>
             ) : null}

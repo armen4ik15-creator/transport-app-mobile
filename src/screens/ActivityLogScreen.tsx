@@ -8,6 +8,7 @@ import { apiErrorMessage } from '../api/client';
 import { listActivity } from '../api/activity';
 import { screenUi } from '../styles/screenUi';
 import type { ActivityLogItem } from '../types';
+import { colors } from '../theme';
 
 function formatDetails(details: string | null): string {
   if (!details) return '';
@@ -74,7 +75,7 @@ export function ActivityLogScreen() {
             <View style={screenUi.summaryBar}>
               <View style={screenUi.sumItem}>
                 <Text style={screenUi.sumLabel}>Событий</Text>
-                <Text style={[screenUi.sumValue, { color: '#2563eb' }]}>{rows.length}</Text>
+                <Text style={[screenUi.sumValue, { color: colors.primary }]}>{rows.length}</Text>
               </View>
             </View>
             <ErrorText message={error} />
@@ -82,13 +83,13 @@ export function ActivityLogScreen() {
         }
         renderItem={({ item }) => (
           <Pressable style={screenUi.card}>
-            <Text style={{ fontSize: 15, fontWeight: '600', color: '#111827' }}>{item.action}</Text>
+            <Text style={{ fontSize: 15, fontWeight: '600', color: colors.text }}>{item.action}</Text>
             {item.user_email ? (
-              <Text style={{ fontSize: 13, color: '#6b7280', marginTop: 4 }}>👤 {item.user_email}</Text>
+              <Text style={{ fontSize: 13, color: colors.textMuted, marginTop: 4 }}>👤 {item.user_email}</Text>
             ) : null}
-            <Text style={{ fontSize: 12, color: '#9ca3af', marginTop: 2 }}>{item.created_at}</Text>
+            <Text style={{ fontSize: 12, color: colors.textMuted, marginTop: 2 }}>{item.created_at}</Text>
             {item.detailsText ? (
-              <Text style={{ fontSize: 13, color: '#4b5563', marginTop: 6, fontStyle: 'italic' }}>
+              <Text style={{ fontSize: 13, color: colors.textMuted, marginTop: 6, fontStyle: 'italic' }}>
                 {item.detailsText}
               </Text>
             ) : null}

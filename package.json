@@ -8,6 +8,8 @@
     "android": "expo run:android",
     "ios": "expo run:ios",
     "lint": "tsc --noEmit",
+    "design:preview": "npm --prefix design/v0-reference install && npm --prefix design/v0-reference run dev",
+    "build:apk": "eas build --platform android --profile experimental",
     "update:preview": "eas update --channel preview --message",
     "update:production": "eas update --channel production --message"
   },

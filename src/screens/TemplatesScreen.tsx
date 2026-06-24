@@ -9,6 +9,7 @@ import { apiErrorMessage } from '../api/client';
 import { createTemplate, deleteTemplate, listTemplates, updateTemplate } from '../api/templates';
 import { screenUi } from '../styles/screenUi';
 import type { DocumentTemplate, DocumentType } from '../types';
+import { colors } from '../theme';
 
 const initialForm = {
   id: '',
@@ -137,15 +138,15 @@ export function TemplatesScreen() {
         }
         renderItem={({ item }) => (
           <Pressable style={screenUi.card} onLongPress={() => onDelete(item)}>
-            <Text style={{ fontSize: 16, fontWeight: '600', color: '#111827' }}>{item.name}</Text>
-            <Text style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>
+            <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text }}>{item.name}</Text>
+            <Text style={{ fontSize: 12, color: colors.textMuted, marginTop: 2 }}>
               #{item.id} · {templateTypeLabel(item.type)} · {item.created_at}
             </Text>
-            <Text style={{ fontSize: 13, color: '#4b5563', marginTop: 6 }} numberOfLines={2}>
+            <Text style={{ fontSize: 13, color: colors.textMuted, marginTop: 6 }} numberOfLines={2}>
               {item.content}
             </Text>
             <Pressable onPress={() => onDelete(item)} style={{ marginTop: 8 }}>
-              <Text style={{ color: '#ef4444', fontSize: 13 }}>🗑 Удалить</Text>
+              <Text style={{ color: colors.loss, fontSize: 13 }}>🗑 Удалить</Text>
             </Pressable>
           </Pressable>
         )}

@@ -1,7 +1,7 @@
 import { Pressable, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { TabBarIcon } from './TabBarIcon';
-import { colors } from '../theme';
+import { colors, radii } from '../theme';
 
 export interface BottomTabItem<T extends string> {
   id: T;
@@ -15,7 +15,7 @@ interface CustomBottomTabBarProps<T extends string> {
   onSelect: (id: T) => void;
 }
 
-/** v0-style bottom navigation: equal-width tabs, primary accent on active. */
+/** Нижняя навигация в стиле transport-company-app-ref. */
 export function CustomBottomTabBar<T extends string>({
   items,
   activeId,
@@ -29,8 +29,9 @@ export function CustomBottomTabBar<T extends string>({
         backgroundColor: colors.tabBar,
         borderTopWidth: 1,
         borderTopColor: colors.border,
-        paddingBottom: Math.max(insets.bottom, 8),
-        paddingTop: 8,
+        paddingBottom: Math.max(insets.bottom, 10),
+        paddingTop: 6,
+        paddingHorizontal: 4,
         flexDirection: 'row',
       }}
     >
@@ -43,17 +44,20 @@ export function CustomBottomTabBar<T extends string>({
             style={{
               flex: 1,
               alignItems: 'center',
-              paddingVertical: 4,
-              gap: 4,
+              paddingVertical: 6,
+              paddingHorizontal: 2,
+              borderRadius: radii.md,
+              backgroundColor: focused ? colors.primaryMuted : 'transparent',
             }}
           >
             <TabBarIcon emoji={item.emoji} focused={focused} />
             <Text
               numberOfLines={1}
               style={{
-                fontSize: 10,
+                fontSize: 11,
                 fontWeight: focused ? '700' : '500',
-                color: focused ? colors.primary : colors.textMuted,
+                color: focused ? colors.primaryLight : colors.textMuted,
+                marginTop: 2,
               }}
             >
               {item.label}

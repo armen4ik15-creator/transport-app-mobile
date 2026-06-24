@@ -27,6 +27,7 @@ import {
 } from '../utils/datePeriods';
 import { withFallback } from '../utils/safeRequest';
 import type { Driver, TripRecord, Vehicle } from '../types';
+import { colors } from '../theme';
 
 function tripRevenue(row: TripRecord): number {
   return (row.volume ?? 0) * (row.company_rate ?? 0);
@@ -164,7 +165,7 @@ export function RegistryReportScreen() {
               subtitle={`${rows.length} разгрузок · ${formatMoney(totalRevenue)} ₽`}
             />
 
-            <Text style={{ fontSize: 14, fontWeight: '600', color: '#374151', marginBottom: 8 }}>
+            <Text style={{ fontSize: 14, fontWeight: '600', color: colors.textMuted, marginBottom: 8 }}>
               Быстрый период
             </Text>
             <QuickPeriodRow items={REPORT_PERIOD_ITEMS} activeId={reportPeriod} onSelect={setReportPeriod} />
@@ -204,12 +205,12 @@ export function RegistryReportScreen() {
                 borderColor: '#bfdbfe',
               }}
             >
-              <Text style={{ color: '#2563eb', fontWeight: '600' }}>🔍 Применить фильтр</Text>
+              <Text style={{ color: colors.primary, fontWeight: '600' }}>🔍 Применить фильтр</Text>
             </Pressable>
 
             <ErrorText message={error} />
 
-            {loading ? <ActivityIndicator style={{ marginVertical: 16 }} color="#2563eb" /> : null}
+            {loading ? <ActivityIndicator style={{ marginVertical: 16 }} color={colors.primary} /> : null}
             {!loading && rows.length === 0 ? (
               <Text style={screenUi.emptyText}>Нет рейсов за выбранный период</Text>
             ) : null}

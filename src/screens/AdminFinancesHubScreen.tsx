@@ -2,6 +2,7 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { HubCardMenu } from '../components/HubCardMenu';
 import type { RootStackParamList } from '../navigation/types';
+import { colors } from '../theme';
 
 export function AdminFinancesHubScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
@@ -15,35 +16,35 @@ export function AdminFinancesHubScreen() {
           icon: '📊',
           title: 'Финансовый отчёт',
           subtitle: 'День / неделя / месяц / квартал / год · Excel 3 листа',
-          accentColor: '#2563eb',
+          accentColor: colors.primary,
           onPress: () => navigation.navigate('FinanceReport'),
         },
         {
           icon: '💵',
           title: 'Зарплата',
           subtitle: 'Начисления, выплаты водителям',
-          accentColor: '#16a34a',
+          accentColor: colors.profit,
           onPress: () => navigation.navigate('Salary'),
         },
         {
           icon: '🧮',
           title: 'Заработок водителей',
           subtitle: 'Ставка за рейс · начисления',
-          accentColor: '#0891b2',
+          accentColor: colors.primary,
           onPress: () => navigation.navigate('Earnings'),
         },
         {
           icon: '💸',
           title: 'Расходы',
           subtitle: 'Топливо, ремонт, штрафы · Excel',
-          accentColor: '#ef4444',
+          accentColor: colors.loss,
           onPress: () => navigation.replace('Expenses'),
         },
         {
           icon: '🖼',
           title: 'Фото ТТН',
           subtitle: 'Все накладные · просмотр и сохранение',
-          accentColor: '#f59e0b',
+          accentColor: colors.warning,
           onPress: () => navigation.navigate('AllPhotos'),
         },
         {

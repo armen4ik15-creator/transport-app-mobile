@@ -14,6 +14,7 @@ import { buildOrderTripMap } from '../utils/orderTripMap';
 import { screenUi } from '../styles/screenUi';
 import { STATUS_LABEL, type Order } from '../types';
 import type { RootStackParamList } from '../navigation/types';
+import { colors } from '../theme';
 
 const PAGE_SIZE = 20;
 const ORDERS_CACHE_KEY = 'driver:orders';
@@ -89,14 +90,14 @@ export function DriverOrdersScreen() {
         ListHeaderComponent={
           <View style={screenUi.content}>
             <ScreenHeader title="📦 Мои заказы" showBack={false} />
-            <Text style={{ fontSize: 13, color: '#6b7280', marginBottom: 8 }}>
+            <Text style={{ fontSize: 13, color: colors.textMuted, marginBottom: 8 }}>
               {driver?.full_name ?? user?.full_name ?? user?.email} · 🚚{' '}
               {driver?.car_number ?? 'без номера'}
             </Text>
             <View style={screenUi.summaryBar}>
               <View style={screenUi.sumItem}>
                 <Text style={screenUi.sumLabel}>Заказов</Text>
-                <Text style={[screenUi.sumValue, { color: '#2563eb' }]}>{orders.length}</Text>
+                <Text style={[screenUi.sumValue, { color: colors.primary }]}>{orders.length}</Text>
               </View>
             </View>
             <ErrorText message={error} />
@@ -104,20 +105,20 @@ export function DriverOrdersScreen() {
         }
         renderItem={({ item }) => (
           <View style={screenUi.card}>
-            <Text style={{ fontSize: 16, fontWeight: '600', color: '#111827' }}>
+            <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text }}>
               {item.contractor_name ?? 'Без контрагента'}
             </Text>
-            <Text style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>
+            <Text style={{ fontSize: 12, color: colors.textMuted, marginTop: 2 }}>
               #{item.id} · {STATUS_LABEL[item.status]}
             </Text>
             {item.material ? (
-              <Text style={{ fontSize: 13, color: '#4b5563', marginTop: 4 }}>🧱 {item.material}</Text>
+              <Text style={{ fontSize: 13, color: colors.textMuted, marginTop: 4 }}>🧱 {item.material}</Text>
             ) : null}
             {item.quantity != null ? (
-              <Text style={{ fontSize: 13, color: '#4b5563', marginTop: 2 }}>⚖️ {item.quantity}</Text>
+              <Text style={{ fontSize: 13, color: colors.textMuted, marginTop: 2 }}>⚖️ {item.quantity}</Text>
             ) : null}
             {item.load_address ? (
-              <Text style={{ fontSize: 13, color: '#6b7280', marginTop: 4 }}>
+              <Text style={{ fontSize: 13, color: colors.textMuted, marginTop: 4 }}>
                 📍 {item.load_address}
                 {item.unload_address ? ` → ${item.unload_address}` : ''}
               </Text>
@@ -134,7 +135,7 @@ export function DriverOrdersScreen() {
               onPress={() => navigation.navigate('OrderDetail', { id: item.id })}
               style={{ paddingVertical: 8, alignItems: 'center' }}
             >
-              <Text style={{ color: '#6b7280', fontSize: 12 }}>ℹ️ Подробнее о заказе</Text>
+              <Text style={{ color: colors.textMuted, fontSize: 12 }}>ℹ️ Подробнее о заказе</Text>
             </Pressable>
           </View>
         )}

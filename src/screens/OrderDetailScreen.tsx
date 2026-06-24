@@ -14,6 +14,7 @@ import { useAuth } from '../auth/AuthContext';
 import { createOrderTemplateFromOrder } from '../api/orderTemplates';
 import { invalidateCache } from '../utils/apiCache';
 import { screenUi } from '../styles/screenUi';
+import { colors } from '../theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'OrderDetail'>;
 
@@ -116,10 +117,10 @@ export function OrderDetailScreen({ route, navigation }: Props) {
             padding: 10,
             marginBottom: 12,
             borderWidth: 1,
-            borderColor: order.is_active ? '#2563eb' : '#fcd34d',
+            borderColor: order.is_active ? colors.primary : '#fcd34d',
           }}
         >
-          <Text style={{ fontSize: 14, fontWeight: '600', color: order.is_active ? '#2563eb' : '#92400e' }}>
+          <Text style={{ fontSize: 14, fontWeight: '600', color: order.is_active ? colors.primary : '#92400e' }}>
             {STATUS_LABEL[order.status]} · {order.is_active ? '✅ Активен' : '📦 Архив'}
           </Text>
         </View>
@@ -173,28 +174,28 @@ export function OrderDetailScreen({ route, navigation }: Props) {
         ) : null}
 
         <View style={screenUi.card}>
-          <Text style={{ fontSize: 18, fontWeight: '700', color: '#111827' }}>{order.contractor_name ?? '—'}</Text>
+          <Text style={{ fontSize: 18, fontWeight: '700', color: colors.text }}>{order.contractor_name ?? '—'}</Text>
           {order.task_name ? (
-            <Text style={{ fontSize: 14, color: '#4b5563', marginTop: 4 }}>📋 {order.task_name}</Text>
+            <Text style={{ fontSize: 14, color: colors.textMuted, marginTop: 4 }}>📋 {order.task_name}</Text>
           ) : null}
-          <Text style={{ fontSize: 14, color: '#4b5563', marginTop: 8 }}>
+          <Text style={{ fontSize: 14, color: colors.textMuted, marginTop: 8 }}>
             👤 {order.driver_name ?? '—'}
             {order.driver_car_number ? ` · 🚚 ${order.driver_car_number}` : ''}
           </Text>
           {order.material ? (
-            <Text style={{ fontSize: 14, color: '#4b5563', marginTop: 4 }}>🧱 {order.material}</Text>
+            <Text style={{ fontSize: 14, color: colors.textMuted, marginTop: 4 }}>🧱 {order.material}</Text>
           ) : null}
           {order.quantity != null ? (
-            <Text style={{ fontSize: 14, color: '#4b5563', marginTop: 2 }}>⚖️ {order.quantity} {order.unit ?? ''}</Text>
+            <Text style={{ fontSize: 14, color: colors.textMuted, marginTop: 2 }}>⚖️ {order.quantity} {order.unit ?? ''}</Text>
           ) : null}
           {order.driver_rate != null ? (
-            <Text style={{ fontSize: 14, color: '#4b5563', marginTop: 2 }}>💰 Ставка: {order.driver_rate} ₽</Text>
+            <Text style={{ fontSize: 14, color: colors.textMuted, marginTop: 2 }}>💰 Ставка: {order.driver_rate} ₽</Text>
           ) : null}
           {order.load_address ? (
-            <Text style={{ fontSize: 13, color: '#6b7280', marginTop: 6 }}>📍 {order.load_address} → {order.unload_address ?? '—'}</Text>
+            <Text style={{ fontSize: 13, color: colors.textMuted, marginTop: 6 }}>📍 {order.load_address} → {order.unload_address ?? '—'}</Text>
           ) : null}
           {order.notes ? (
-            <Text style={{ fontSize: 13, color: '#6b7280', marginTop: 4, fontStyle: 'italic' }}>📝 {order.notes}</Text>
+            <Text style={{ fontSize: 13, color: colors.textMuted, marginTop: 4, fontStyle: 'italic' }}>📝 {order.notes}</Text>
           ) : null}
         </View>
 
@@ -221,15 +222,15 @@ export function OrderDetailScreen({ route, navigation }: Props) {
         {isAdmin
           ? order.trips.map((trip) => (
               <View key={trip.id} style={screenUi.card}>
-                <Text style={{ fontSize: 14, fontWeight: '600', color: '#111827' }}>
+                <Text style={{ fontSize: 14, fontWeight: '600', color: colors.text }}>
                   Рейс #{trip.id} · {TRIP_STAGE_LABEL[trip.stage]}
                 </Text>
-                <Text style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>{trip.created_at}</Text>
+                <Text style={{ fontSize: 12, color: colors.textMuted, marginTop: 2 }}>{trip.created_at}</Text>
                 {trip.ttn_number ? (
-                  <Text style={{ fontSize: 13, color: '#4b5563', marginTop: 4 }}>📄 ТТН: {trip.ttn_number}</Text>
+                  <Text style={{ fontSize: 13, color: colors.textMuted, marginTop: 4 }}>📄 ТТН: {trip.ttn_number}</Text>
                 ) : null}
                 {trip.volume != null ? (
-                  <Text style={{ fontSize: 13, color: '#4b5563', marginTop: 2 }}>⚖️ {trip.volume}</Text>
+                  <Text style={{ fontSize: 13, color: colors.textMuted, marginTop: 2 }}>⚖️ {trip.volume}</Text>
                 ) : null}
                 {trip.photo_path ? (
                   <Image
@@ -261,7 +262,7 @@ export function OrderDetailScreen({ route, navigation }: Props) {
             </View>
             {order.photos.map((p) => (
               <View key={p.id} style={screenUi.card}>
-                <Text style={{ fontSize: 12, color: '#6b7280' }}>{p.uploaded_at}</Text>
+                <Text style={{ fontSize: 12, color: colors.textMuted }}>{p.uploaded_at}</Text>
                 <Image
                   source={{ uri: `${fileHost}${p.file_path}` }}
                   style={{ width: '100%', height: 220, borderRadius: 8, marginTop: 8 }}

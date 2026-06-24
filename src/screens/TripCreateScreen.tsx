@@ -23,6 +23,7 @@ import { screenUi } from '../styles/screenUi';
 import { TRIP_STAGE_LABEL, TRIP_STATUS_LABEL, type TripRecord } from '../types';
 
 import type { RootStackParamList } from '../navigation/RootNavigator';
+import { colors } from '../theme';
 
 
 
@@ -372,15 +373,15 @@ export function TripCreateScreen({ route }: Props) {
 
             {activeTrip ? (
 
-              <View style={[screenUi.card, { marginBottom: 12, borderColor: '#f59e0b', borderWidth: 1 }]}>
+              <View style={[screenUi.card, { marginBottom: 12, borderColor: colors.warning, borderWidth: 1 }]}>
 
-                <Text style={{ fontSize: 14, fontWeight: '600', color: '#b45309' }}>
+                <Text style={{ fontSize: 14, fontWeight: '600', color: colors.warning }}>
 
                   ⏳ Рейс #{activeTrip.id} — ожидает разгрузку
 
                 </Text>
 
-                <Text style={{ fontSize: 12, color: '#6b7280', marginTop: 4 }}>{activeTrip.created_at}</Text>
+                <Text style={{ fontSize: 12, color: colors.textMuted, marginTop: 4 }}>{activeTrip.created_at}</Text>
 
               </View>
 
@@ -392,7 +393,7 @@ export function TripCreateScreen({ route }: Props) {
 
                 <Text style={screenUi.sumLabel}>Завершено</Text>
 
-                <Text style={[screenUi.sumValue, { color: '#2563eb' }]}>{completedTrips.length}</Text>
+                <Text style={[screenUi.sumValue, { color: colors.primary }]}>{completedTrips.length}</Text>
 
               </View>
 
@@ -408,13 +409,13 @@ export function TripCreateScreen({ route }: Props) {
 
           <Pressable style={screenUi.card}>
 
-            <Text style={{ fontSize: 15, fontWeight: '600', color: '#111827' }}>
+            <Text style={{ fontSize: 15, fontWeight: '600', color: colors.text }}>
 
               #{item.id} · {tripStatusLabel(item)}
 
             </Text>
 
-            <Text style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>
+            <Text style={{ fontSize: 12, color: colors.textMuted, marginTop: 2 }}>
 
               {item.completed_at ?? item.created_at}
 
@@ -422,13 +423,13 @@ export function TripCreateScreen({ route }: Props) {
 
             {item.ttn_number ? (
 
-              <Text style={{ fontSize: 13, color: '#4b5563', marginTop: 4 }}>📄 ТТН: {item.ttn_number}</Text>
+              <Text style={{ fontSize: 13, color: colors.textMuted, marginTop: 4 }}>📄 ТТН: {item.ttn_number}</Text>
 
             ) : null}
 
             {item.volume != null ? (
 
-              <Text style={{ fontSize: 14, fontWeight: '600', color: '#2563eb', marginTop: 4 }}>
+              <Text style={{ fontSize: 14, fontWeight: '600', color: colors.primary, marginTop: 4 }}>
 
                 ⚖️ {item.volume} {item.unit ?? 'т'}
 
@@ -438,19 +439,19 @@ export function TripCreateScreen({ route }: Props) {
 
             {item.material ? (
 
-              <Text style={{ fontSize: 13, color: '#4b5563', marginTop: 4 }}>🧱 {item.material}</Text>
+              <Text style={{ fontSize: 13, color: colors.textMuted, marginTop: 4 }}>🧱 {item.material}</Text>
 
             ) : null}
 
             {item.load_address ? (
 
-              <Text style={{ fontSize: 13, color: '#4b5563', marginTop: 2 }}>📍 {item.load_address}</Text>
+              <Text style={{ fontSize: 13, color: colors.textMuted, marginTop: 2 }}>📍 {item.load_address}</Text>
 
             ) : null}
 
             {item.note ? (
 
-              <Text style={{ fontSize: 13, color: '#4b5563', marginTop: 4, fontStyle: 'italic' }}>{item.note}</Text>
+              <Text style={{ fontSize: 13, color: colors.textMuted, marginTop: 4, fontStyle: 'italic' }}>{item.note}</Text>
 
             ) : null}
 
@@ -500,7 +501,7 @@ export function TripCreateScreen({ route }: Props) {
 
         <MenuButton label="🖼 Галерея" onPress={() => onPickPhoto('library')} variant="secondary" />
 
-        <Text style={{ fontSize: 13, color: '#6b7280', marginTop: 8 }}>
+        <Text style={{ fontSize: 13, color: colors.textMuted, marginTop: 8 }}>
 
           {photoUri ? '✅ Фото выбрано' : 'Фото не выбрано'}
 

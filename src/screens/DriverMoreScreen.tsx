@@ -4,6 +4,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { HubMenuScreen } from '../components/HubMenuScreen';
 import { useAuth } from '../auth/AuthContext';
 import type { RootStackParamList } from '../navigation/types';
+import { colors } from '../theme';
 
 export function DriverMoreScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
@@ -28,7 +29,7 @@ export function DriverMoreScreen() {
               icon: '🧾',
               title: 'Путевые листы',
               subtitle: 'Мои путевые листы',
-              accentColor: '#7c3aed',
+              accentColor: colors.accent,
               onPress: () => navigation.navigate('Waybills'),
             },
             {
@@ -49,7 +50,7 @@ export function DriverMoreScreen() {
               icon: '📊',
               title: 'Отчёты',
               subtitle: 'Сводка по рейсам',
-              accentColor: '#2563eb',
+              accentColor: colors.primary,
               onPress: () => navigation.navigate('Reports'),
             },
             {
@@ -75,7 +76,7 @@ export function DriverMoreScreen() {
               icon: '🌐',
               title: 'Настройки сервера',
               subtitle: 'Адрес API',
-              accentColor: '#6b7280',
+              accentColor: colors.textMuted,
               onPress: () =>
                 navigation.navigate('ServerSetup', {
                   reason: 'Измените адрес сервера при необходимости',
@@ -85,7 +86,7 @@ export function DriverMoreScreen() {
               icon: '🚪',
               title: 'Выйти',
               subtitle: 'Завершить сеанс',
-              accentColor: '#ef4444',
+              accentColor: colors.loss,
               onPress: onLogout,
               danger: true,
             },

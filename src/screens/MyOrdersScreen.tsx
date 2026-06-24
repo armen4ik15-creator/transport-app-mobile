@@ -10,6 +10,7 @@ import { useAuth } from '../auth/AuthContext';
 import { screenUi } from '../styles/screenUi';
 import { STATUS_LABEL, type Order } from '../types';
 import type { RootStackParamList } from '../navigation/types';
+import { colors } from '../theme';
 
 export function MyOrdersScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
@@ -60,24 +61,24 @@ export function MyOrdersScreen() {
         ListHeaderComponent={
           <View style={screenUi.content}>
             <ScreenHeader title="📦 Мои заказы" showBack={false} />
-            <Text style={{ fontSize: 13, color: '#6b7280', marginBottom: 8 }}>
+            <Text style={{ fontSize: 13, color: colors.textMuted, marginBottom: 8 }}>
               {driver?.full_name ?? user?.email} · 🚚 {driver?.car_number ?? 'без номера'}
             </Text>
             <View style={{ flexDirection: 'row', gap: 8, marginBottom: 8 }}>
               <Pressable
-                style={{ flex: 1, backgroundColor: '#2563eb', paddingVertical: 10, borderRadius: 8, alignItems: 'center' }}
+                style={{ flex: 1, backgroundColor: colors.primary, paddingVertical: 10, borderRadius: 8, alignItems: 'center' }}
                 onPress={() => navigation.navigate('DriverFinances')}
               >
                 <Text style={{ color: '#fff', fontWeight: '600', fontSize: 13 }}>💰 Финансы</Text>
               </Pressable>
               <Pressable
-                style={{ flex: 1, backgroundColor: '#7c3aed', paddingVertical: 10, borderRadius: 8, alignItems: 'center' }}
+                style={{ flex: 1, backgroundColor: colors.accent, paddingVertical: 10, borderRadius: 8, alignItems: 'center' }}
                 onPress={() => navigation.navigate('Documents')}
               >
                 <Text style={{ color: '#fff', fontWeight: '600', fontSize: 13 }}>📑 Документы</Text>
               </Pressable>
               <Pressable
-                style={{ flex: 1, backgroundColor: '#6b7280', paddingVertical: 10, borderRadius: 8, alignItems: 'center' }}
+                style={{ flex: 1, backgroundColor: colors.textMuted, paddingVertical: 10, borderRadius: 8, alignItems: 'center' }}
                 onPress={() => navigation.navigate('Reports')}
               >
                 <Text style={{ color: '#fff', fontWeight: '600', fontSize: 13 }}>📊 Отчёты</Text>
@@ -91,17 +92,17 @@ export function MyOrdersScreen() {
             style={screenUi.card}
             onPress={() => navigation.navigate('OrderDetail', { id: item.id })}
           >
-            <Text style={{ fontSize: 16, fontWeight: '600', color: '#111827' }}>
+            <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text }}>
               {item.contractor_name ?? 'Без контрагента'}
             </Text>
-            <Text style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>
+            <Text style={{ fontSize: 12, color: colors.textMuted, marginTop: 2 }}>
               #{item.id} · {STATUS_LABEL[item.status]}
             </Text>
             {item.material ? (
-              <Text style={{ fontSize: 13, color: '#4b5563', marginTop: 4 }}>🧱 {item.material}</Text>
+              <Text style={{ fontSize: 13, color: colors.textMuted, marginTop: 4 }}>🧱 {item.material}</Text>
             ) : null}
             {item.load_address ? (
-              <Text style={{ fontSize: 13, color: '#4b5563', marginTop: 2 }}>📍 {item.load_address}</Text>
+              <Text style={{ fontSize: 13, color: colors.textMuted, marginTop: 2 }}>📍 {item.load_address}</Text>
             ) : null}
           </Pressable>
         )}

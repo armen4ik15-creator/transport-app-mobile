@@ -1,11 +1,12 @@
 import { Pressable, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { screenUi } from '../styles/screenUi';
-import { colors } from '../theme';
+import { colors, radii, spacing } from '../theme';
 
 interface ScreenHeaderProps {
   title: string;
   pageTitle?: string;
+  subtitle?: string;
   showBack?: boolean;
   actionLabel?: string;
   onAction?: () => void;
@@ -13,9 +14,11 @@ interface ScreenHeaderProps {
   onBack?: () => void;
 }
 
+/** Заголовок экрана в стиле app-header из transport-company-app-ref. */
 export function ScreenHeader({
   title,
   pageTitle,
+  subtitle,
   showBack,
   actionLabel,
   onAction,
@@ -35,12 +38,51 @@ export function ScreenHeader({
     navigation.goBack();
   };
 
+  if (showPageTitle && !showBackButton && !actionLabel) {
+    return (
+      <View
+        style={{
+          borderBottomWidth: 1,
+          borderBottomColor: colors.border,
+          paddingBottom: spacing.sm,
+          marginBottom: spacing.sm,
+          marginHorizontal: -spacing.md,
+          paddingHorizontal: spacing.md,
+        }}
+      >
+        <Text
+          style={{
+            fontSize: 18,
+            fontWeight: '700',
+            color: colors.text,
+            lineHeight: 22,
+          }}
+          numberOfLines={1}
+        >
+          {displayPageTitle}
+        </Text>
+        {subtitle ? (
+          <Text style={{ fontSize: 12, color: colors.textMuted, marginTop: 2 }} numberOfLines={1}>
+            {subtitle}
+          </Text>
+        ) : null}
+      </View>
+    );
+  }
+
   return (
-    <View>
+    <View
+      style={{
+        borderBottomWidth: 1,
+        borderBottomColor: colors.border,
+        paddingBottom: spacing.sm,
+        marginBottom: spacing.sm,
+      }}
+    >
       {showPageTitle ? (
         <Text
           style={{
-            fontSize: 26,
+            fontSize: 18,
             fontWeight: '700',
             color: colors.text,
             marginBottom: 8,
@@ -51,7 +93,16 @@ export function ScreenHeader({
       ) : null}
       <View style={screenUi.header}>
         {showBackButton ? (
-          <Pressable onPress={handleBack} hitSlop={8}>
+          <Pressable
+            onPress={handleBack}
+            hitSlop={8}
+            style={{
+              paddingHorizontal: 10,
+              paddingVertical: 6,
+              borderRadius: radii.full,
+              backgroundColor: colors.secondary,
+            }}
+          >
             <Text style={screenUi.back}>← Назад</Text>
           </Pressable>
         ) : (

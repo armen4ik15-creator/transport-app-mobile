@@ -16,6 +16,7 @@ import { formatDateTimeRu } from '../utils/datePeriods';
 import { withFallback } from '../utils/safeRequest';
 import { useAuth } from '../auth/AuthContext';
 import type { DocumentRecord, DocumentType, Order } from '../types';
+import { colors } from '../theme';
 
 type DocFilter = 'all' | DocumentType;
 
@@ -178,7 +179,7 @@ export function DocumentsScreen() {
             <View style={screenUi.summaryBar}>
               <View style={screenUi.sumItem}>
                 <Text style={screenUi.sumLabel}>Документов</Text>
-                <Text style={[screenUi.sumValue, { color: '#2563eb' }]}>{filtered.length}</Text>
+                <Text style={[screenUi.sumValue, { color: colors.primary }]}>{filtered.length}</Text>
               </View>
             </View>
             <ErrorText message={error} />
@@ -191,20 +192,20 @@ export function DocumentsScreen() {
           >
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
               <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 16, fontWeight: '800', color: '#111827' }}>
+                <Text style={{ fontSize: 16, fontWeight: '800', color: colors.text }}>
                   {getDocTypeLabel(item.type)}
                 </Text>
-                <Text style={{ fontSize: 13, color: '#4b5563', marginTop: 4 }}>📦 Заказ #{item.order_id}</Text>
-                <Text style={{ fontSize: 12, color: '#6b7280', marginTop: 4 }}>
+                <Text style={{ fontSize: 13, color: colors.textMuted, marginTop: 4 }}>📦 Заказ #{item.order_id}</Text>
+                <Text style={{ fontSize: 12, color: colors.textMuted, marginTop: 4 }}>
                   📅 {formatDateTimeRu(item.created_at)}
                 </Text>
                 <View style={{ marginTop: 8 }}>
-                  <StatusBadge label="Открыть файл" color="#2563eb" />
+                  <StatusBadge label="Открыть файл" color={colors.primary} />
                 </View>
               </View>
               {user?.role === 'admin' ? (
                 <Pressable onPress={() => onDelete(item)} hitSlop={8}>
-                  <Text style={{ color: '#ef4444', fontSize: 16 }}>🗑</Text>
+                  <Text style={{ color: colors.loss, fontSize: 16 }}>🗑</Text>
                 </Pressable>
               ) : null}
             </View>
@@ -244,7 +245,7 @@ export function DocumentsScreen() {
         ))}
         <MenuButton label="📷 Камера" onPress={() => pickDocumentImage('camera')} variant="secondary" />
         <MenuButton label="🖼 Галерея" onPress={() => pickDocumentImage('library')} variant="secondary" />
-        <Text style={{ fontSize: 13, color: '#6b7280', marginTop: 8 }}>
+        <Text style={{ fontSize: 13, color: colors.textMuted, marginTop: 8 }}>
           {form.fileUri ? '✅ Файл выбран' : 'Файл не выбран'}
         </Text>
       </FormBottomModal>

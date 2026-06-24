@@ -24,6 +24,7 @@ import { screenUi } from '../styles/screenUi';
 import { buildExportQuery, downloadAndShareExcel } from '../utils/exportUtils';
 import { formatDateTimeRu, getReportPeriodBounds } from '../utils/datePeriods';
 import { withFallback } from '../utils/safeRequest';
+import { colors } from '../theme';
 import type {
   Driver,
   DriverDebtSummary,
@@ -292,11 +293,11 @@ export function SalaryScreen() {
             ) : null}
             {debts.length > 0 ? (
               <View style={[screenUi.card, { marginBottom: 8 }]}>
-                <Text style={{ fontSize: 13, fontWeight: '600', color: '#374151', marginBottom: 6 }}>
+                <Text style={{ fontSize: 13, fontWeight: '600', color: colors.textMuted, marginBottom: 6 }}>
                   📋 Задолженность водителям
                 </Text>
                 {debts.slice(0, 5).map((item) => (
-                  <Text key={item.driver_id} style={{ fontSize: 12, color: '#6b7280', marginBottom: 2 }}>
+                  <Text key={item.driver_id} style={{ fontSize: 12, color: colors.textMuted, marginBottom: 2 }}>
                     {item.driver_name ?? `#${item.driver_id}`}: {item.debt.toFixed(0)} ₽
                   </Text>
                 ))}
@@ -307,7 +308,7 @@ export function SalaryScreen() {
               label="📥 Зарплатный табель Excel"
               onPress={() => void onExportExcel()}
             />
-            <Text style={{ fontSize: 12, color: '#6b7280', marginBottom: 8 }}>
+            <Text style={{ fontSize: 12, color: colors.textMuted, marginBottom: 8 }}>
               Формат как в бухгалтерии: начислено по рейсам, нал/безнал, долг
             </Text>
             <ErrorText message={error} />
@@ -319,14 +320,14 @@ export function SalaryScreen() {
             return (
               <Pressable style={[screenUi.card, { borderRadius: 14 }]} onLongPress={() => onDelete(payment.id)}>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <Text style={{ fontSize: 16, fontWeight: '800', color: '#111827' }}>{payment.driver_name}</Text>
-                  <Text style={{ fontSize: 17, fontWeight: '800', color: '#16a34a' }}>{payment.amount} ₽</Text>
+                  <Text style={{ fontSize: 16, fontWeight: '800', color: colors.text }}>{payment.driver_name}</Text>
+                  <Text style={{ fontSize: 17, fontWeight: '800', color: colors.profit }}>{payment.amount} ₽</Text>
                 </View>
-                <Text style={{ fontSize: 12, color: '#6b7280', marginTop: 4 }}>
+                <Text style={{ fontSize: 12, color: colors.textMuted, marginTop: 4 }}>
                   {paymentTypeLabels[payment.type]}
                   {payment.method ? ` · ${paymentMethodLabels[payment.method]}` : ''}
                 </Text>
-                <Text style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>
+                <Text style={{ fontSize: 12, color: colors.textMuted, marginTop: 2 }}>
                   📅 {formatDateTimeRu(payment.created_at)}
                 </Text>
               </Pressable>
@@ -335,23 +336,23 @@ export function SalaryScreen() {
 
           const debt = item as DriverDebtSummary;
           const accent = activeTab === 'accruals' ? debt.gross : debt.debt;
-          const accentColor = activeTab === 'accruals' ? '#2563eb' : debt.debt > 0 ? '#ef4444' : '#16a34a';
+          const accentColor = activeTab === 'accruals' ? colors.primary : debt.debt > 0 ? colors.loss : colors.profit;
           return (
             <View style={[screenUi.card, { borderRadius: 14, borderLeftWidth: 4, borderLeftColor: accentColor }]}>
-              <Text style={{ fontSize: 16, fontWeight: '800', color: '#111827' }}>
+              <Text style={{ fontSize: 16, fontWeight: '800', color: colors.text }}>
                 {debt.driver_name ?? `#${debt.driver_id}`}
               </Text>
               <Text style={{ fontSize: 20, fontWeight: '800', color: accentColor, marginTop: 6 }}>
                 {accent.toFixed(0)} ₽
               </Text>
-              <Text style={{ fontSize: 12, color: '#6b7280', marginTop: 4 }}>
+              <Text style={{ fontSize: 12, color: colors.textMuted, marginTop: 4 }}>
                 Начислено: {debt.gross.toFixed(0)} ₽ · Выплачено: {debt.paid.toFixed(0)} ₽
               </Text>
               {activeTab === 'debts' ? (
                 <View style={{ marginTop: 8 }}>
                   <StatusBadge
                     label={debt.debt > 0 ? 'Есть долг' : 'Закрыто'}
-                    color={debt.debt > 0 ? '#ef4444' : '#16a34a'}
+                    color={debt.debt > 0 ? colors.loss : colors.profit}
                   />
                 </View>
               ) : null}
@@ -396,7 +397,7 @@ export function SalaryScreen() {
           onChangeText={(value) => setForm((prev) => ({ ...prev, period_end: value }))}
         />
         {previewAccrued != null ? (
-          <Text style={{ fontSize: 13, color: '#2563eb', marginBottom: 8, fontWeight: '600' }}>
+          <Text style={{ fontSize: 13, color: colors.primary, marginBottom: 8, fontWeight: '600' }}>
             Начислено по рейсам за период: {previewAccrued.toFixed(0)} ₽
           </Text>
         ) : null}

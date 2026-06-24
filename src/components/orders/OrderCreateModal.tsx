@@ -17,6 +17,7 @@ import { apiErrorMessage } from '../../api/client';
 import { screenUi } from '../../styles/screenUi';
 import { withFallback } from '../../utils/safeRequest';
 import type { Contractor, Driver } from '../../types';
+import { colors } from '../../theme';
 
 interface OrderCreateModalProps {
   visible: boolean;
@@ -190,13 +191,13 @@ export function OrderCreateModal({ visible, onClose, onCreated }: OrderCreateMod
           >
             <Text style={screenUi.fieldLabel}>Водитель *</Text>
             <Pressable onPress={() => void loadReferences()}>
-              <Text style={{ color: '#2563eb', fontSize: 13 }}>
+              <Text style={{ color: colors.primary, fontSize: 13 }}>
                 {loadingRefs ? 'Загрузка…' : 'Обновить'}
               </Text>
             </Pressable>
           </View>
           {drivers.length === 0 ? (
-            <Text style={{ color: '#9ca3af', fontStyle: 'italic', marginBottom: 12 }}>
+            <Text style={{ color: colors.textMuted, fontStyle: 'italic', marginBottom: 12 }}>
               Список водителей пуст. Нажмите «Обновить» или дождитесь загрузки.
             </Text>
           ) : (
@@ -208,13 +209,13 @@ export function OrderCreateModal({ visible, onClose, onCreated }: OrderCreateMod
                     key={driver.id}
                     onPress={() => setForm((prev) => ({ ...prev, driver_id: driver.id }))}
                     style={{
-                      backgroundColor: active ? '#2563eb' : '#f3f4f6',
+                      backgroundColor: active ? colors.primary : colors.surfaceElevated,
                       paddingHorizontal: 12,
                       paddingVertical: 8,
                       borderRadius: 20,
                     }}
                   >
-                    <Text style={{ color: active ? '#ffffff' : '#111827', fontSize: 14 }}>
+                    <Text style={{ color: active ? '#ffffff' : colors.text, fontSize: 14 }}>
                       {driver.full_name ?? driver.email}
                       {driver.car_number ? ` (${driver.car_number})` : ''}
                     </Text>
@@ -240,13 +241,13 @@ export function OrderCreateModal({ visible, onClose, onCreated }: OrderCreateMod
                       }))
                     }
                     style={{
-                      backgroundColor: active ? '#2563eb' : '#f3f4f6',
+                      backgroundColor: active ? colors.primary : colors.surfaceElevated,
                       paddingHorizontal: 12,
                       paddingVertical: 8,
                       borderRadius: 20,
                     }}
                   >
-                    <Text style={{ color: active ? '#ffffff' : '#111827', fontSize: 14 }}>
+                    <Text style={{ color: active ? '#ffffff' : colors.text, fontSize: 14 }}>
                       {contractor.name}
                     </Text>
                   </Pressable>
@@ -311,13 +312,13 @@ export function OrderCreateModal({ visible, onClose, onCreated }: OrderCreateMod
                   onPress={() => setForm((prev) => ({ ...prev, unit }))}
                   style={{
                     flex: 1,
-                    backgroundColor: active ? '#2563eb' : '#f3f4f6',
+                    backgroundColor: active ? colors.primary : colors.surfaceElevated,
                     paddingVertical: 12,
                     borderRadius: 8,
                     alignItems: 'center',
                   }}
                 >
-                  <Text style={{ color: active ? '#ffffff' : '#111827', fontWeight: '600' }}>
+                  <Text style={{ color: active ? '#ffffff' : colors.text, fontWeight: '600' }}>
                     {unit}
                   </Text>
                 </Pressable>

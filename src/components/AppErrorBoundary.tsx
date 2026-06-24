@@ -2,6 +2,7 @@ import { Component, type ErrorInfo, type ReactNode } from 'react';
 import { Alert, ScrollView, StyleSheet, Text } from 'react-native';
 import { PrimaryButton } from './ui';
 import { logStartup } from '../utils/startupLogger';
+import { colors } from '../theme';
 
 interface ErrorBoundaryProps {
   children: ReactNode;
@@ -71,7 +72,7 @@ const styles = StyleSheet.create({
   },
   hint: {
     fontSize: 13,
-    color: '#6b7280',
+    color: colors.textMuted,
     marginBottom: 20,
     lineHeight: 18,
   },

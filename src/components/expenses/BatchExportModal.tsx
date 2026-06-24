@@ -4,6 +4,7 @@ import { DateRangePicker } from '../DateRangePicker';
 import { screenUi } from '../../styles/screenUi';
 import { todayIso } from '../../utils/datePeriods';
 import type { ExpenseRecord } from '../../types';
+import { colors } from '../../theme';
 
 interface BatchExportModalProps {
   visible: boolean;
@@ -55,24 +56,24 @@ export function BatchExportModal({
             </Text>
           </Pressable>
 
-          <Text style={{ fontSize: 14, fontWeight: '600', color: '#374151', marginBottom: 8 }}>
+          <Text style={{ fontSize: 14, fontWeight: '600', color: colors.textMuted, marginBottom: 8 }}>
             Произвольный период
           </Text>
           <DateRangePicker from={from} to={to} onChangeFrom={setFrom} onChangeTo={setTo} />
 
           <View
             style={{
-              backgroundColor: '#f3f4f6',
+              backgroundColor: colors.surfaceElevated,
               borderRadius: 10,
               padding: 12,
               marginBottom: 12,
             }}
           >
-            <Text style={{ fontSize: 13, color: '#4b5563' }}>
+            <Text style={{ fontSize: 13, color: colors.textMuted }}>
               Записей в текущем списке:{' '}
-              <Text style={{ fontWeight: '700', color: '#111827' }}>{periodPreviewCount}</Text>
+              <Text style={{ fontWeight: '700', color: colors.text }}>{periodPreviewCount}</Text>
             </Text>
-            <Text style={{ fontSize: 12, color: '#6b7280', marginTop: 4 }}>
+            <Text style={{ fontSize: 12, color: colors.textMuted, marginTop: 4 }}>
               Экспорт выгрузит все расходы за выбранный период
             </Text>
           </View>

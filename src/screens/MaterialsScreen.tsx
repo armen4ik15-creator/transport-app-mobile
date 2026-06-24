@@ -11,6 +11,7 @@ import { createMaterial, deleteMaterial, listMaterials } from '../api/materials'
 import { useAuth } from '../auth/AuthContext';
 import { screenUi } from '../styles/screenUi';
 import type { Material } from '../types';
+import { colors } from '../theme';
 
 export function MaterialsScreen() {
   const { user } = useAuth();
@@ -123,15 +124,15 @@ export function MaterialsScreen() {
           <Pressable style={screenUi.card} onLongPress={() => isAdmin && onDelete(item.id, item.name)}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
               <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 16, fontWeight: '600', color: '#111827' }}>{item.name}</Text>
-                <Text style={{ fontSize: 13, color: '#6b7280', marginTop: 2 }}>
+                <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text }}>{item.name}</Text>
+                <Text style={{ fontSize: 13, color: colors.textMuted, marginTop: 2 }}>
                   Ед.: {item.unit}
                   {item.price_per_ton != null ? ` · 💰 ${item.price_per_ton} ₽/т` : ''}
                 </Text>
               </View>
               {isAdmin ? (
                 <Pressable onPress={() => onDelete(item.id, item.name)} hitSlop={8}>
-                  <Text style={{ color: '#ef4444', fontSize: 16 }}>🗑</Text>
+                  <Text style={{ color: colors.loss, fontSize: 16 }}>🗑</Text>
                 </Pressable>
               ) : null}
             </View>

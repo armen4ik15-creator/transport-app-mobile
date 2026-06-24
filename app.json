@@ -7,9 +7,7 @@
     "scheme": "reestrpro-experimental",
     "userInterfaceStyle": "dark",
     "newArchEnabled": false,
-    "runtimeVersion": {
-      "policy": "appVersion"
-    },
+    "runtimeVersion": "0.1.0",
     "updates": {
       "enabled": false,
       "checkAutomatically": "NEVER"
@@ -45,7 +43,11 @@
       ]
     ],
     "extra": {
-      "isExperimentalBuild": true
-    }
+      "isExperimentalBuild": true,
+      "eas": {
+        "projectId": "60c820cd-3250-43d5-834d-4bf1043377d7"
+      }
+    },
+    "owner": "aramio"
   }
 }

@@ -6,6 +6,7 @@ import { StatSummaryCard } from '../components/dashboard/StatSummaryCard';
 import { DriverTripActionCard } from '../components/DriverTripActionCard';
 import { QuickAccessGrid, type QuickAccessItem } from '../components/QuickAccessGrid';
 import { ErrorText, LoadingScreen } from '../components/ui';
+import { V0DashboardHeader, V0SectionTitle } from '../components/v0';
 import { useAuth } from '../auth/AuthContext';
 import type { RootStackParamList } from '../navigation/types';
 import { listOrders } from '../api/orders';
@@ -13,9 +14,19 @@ import { getEarningsSummary } from '../api/earnings';
 import { listNotifications } from '../api/notifications';
 import { apiErrorMessage } from '../api/client';
 import { screenUi } from '../styles/screenUi';
-import { colors, spacing } from '../theme';
+import { colors, radii, spacing } from '../theme';
 import { withFallback } from '../utils/safeRequest';
 import type { Order } from '../types';
+
+function initialsFromName(name?: string | null) {
+  if (!name?.trim()) return 'В';
+  return name
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((p) => p[0]?.toUpperCase() ?? '')
+    .join('');
+}
 
 export function DriverHomeScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
@@ -93,34 +104,20 @@ export function DriverHomeScreen() {
       contentContainerStyle={[screenUi.content, { paddingBottom: 24 }]}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
     >
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: spacing.md }}>
-        <View style={{ flex: 1 }}>
-          <Text style={{ fontSize: 13, color: colors.textMuted }}>Главная</Text>
-          <Text style={{ fontSize: 22, fontWeight: '700', color: colors.text, marginTop: 2 }}>{displayName}</Text>
-          <Text style={{ fontSize: 12, color: colors.textMuted, marginTop: 4 }}>
-            {driver?.car_number ? `Водитель · ${driver.car_number}` : 'Водитель'}
-          </Text>
-        </View>
-        <Pressable
-          onPress={onLogout}
-          style={{
-            backgroundColor: colors.loss,
-            borderRadius: 8,
-            paddingHorizontal: 14,
-            paddingVertical: 10,
-          }}
-        >
-          <Text style={{ color: colors.text, fontWeight: '700' }}>Выйти</Text>
-        </Pressable>
-      </View>
+      <V0DashboardHeader
+        title="Главная"
+        subtitle={driver?.car_number ? `${displayName} · ${driver.car_number}` : displayName}
+        badge={unreadNotifications}
+        initials={initialsFromName(displayName)}
+        onNotifications={() => navigation.navigate('Notifications')}
+        onLogout={onLogout}
+      />
 
       <ErrorText message={error} />
 
       {primaryOrder ? (
         <View style={{ marginBottom: spacing.md }}>
-          <Text style={{ fontSize: 16, fontWeight: '700', color: colors.text, marginBottom: 8 }}>
-            Ваша задача сейчас
-          </Text>
+          <V0SectionTitle>Ваша задача сейчас</V0SectionTitle>
           <DriverTripActionCard
             orderId={primaryOrder.id}
             taskLabel={
@@ -133,21 +130,28 @@ export function DriverHomeScreen() {
             onPress={() => navigation.navigate('OrderDetail', { id: primaryOrder.id })}
             style={{ paddingVertical: 8, alignItems: 'center' }}
           >
-            <Text style={{ color: colors.primary, fontSize: 13 }}>Подробнее о заказе</Text>
+            <Text style={{ color: colors.primaryLight, fontSize: 13 }}>Подробнее о заказе</Text>
           </Pressable>
         </View>
       ) : (
-        <View style={[screenUi.card, { marginBottom: spacing.md }]}>
+        <View
+          style={{
+            backgroundColor: colors.surface,
+            borderRadius: radii.lg,
+            borderWidth: 1,
+            borderColor: colors.border,
+            padding: spacing.md,
+            marginBottom: spacing.md,
+          }}
+        >
           <Text style={{ fontSize: 14, color: colors.textMuted, textAlign: 'center' }}>
             Активных заказов нет. Новые задачи появятся в «Мои заказы».
           </Text>
         </View>
       )}
 
-      <Text style={{ fontSize: 15, fontWeight: '700', color: colors.text, marginBottom: spacing.sm }}>
-        Сегодня
-      </Text>
-      <View style={{ flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md }}>
+      <V0SectionTitle>Сегодня</V0SectionTitle>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginBottom: spacing.lg }}>
         <StatSummaryCard
           label="Активные заказы"
           value={String(activeOrders)}
@@ -156,12 +160,10 @@ export function DriverHomeScreen() {
         />
         <StatSummaryCard
           label="Заработок"
-          value={`${Math.round(estimatedIncome)} ₽`}
+          value={`${Math.round(estimatedIncome).toLocaleString('ru-RU')} ₽`}
           accentColor={colors.profit}
           icon="💰"
         />
-      </View>
-      <View style={{ flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.lg }}>
         <StatSummaryCard
           label="Уведомления"
           value={String(unreadNotifications)}
@@ -170,9 +172,7 @@ export function DriverHomeScreen() {
         />
       </View>
 
-      <Text style={{ fontSize: 15, fontWeight: '700', color: colors.text, marginBottom: spacing.sm }}>
-        Разделы
-      </Text>
+      <V0SectionTitle>Разделы</V0SectionTitle>
       <QuickAccessGrid items={quickItems} />
     </ScrollView>
   );

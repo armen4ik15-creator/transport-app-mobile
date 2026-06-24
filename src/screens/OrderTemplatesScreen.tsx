@@ -11,6 +11,7 @@ import { createOrderTemplate, deleteOrderTemplate, listOrderTemplates } from '..
 import type { OrderTemplate } from '../types';
 import type { RootStackParamList } from '../navigation/RootNavigator';
 import { screenUi } from '../styles/screenUi';
+import { colors } from '../theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'OrderTemplates'>;
 
@@ -141,24 +142,24 @@ export function OrderTemplatesScreen({ navigation }: Props) {
         }
         renderItem={({ item }) => (
           <View style={screenUi.card}>
-            <Text style={{ fontSize: 16, fontWeight: '600', color: '#111827' }}>{item.name}</Text>
-            <Text style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>#{item.id}</Text>
+            <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text }}>{item.name}</Text>
+            <Text style={{ fontSize: 12, color: colors.textMuted, marginTop: 2 }}>#{item.id}</Text>
             {item.material ? (
-              <Text style={{ fontSize: 13, color: '#4b5563', marginTop: 4 }}>🧱 {item.material}</Text>
+              <Text style={{ fontSize: 13, color: colors.textMuted, marginTop: 4 }}>🧱 {item.material}</Text>
             ) : null}
             {item.driver_rate != null ? (
-              <Text style={{ fontSize: 13, color: '#4b5563', marginTop: 2 }}>💰 {item.driver_rate} ₽</Text>
+              <Text style={{ fontSize: 13, color: colors.textMuted, marginTop: 2 }}>💰 {item.driver_rate} ₽</Text>
             ) : null}
-            <View style={{ flexDirection: 'row', gap: 8, marginTop: 10, borderTopWidth: 1, borderTopColor: '#f3f4f6', paddingTop: 10 }}>
+            <View style={{ flexDirection: 'row', gap: 8, marginTop: 10, borderTopWidth: 1, borderTopColor: colors.surfaceElevated, paddingTop: 10 }}>
               <Pressable
                 onPress={() => navigation.navigate('OrderCreate', { templateId: item.id })}
-                style={{ flex: 1, backgroundColor: '#2563eb', paddingVertical: 8, borderRadius: 7, alignItems: 'center' }}
+                style={{ flex: 1, backgroundColor: colors.primary, paddingVertical: 8, borderRadius: 7, alignItems: 'center' }}
               >
                 <Text style={{ color: '#fff', fontSize: 12, fontWeight: '600' }}>Создать заказ</Text>
               </Pressable>
               <Pressable
                 onPress={() => onDelete(item)}
-                style={{ flex: 1, backgroundColor: '#ef4444', paddingVertical: 8, borderRadius: 7, alignItems: 'center' }}
+                style={{ flex: 1, backgroundColor: colors.loss, paddingVertical: 8, borderRadius: 7, alignItems: 'center' }}
               >
                 <Text style={{ color: '#fff', fontSize: 12, fontWeight: '600' }}>🗑</Text>
               </Pressable>

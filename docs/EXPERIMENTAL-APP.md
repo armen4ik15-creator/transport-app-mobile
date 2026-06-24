@@ -20,13 +20,30 @@ npm install
 npx expo start
 ```
 
+В Expo Go отсканируйте QR — это **рабочее приложение** с API, не зависит от v0 preview.
+
+## Превью дизайна v0 в браузере (если v0.dev завис)
+
+Макет из v0 лежит в `design/v0-reference/`. Локальный запуск:
+
+```bash
+npm run design:preview
+```
+
+Откройте http://localhost:3000 — кликабельный прототип admin/driver без бэкенда.
+
 ## APK на телефон
 
 ```bash
+npm install
 npx eas build --platform android --profile experimental
 ```
 
-Или локально: `npx expo run:android` (нужен Android SDK).
+Ссылку на APK пришлёт EAS после сборки. Или локально: `npx expo run:android` (нужен Android SDK).
+
+## Дизайн v0 → это приложение
+
+Токены (`#1E1E1E` фон, `#2C2C2C` карточки, `#1A73E8` primary) синхронизированы из `design/v0-reference/app/globals.css` в `src/theme/`. Экран входа и все экраны используют RN-код в `src/` — его и ставьте на телефон для теста.
 
 ## Правила
 

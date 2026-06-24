@@ -19,6 +19,7 @@ import { buildExportQuery, downloadAndShareExcel } from '../utils/exportUtils';
 import { formatDateTimeRu, getReportPeriodBounds } from '../utils/datePeriods';
 import { withFallback } from '../utils/safeRequest';
 import type { Driver, DriverBalance, FinanceRecord, Order } from '../types';
+import { colors } from '../theme';
 
 const defaultMonth = getReportPeriodBounds('month');
 
@@ -182,17 +183,17 @@ export function AdminFinancesScreen() {
               <View style={screenUi.summaryBar}>
                 <View style={screenUi.sumItem}>
                   <Text style={screenUi.sumLabel}>Доход</Text>
-                  <Text style={[screenUi.sumValue, { color: '#16a34a' }]}>{balance.income} ₽</Text>
+                  <Text style={[screenUi.sumValue, { color: colors.profit }]}>{balance.income} ₽</Text>
                 </View>
                 <View style={screenUi.sumDivider} />
                 <View style={screenUi.sumItem}>
                   <Text style={screenUi.sumLabel}>Расход</Text>
-                  <Text style={[screenUi.sumValue, { color: '#ef4444' }]}>{balance.expense} ₽</Text>
+                  <Text style={[screenUi.sumValue, { color: colors.loss }]}>{balance.expense} ₽</Text>
                 </View>
                 <View style={screenUi.sumDivider} />
                 <View style={screenUi.sumItem}>
                   <Text style={screenUi.sumLabel}>Баланс</Text>
-                  <Text style={[screenUi.sumValue, { color: '#2563eb' }]}>{balance.balance} ₽</Text>
+                  <Text style={[screenUi.sumValue, { color: colors.primary }]}>{balance.balance} ₽</Text>
                 </View>
               </View>
             ) : null}
@@ -210,34 +211,34 @@ export function AdminFinancesScreen() {
           </View>
         }
         renderItem={({ item }) => (
-          <View style={[screenUi.card, { borderRadius: 14, borderLeftWidth: 4, borderLeftColor: item.type === 'income' ? '#16a34a' : '#ef4444' }]}>
+          <View style={[screenUi.card, { borderRadius: 14, borderLeftWidth: 4, borderLeftColor: item.type === 'income' ? colors.profit : colors.loss }]}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Text style={{ fontSize: 15, fontWeight: '700', color: '#111827' }}>
+              <Text style={{ fontSize: 15, fontWeight: '700', color: colors.text }}>
                 {item.type === 'income' ? '💵 Доход' : '💸 Расход'}
               </Text>
               <Text
                 style={{
                   fontSize: 17,
                   fontWeight: '800',
-                  color: item.type === 'income' ? '#16a34a' : '#ef4444',
+                  color: item.type === 'income' ? colors.profit : colors.loss,
                 }}
               >
                 {item.type === 'income' ? '+' : '−'}
                 {item.amount} ₽
               </Text>
             </View>
-            <Text style={{ fontSize: 13, color: '#4b5563', marginTop: 6 }}>
+            <Text style={{ fontSize: 13, color: colors.textMuted, marginTop: 6 }}>
               👤 {item.driver_name}
               {item.driver_car_number ? ` · ${item.driver_car_number}` : ''}
             </Text>
-            <Text style={{ fontSize: 12, color: '#6b7280', marginTop: 4 }}>
+            <Text style={{ fontSize: 12, color: colors.textMuted, marginTop: 4 }}>
               📅 {formatDateTimeRu(item.created_at)}
             </Text>
             {item.order_id ? (
-              <Text style={{ fontSize: 13, color: '#4b5563', marginTop: 4 }}>📦 Заказ #{item.order_id}</Text>
+              <Text style={{ fontSize: 13, color: colors.textMuted, marginTop: 4 }}>📦 Заказ #{item.order_id}</Text>
             ) : null}
             {item.description ? (
-              <Text style={{ fontSize: 13, color: '#6b7280', marginTop: 4, fontStyle: 'italic' }}>
+              <Text style={{ fontSize: 13, color: colors.textMuted, marginTop: 4, fontStyle: 'italic' }}>
                 {item.description}
               </Text>
             ) : null}

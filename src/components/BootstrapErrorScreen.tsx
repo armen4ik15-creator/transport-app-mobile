@@ -1,5 +1,6 @@
 import { StyleSheet, Text, View } from 'react-native';
 import { PrimaryButton } from './ui';
+import { colors } from '../theme';
 
 interface BootstrapErrorScreenProps {
   message: string;
@@ -45,7 +46,7 @@ const styles = StyleSheet.create({
   },
   hint: {
     fontSize: 13,
-    color: '#6b7280',
+    color: colors.textMuted,
     marginBottom: 20,
     lineHeight: 18,
   },

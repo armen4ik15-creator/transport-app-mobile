@@ -12,6 +12,7 @@ import type { Driver, FuelTransactionRecord } from '../types';
 import { screenUi } from '../styles/screenUi';
 import { formatFuelSyncLabel } from '../utils/fuelSyncLabel';
 import { withFallback } from '../utils/safeRequest';
+import { colors } from '../theme';
 
 interface FuelRefillsScreenProps {
   navigation: { goBack: () => void };
@@ -102,8 +103,8 @@ export function FuelRefillsScreen({ navigation }: FuelRefillsScreenProps) {
                       paddingHorizontal: 12,
                       paddingVertical: 8,
                       borderRadius: 20,
-                      backgroundColor: driverId == null ? '#2563eb' : '#e5e7eb',
-                      color: driverId == null ? '#fff' : '#111827',
+                      backgroundColor: driverId == null ? colors.primary : colors.border,
+                      color: driverId == null ? '#fff' : colors.text,
                     }}
                   >
                     Все
@@ -116,8 +117,8 @@ export function FuelRefillsScreen({ navigation }: FuelRefillsScreenProps) {
                         paddingHorizontal: 12,
                         paddingVertical: 8,
                         borderRadius: 20,
-                        backgroundColor: driverId === driver.id ? '#2563eb' : '#e5e7eb',
-                        color: driverId === driver.id ? '#fff' : '#111827',
+                        backgroundColor: driverId === driver.id ? colors.primary : colors.border,
+                        color: driverId === driver.id ? '#fff' : colors.text,
                       }}
                     >
                       {driver.full_name || driver.car_number || `#${driver.id}`}
@@ -128,7 +129,7 @@ export function FuelRefillsScreen({ navigation }: FuelRefillsScreenProps) {
             ) : null}
             <View style={[screenUi.card, { marginBottom: 12 }]}>
               <Text style={screenUi.sumLabel}>Итого за период</Text>
-              <Text style={[screenUi.sumValue, { color: '#ef4444' }]}>{Math.round(totalAmount)} ₽</Text>
+              <Text style={[screenUi.sumValue, { color: colors.loss }]}>{Math.round(totalAmount)} ₽</Text>
               <Text style={{ color: '#64748b', marginTop: 4 }}>{items.length} заправок</Text>
             </View>
           </View>
@@ -142,19 +143,19 @@ export function FuelRefillsScreen({ navigation }: FuelRefillsScreenProps) {
         }
         renderItem={({ item }) => (
           <View style={[screenUi.card, { marginBottom: 10 }]}>
-            <Text style={{ fontWeight: '700', color: '#111827' }}>{item.station_name || 'АЗС'}</Text>
+            <Text style={{ fontWeight: '700', color: colors.text }}>{item.station_name || 'АЗС'}</Text>
             <Text style={{ color: '#64748b', marginTop: 4 }}>
               {item.transaction_at} · карта {item.card_number}
             </Text>
             <Text style={{ marginTop: 6 }}>
               {item.driver_name || 'Водитель'} · {item.car_number || '—'}
             </Text>
-            <Text style={{ marginTop: 8, fontWeight: '700', color: '#ef4444' }}>
+            <Text style={{ marginTop: 8, fontWeight: '700', color: colors.loss }}>
               {Math.round(item.amount)} ₽
               {item.liters != null ? ` · ${item.liters} л` : ''}
             </Text>
             {item.expense_id ? (
-              <Text style={{ color: '#16a34a', marginTop: 4, fontSize: 12 }}>
+              <Text style={{ color: colors.profit, marginTop: 4, fontSize: 12 }}>
                 ✓ Учтено в расходах #{item.expense_id}
               </Text>
             ) : null}

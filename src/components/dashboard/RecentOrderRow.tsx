@@ -15,8 +15,8 @@ export function RecentOrderRow({ order, onPress }: RecentOrderRowProps) {
     <Pressable
       onPress={onPress}
       style={{
-        backgroundColor: colors.surfaceElevated,
-        borderRadius: radii.md,
+        backgroundColor: colors.surface,
+        borderRadius: radii.lg,
         padding: spacing.md,
         marginBottom: spacing.sm,
         borderWidth: 1,

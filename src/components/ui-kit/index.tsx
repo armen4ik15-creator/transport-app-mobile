@@ -238,43 +238,44 @@ export function PrimaryBanner({
   icon,
   title,
   subtitle,
+  tone = 'info',
 }: {
   icon: string;
   title: string;
   subtitle?: string;
+  tone?: 'info' | 'success' | 'warning';
 }) {
+  const borderColor =
+    tone === 'success' ? colors.profit : tone === 'warning' ? colors.warning : colors.primary;
+  const bgColor =
+    tone === 'success' ? colors.profitMuted : tone === 'warning' ? colors.warningMuted : colors.primaryMuted;
+
   return (
     <View
       style={{
-        backgroundColor: colors.primary,
+        marginHorizontal: spacing.md,
+        marginBottom: spacing.md,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: spacing.sm,
+        backgroundColor: bgColor,
+        borderWidth: 1,
+        borderColor: `${borderColor}4D`,
+        borderRadius: radii.lg,
         paddingHorizontal: spacing.md,
-        paddingTop: spacing.md,
-        paddingBottom: spacing.lg,
+        paddingVertical: 12,
       }}
     >
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
-        <View
-          style={{
-            width: 44,
-            height: 44,
-            borderRadius: radii.lg,
-            backgroundColor: 'rgba(255,255,255,0.15)',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <Text style={{ fontSize: 24 }}>{icon}</Text>
-        </View>
-        <View style={{ flex: 1, minWidth: 0 }}>
-          <Text style={{ fontSize: 18, fontWeight: '700', color: colors.text }} numberOfLines={1}>
-            {title}
+      <Text style={{ fontSize: 20 }}>{icon}</Text>
+      <View style={{ flex: 1, minWidth: 0 }}>
+        <Text style={{ fontSize: 14, fontWeight: '600', color: colors.text }} numberOfLines={1}>
+          {title}
+        </Text>
+        {subtitle ? (
+          <Text style={{ fontSize: 12, color: colors.textMuted, marginTop: 2 }} numberOfLines={2}>
+            {subtitle}
           </Text>
-          {subtitle ? (
-            <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.8)', marginTop: 2 }} numberOfLines={1}>
-              {subtitle}
-            </Text>
-          ) : null}
-        </View>
+        ) : null}
       </View>
     </View>
   );

@@ -2,6 +2,7 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { HubMenuScreen } from '../components/HubMenuScreen';
 import type { RootStackParamList } from '../navigation/types';
+import { colors } from '../theme';
 
 export function DriverFinancesHubScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
@@ -25,14 +26,14 @@ export function DriverFinancesHubScreen() {
               icon: '🧮',
               title: 'Мой заработок',
               subtitle: 'Ставка и начисления по рейсам',
-              accentColor: '#16a34a',
+              accentColor: colors.profit,
               onPress: () => navigation.navigate('Earnings'),
             },
             {
               icon: '💸',
               title: 'Мои расходы',
               subtitle: 'Топливо, ремонт, прочее',
-              accentColor: '#ef4444',
+              accentColor: colors.loss,
               onPress: () => navigation.navigate('Expenses'),
             },
           ],

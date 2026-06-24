@@ -154,9 +154,10 @@ const styles = StyleSheet.create({
   primaryBtn: {
     backgroundColor: colors.primary,
     borderRadius: radii.md,
-    paddingVertical: 14,
+    paddingVertical: 16,
     alignItems: 'center',
     marginTop: 8,
+    width: '100%',
   },
   primaryBtnPressed: { opacity: 0.9 },
   primaryBtnDisabled: { opacity: 0.5 },

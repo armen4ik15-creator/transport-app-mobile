@@ -21,6 +21,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation/types';
 import { screenUi } from '../styles/screenUi';
 import type { NotificationItem } from '../types';
+import { colors } from '../theme';
 
 export function NotificationsScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
@@ -161,12 +162,12 @@ export function NotificationsScreen() {
             <View style={screenUi.summaryBar}>
               <View style={screenUi.sumItem}>
                 <Text style={screenUi.sumLabel}>Всего</Text>
-                <Text style={[screenUi.sumValue, { color: '#2563eb' }]}>{rows.length}</Text>
+                <Text style={[screenUi.sumValue, { color: colors.primary }]}>{rows.length}</Text>
               </View>
               <View style={screenUi.sumDivider} />
               <View style={screenUi.sumItem}>
                 <Text style={screenUi.sumLabel}>Непрочитано</Text>
-                <Text style={[screenUi.sumValue, { color: '#ef4444' }]}>{unreadCount}</Text>
+                <Text style={[screenUi.sumValue, { color: colors.loss }]}>{unreadCount}</Text>
               </View>
             </View>
             <ErrorText message={error} />
@@ -176,18 +177,18 @@ export function NotificationsScreen() {
           <Pressable
             style={[
               screenUi.card,
-              !item.read && { borderColor: '#2563eb', backgroundColor: '#eff6ff' },
+              !item.read && { borderColor: colors.primary, backgroundColor: '#eff6ff' },
             ]}
           >
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Text style={{ fontSize: 13, fontWeight: '600', color: item.read ? '#6b7280' : '#2563eb' }}>
+              <Text style={{ fontSize: 13, fontWeight: '600', color: item.read ? colors.textMuted : colors.primary }}>
                 {item.read ? '✅ Прочитано' : '🔴 Новое'}
               </Text>
-              <Text style={{ fontSize: 11, color: '#9ca3af' }}>{item.created_at}</Text>
+              <Text style={{ fontSize: 11, color: colors.textMuted }}>{item.created_at}</Text>
             </View>
-            <Text style={{ fontSize: 15, color: '#111827', marginTop: 6 }}>{item.message}</Text>
+            <Text style={{ fontSize: 15, color: colors.text, marginTop: 6 }}>{item.message}</Text>
             {item.user_email ? (
-              <Text style={{ fontSize: 12, color: '#6b7280', marginTop: 4 }}>👤 {item.user_email}</Text>
+              <Text style={{ fontSize: 12, color: colors.textMuted, marginTop: 4 }}>👤 {item.user_email}</Text>
             ) : null}
             <View style={{ flexDirection: 'row', gap: 12, marginTop: 8 }}>
               {isAdmin &&
@@ -198,7 +199,7 @@ export function NotificationsScreen() {
                     onPress={() => onApproveRegistration(item.ref_id!, item.kind)}
                     disabled={actingRefId === item.ref_id}
                   >
-                    <Text style={{ color: '#16a34a', fontSize: 13 }}>
+                    <Text style={{ color: colors.profit, fontSize: 13 }}>
                       {actingRefId === item.ref_id ? '…' : '✓ Одобрить'}
                     </Text>
                   </Pressable>
@@ -206,22 +207,22 @@ export function NotificationsScreen() {
                     onPress={() => onRejectRegistration(item.ref_id!, item.kind)}
                     disabled={actingRefId === item.ref_id}
                   >
-                    <Text style={{ color: '#ef4444', fontSize: 13 }}>
+                    <Text style={{ color: colors.loss, fontSize: 13 }}>
                       {actingRefId === item.ref_id ? '…' : '✕ Отклонить'}
                     </Text>
                   </Pressable>
                   <Pressable onPress={() => navigation.navigate('AdminRegistrationRequests')}>
-                    <Text style={{ color: '#2563eb', fontSize: 13 }}>Все заявки</Text>
+                    <Text style={{ color: colors.primary, fontSize: 13 }}>Все заявки</Text>
                   </Pressable>
                 </>
               ) : null}
               {!item.read ? (
                 <Pressable onPress={() => onMarkRead(item.id)}>
-                  <Text style={{ color: '#2563eb', fontSize: 13 }}>✓ Прочитано</Text>
+                  <Text style={{ color: colors.primary, fontSize: 13 }}>✓ Прочитано</Text>
                 </Pressable>
               ) : null}
               <Pressable onPress={() => onDelete(item.id)}>
-                <Text style={{ color: '#ef4444', fontSize: 13 }}>🗑 Удалить</Text>
+                <Text style={{ color: colors.loss, fontSize: 13 }}>🗑 Удалить</Text>
               </Pressable>
             </View>
           </Pressable>

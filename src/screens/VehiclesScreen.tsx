@@ -11,6 +11,7 @@ import { createVehicle, deleteVehicle, listVehicles } from '../api/vehicles';
 import { useAuth } from '../auth/AuthContext';
 import { screenUi } from '../styles/screenUi';
 import type { Vehicle } from '../types';
+import { colors } from '../theme';
 
 export function VehiclesScreen() {
   const { user } = useAuth();
@@ -126,15 +127,15 @@ export function VehiclesScreen() {
           <Pressable style={screenUi.card} onLongPress={() => isAdmin && onDelete(item)}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
               <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 16, fontWeight: '600', color: '#111827' }}>{item.plate_number}</Text>
-                <Text style={{ fontSize: 13, color: '#6b7280', marginTop: 2 }}>
+                <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text }}>{item.plate_number}</Text>
+                <Text style={{ fontSize: 13, color: colors.textMuted, marginTop: 2 }}>
                   {item.model ?? 'Модель не указана'}
                   {item.capacity != null ? ` · ⚖️ ${item.capacity}` : ''}
                 </Text>
               </View>
               {isAdmin ? (
                 <Pressable onPress={() => onDelete(item)} hitSlop={8}>
-                  <Text style={{ color: '#ef4444', fontSize: 16 }}>🗑</Text>
+                  <Text style={{ color: colors.loss, fontSize: 16 }}>🗑</Text>
                 </Pressable>
               ) : null}
             </View>

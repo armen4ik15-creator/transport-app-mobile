@@ -9,6 +9,7 @@ import { DriverOrdersScreen } from '../screens/DriverOrdersScreen';
 import { DriverFinancesHubScreen } from '../screens/DriverFinancesHubScreen';
 import { DriverMoreScreen } from '../screens/DriverMoreScreen';
 import type { DriverTabParamList, RootStackParamList } from './types';
+import { colors } from '../theme';
 
 const DRIVER_TABS: BottomTabItem<keyof DriverTabParamList>[] = [
   { id: 'DriverHome', label: 'Главная', emoji: '🏠' },
@@ -35,7 +36,7 @@ function DriverMainLayout({ activeTab, children }: DriverMainLayoutProps) {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#121212' }} edges={['top']}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }} edges={['top']}>
       <View style={{ flex: 1 }}>{children}</View>
       <CustomBottomTabBar
         items={DRIVER_TABS}

@@ -15,6 +15,7 @@ import { invalidateCache } from '../utils/apiCache';
 import { screenUi } from '../styles/screenUi';
 import type { Contractor, Driver, Material, OrderTemplate } from '../types';
 import type { RootStackParamList } from '../navigation/RootNavigator';
+import { colors } from '../theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'OrderCreate'>;
 
@@ -34,22 +35,22 @@ function ListStatusMessage({
   if (state === 'loading') {
     return (
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 4 }}>
-        <ActivityIndicator size="small" color="#2563eb" />
-        <Text style={{ fontSize: 13, color: '#6b7280' }}>Загрузка…</Text>
+        <ActivityIndicator size="small" color={colors.primary} />
+        <Text style={{ fontSize: 13, color: colors.textMuted }}>Загрузка…</Text>
       </View>
     );
   }
   if (state === 'error') {
     return (
       <View style={{ gap: 8 }}>
-        <Text style={{ fontSize: 13, color: '#dc2626' }}>
+        <Text style={{ fontSize: 13, color: colors.loss }}>
           {error ?? 'Не удалось загрузить данные с сервера'}
         </Text>
         <MenuButton label="🔄 Повторить загрузку" onPress={onRetry} variant="secondary" />
       </View>
     );
   }
-  return <Text style={{ fontSize: 13, color: '#6b7280' }}>{emptyMessage}</Text>;
+  return <Text style={{ fontSize: 13, color: colors.textMuted }}>{emptyMessage}</Text>;
 }
 
 export function OrderCreateScreen({ navigation, route }: Props) {
@@ -403,11 +404,11 @@ export function OrderCreateScreen({ navigation, route }: Props) {
                 onRetry={reloadDrivers}
               />
             ) : activeDrivers.length === 0 ? (
-              <Text style={{ fontSize: 13, color: '#6b7280' }}>
+              <Text style={{ fontSize: 13, color: colors.textMuted }}>
                 Нет активных водителей — добавьте или активируйте водителей в разделе «Водители»
               </Text>
             ) : (
-              <Text style={{ fontSize: 13, color: '#16a34a' }}>
+              <Text style={{ fontSize: 13, color: colors.profit }}>
                 Будет создано {activeDrivers.length}{' '}
                 {activeDrivers.length === 1 ? 'заказ' : activeDrivers.length < 5 ? 'заказа' : 'заказов'} для{' '}
                 {activeDrivers.length}{' '}
@@ -424,7 +425,7 @@ export function OrderCreateScreen({ navigation, route }: Props) {
               onRetry={reloadDrivers}
             />
           ) : drivers.length === 0 ? (
-            <Text style={{ fontSize: 13, color: '#6b7280' }}>
+            <Text style={{ fontSize: 13, color: colors.textMuted }}>
               Нет водителей — создайте в разделе «Водители»
             </Text>
           ) : (
@@ -454,7 +455,7 @@ export function OrderCreateScreen({ navigation, route }: Props) {
               onRetry={reloadContractors}
             />
           ) : contractors.length === 0 ? (
-            <Text style={{ fontSize: 13, color: '#6b7280' }}>
+            <Text style={{ fontSize: 13, color: colors.textMuted }}>
               Нет контрагентов — создайте в разделе «Контрагенты»
             </Text>
           ) : (
@@ -483,7 +484,7 @@ export function OrderCreateScreen({ navigation, route }: Props) {
           {materialsState === 'loading' ? (
             <ListStatusMessage state="loading" error={null} emptyMessage="" onRetry={() => void load({ silent: true })} />
           ) : materials.length === 0 ? (
-            <Text style={{ fontSize: 13, color: '#9ca3af' }}>
+            <Text style={{ fontSize: 13, color: colors.textMuted }}>
               Справочник пуст. Добавьте материалы в разделе «Ещё → Материалы».
             </Text>
           ) : (
@@ -498,12 +499,12 @@ export function OrderCreateScreen({ navigation, route }: Props) {
                       setUnit(m.unit);
                     }}
                     style={{
-                      backgroundColor: active ? '#2563eb' : '#374151',
+                      backgroundColor: active ? colors.primary : colors.textMuted,
                       paddingHorizontal: 12,
                       paddingVertical: 10,
                       borderRadius: 20,
                       borderWidth: 1,
-                      borderColor: active ? '#2563eb' : '#4b5563',
+                      borderColor: active ? colors.primary : colors.textMuted,
                     }}
                   >
                     <Text style={{ color: '#ffffff', fontSize: 14, fontWeight: active ? '700' : '500' }}>

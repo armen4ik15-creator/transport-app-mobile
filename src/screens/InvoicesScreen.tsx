@@ -12,6 +12,7 @@ import { listOrders } from '../api/orders';
 import { screenUi } from '../styles/screenUi';
 import { withFallback } from '../utils/safeRequest';
 import type { Invoice, Order } from '../types';
+import { colors } from '../theme';
 
 export function InvoicesScreen() {
   const [rows, setRows] = useState<Invoice[]>([]);
@@ -134,22 +135,22 @@ export function InvoicesScreen() {
         }
         renderItem={({ item }) => (
           <Pressable style={screenUi.card} onLongPress={() => onDelete(item.id)}>
-            <Text style={{ fontSize: 16, fontWeight: '600', color: '#111827' }}>
+            <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text }}>
               #{item.id} · {item.number}
             </Text>
-            <Text style={{ fontSize: 13, color: '#6b7280', marginTop: 2 }}>
+            <Text style={{ fontSize: 13, color: colors.textMuted, marginTop: 2 }}>
               Заказ #{item.order_id} · {item.date}
             </Text>
             {item.amount != null ? (
-              <Text style={{ fontSize: 15, fontWeight: '700', color: '#2563eb', marginTop: 4 }}>
+              <Text style={{ fontSize: 15, fontWeight: '700', color: colors.primary, marginTop: 4 }}>
                 💰 {item.amount} ₽
               </Text>
             ) : null}
             {item.contractor_name ? (
-              <Text style={{ fontSize: 13, color: '#4b5563', marginTop: 2 }}>🏢 {item.contractor_name}</Text>
+              <Text style={{ fontSize: 13, color: colors.textMuted, marginTop: 2 }}>🏢 {item.contractor_name}</Text>
             ) : null}
             <Pressable onPress={() => onDelete(item.id)} style={{ marginTop: 8 }}>
-              <Text style={{ color: '#ef4444', fontSize: 13 }}>🗑 Удалить</Text>
+              <Text style={{ color: colors.loss, fontSize: 13 }}>🗑 Удалить</Text>
             </Pressable>
           </Pressable>
         )}

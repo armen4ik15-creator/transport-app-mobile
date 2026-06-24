@@ -5,12 +5,18 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RecentOrderRow } from '../components/dashboard/RecentOrderRow';
 import { StatSummaryCard } from '../components/dashboard/StatSummaryCard';
 import { QuickAccessGrid, type QuickAccessItem } from '../components/QuickAccessGrid';
-import { SectionTitle } from '../components/ui-kit';
 import { ErrorText } from '../components/ui';
+import {
+  V0DashboardHeader,
+  V0OptiBanner,
+  V0PnLCard,
+  V0SectionTitle,
+} from '../components/v0';
 import { useAuth } from '../auth/AuthContext';
 import type { RootStackParamList } from '../navigation/types';
 import type { Order } from '../types';
 import { getDashboardStats } from '../api/dashboard';
+import { getReportDaily } from '../api/reports';
 import { listDrivers } from '../api/drivers';
 import { listOrders } from '../api/orders';
 import { getContractorDebtSummary } from '../api/contractorPayments';
@@ -21,8 +27,19 @@ import { screenUi } from '../styles/screenUi';
 import { colors, spacing } from '../theme';
 
 const DASHBOARD_CACHE_KEY = 'dashboard:stats';
+const REPORT_CACHE_KEY = 'dashboard:report-daily';
 const DASHBOARD_TTL_MS = 45_000;
 const REQUEST_TIMEOUT_MS = 12_000;
+
+interface FinanceSlice {
+  revenue: number;
+  costs: number;
+  profit: number;
+}
+
+function emptyFinance(): FinanceSlice {
+  return { revenue: 0, costs: 0, profit: 0 };
+}
 
 function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
   return new Promise((resolve, reject) => {
@@ -62,6 +79,25 @@ async function loadDashboardStats() {
   }
 }
 
+function monthStartIso() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`;
+}
+
+function todayIso() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function initialsFromName(name?: string | null) {
+  if (!name?.trim()) return 'RP';
+  return name
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((p) => p[0]?.toUpperCase() ?? '')
+    .join('');
+}
+
 export function AdminHomeScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { user, signOut, clearNetworkIssue } = useAuth();
@@ -70,6 +106,8 @@ export function AdminHomeScreen() {
   const [totalDebt, setTotalDebt] = useState(0);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
   const [recentOrders, setRecentOrders] = useState<Order[]>([]);
+  const [todayFinance, setTodayFinance] = useState<FinanceSlice>(emptyFinance);
+  const [monthFinance, setMonthFinance] = useState<FinanceSlice>(emptyFinance);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -86,8 +124,28 @@ export function AdminHomeScreen() {
       try {
         setError(null);
         if (force) invalidateCache('dashboard:');
-        const stats = await fetchCached(DASHBOARD_CACHE_KEY, DASHBOARD_TTL_MS, loadDashboardStats);
+        const from = monthStartIso();
+        const to = todayIso();
+        const [stats, report] = await Promise.all([
+          fetchCached(DASHBOARD_CACHE_KEY, DASHBOARD_TTL_MS, loadDashboardStats),
+          fetchCached(REPORT_CACHE_KEY, DASHBOARD_TTL_MS, () =>
+            withTimeout(getReportDaily({ from, to }), REQUEST_TIMEOUT_MS)
+          ).catch(() => null),
+        ]);
         applyStats(stats);
+        if (report) {
+          const todayRow = report.days.find((d) => d.date === to);
+          setTodayFinance({
+            revenue: todayRow?.revenue ?? 0,
+            costs: todayRow?.costs ?? 0,
+            profit: todayRow?.profit ?? 0,
+          });
+          setMonthFinance({
+            revenue: report.totals.revenue,
+            costs: report.totals.costs,
+            profit: report.totals.profit,
+          });
+        }
         clearNetworkIssue();
       } catch (e) {
         setError(apiErrorMessage(e, 'Не удалось загрузить дашборд'));
@@ -135,26 +193,14 @@ export function AdminHomeScreen() {
       contentContainerStyle={[screenUi.content, { paddingBottom: 24 }]}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
     >
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: spacing.md }}>
-        <View style={{ flex: 1 }}>
-          <Text style={{ fontSize: 13, color: colors.textMuted }}>Главная</Text>
-          <Text style={{ fontSize: 22, fontWeight: '700', color: colors.text, marginTop: 2 }}>{companyTitle}</Text>
-          <Text style={{ fontSize: 12, color: colors.textMuted, marginTop: 4 }}>{user?.email ?? ''}</Text>
-        </View>
-        <Pressable
-          onPress={onLogout}
-          style={{
-            backgroundColor: colors.surfaceElevated,
-            borderRadius: 10,
-            paddingHorizontal: 12,
-            paddingVertical: 8,
-            borderWidth: 1,
-            borderColor: colors.border,
-          }}
-        >
-          <Text style={{ color: colors.loss, fontWeight: '600', fontSize: 13 }}>Выйти</Text>
-        </Pressable>
-      </View>
+      <V0DashboardHeader
+        title="Дашборд"
+        subtitle={`${companyTitle} · ${user?.email ?? ''}`}
+        badge={unreadNotifications}
+        initials={initialsFromName(user?.full_name ?? user?.email)}
+        onNotifications={() => navigation.navigate('Notifications')}
+        onLogout={onLogout}
+      />
 
       {refreshing ? (
         <View style={{ alignItems: 'center', marginBottom: spacing.sm }}>
@@ -164,7 +210,10 @@ export function AdminHomeScreen() {
 
       <ErrorText message={error} />
 
-      <Text style={{ fontSize: 16, fontWeight: '700', color: colors.text, marginBottom: spacing.sm }}>Сводка</Text>
+      <V0OptiBanner />
+      <V0PnLCard today={todayFinance} month={monthFinance} />
+
+      <V0SectionTitle>Сводка</V0SectionTitle>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginBottom: spacing.lg }}>
         <StatSummaryCard
           label="Активные заказы"
@@ -200,20 +249,22 @@ export function AdminHomeScreen() {
         />
       </View>
 
-      <SectionTitle>Быстрый доступ</SectionTitle>
+      <V0SectionTitle>Быстрый доступ</V0SectionTitle>
       <QuickAccessGrid items={quickItems} />
 
-      <SectionTitle
+      <V0SectionTitle
         action={
           <Pressable onPress={() => navigation.navigate('Orders')}>
-            <Text style={{ fontSize: 12, fontWeight: '600', color: colors.primary }}>Все →</Text>
+            <Text style={{ fontSize: 12, fontWeight: '600', color: colors.primaryLight }}>Все →</Text>
           </Pressable>
         }
       >
         Последние заказы
-      </SectionTitle>
+      </V0SectionTitle>
       {recentOrders.length === 0 ? (
-        <Text style={screenUi.emptyText}>{error ? 'Данные недоступны. Потяните вниз для обновления.' : 'Нет заказов'}</Text>
+        <Text style={screenUi.emptyText}>
+          {error ? 'Данные недоступны. Потяните вниз для обновления.' : 'Нет заказов'}
+        </Text>
       ) : (
         recentOrders.map((order) => (
           <RecentOrderRow

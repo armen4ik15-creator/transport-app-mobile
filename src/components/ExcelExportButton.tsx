@@ -1,4 +1,5 @@
 import { ActivityIndicator, Pressable, Text } from 'react-native';
+import { colors } from '../theme';
 
 interface ExcelExportButtonProps {
   label?: string;
@@ -16,7 +17,7 @@ export function ExcelExportButton({
       onPress={onPress}
       disabled={loading}
       style={{
-        backgroundColor: '#16a34a',
+        backgroundColor: colors.profit,
         borderRadius: 10,
         paddingVertical: 14,
         alignItems: 'center',
