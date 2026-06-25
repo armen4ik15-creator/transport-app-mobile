@@ -87,9 +87,15 @@ export function RegisterScreen({ navigation }: Props) {
         license_expiry: licenseExpiry.trim() || undefined,
         medical_check_expiry: medicalExpiry.trim() || undefined,
       });
-      Alert.alert('Заявка отправлена', result.message, [
-        { text: 'Ко входу', onPress: () => navigation.navigate('Login') },
-      ]);
+      if ('pending' in result && result.pending) {
+        Alert.alert('Заявка отправлена', result.message, [
+          { text: 'Ко входу', onPress: () => navigation.navigate('Login') },
+        ]);
+      } else {
+        Alert.alert('Готово', 'Аккаунт создан. Войдите с вашим email и паролем.', [
+          { text: 'Ко входу', onPress: () => navigation.navigate('Login') },
+        ]);
+      }
     } catch (e) {
       const msg = apiErrorMessage(e, 'Не удалось зарегистрироваться');
       setError(msg);

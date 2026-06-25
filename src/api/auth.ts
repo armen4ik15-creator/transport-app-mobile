@@ -1,5 +1,21 @@
-import { api } from './client';
+import axios from 'axios';
+import { api, getApiBaseUrl, resetAuthTokenCache } from './client';
 import type { Driver, User } from '../types';
+
+const JSON_HEADERS = {
+  Accept: 'application/json',
+  'Content-Type': 'application/json',
+} as const;
+
+async function postPublicAuth<T>(path: string, body: unknown): Promise<T> {
+  resetAuthTokenCache();
+  const baseURL = await getApiBaseUrl();
+  const { data } = await axios.post<T>(`${baseURL}${path}`, body, {
+    timeout: 20000,
+    headers: JSON_HEADERS,
+  });
+  return data;
+}
 
 export interface AuthResponse {
   token: string;
@@ -28,8 +44,7 @@ export async function getSecurityConfig(): Promise<SecurityConfig> {
 }
 
 export async function login(email: string, password: string): Promise<AuthResponse> {
-  const { data } = await api.post<AuthResponse>('/auth/login', { email, password });
-  return data;
+  return postPublicAuth<AuthResponse>('/auth/login', { email, password });
 }
 
 export async function registerDriver(payload: {
@@ -44,8 +59,7 @@ export async function registerDriver(payload: {
   medical_check_expiry?: string;
   invite_code?: string;
 }): Promise<RegisterDriverResult> {
-  const { data } = await api.post<RegisterDriverResult>('/auth/register', { ...payload, role: 'driver' });
-  return data;
+  return postPublicAuth<RegisterDriverResult>('/auth/register', { ...payload, role: 'driver' });
 }
 
 export async function registerAdmin(payload: {
@@ -55,11 +69,10 @@ export async function registerAdmin(payload: {
   full_name: string;
   phone?: string;
 }): Promise<RegistrationPendingResponse> {
-  const { data } = await api.post<RegistrationPendingResponse>('/auth/register', {
+  return postPublicAuth<RegistrationPendingResponse>('/auth/register', {
     ...payload,
     role: 'admin',
   });
-  return data;
 }
 
 export async function forgotPassword(payload: {
@@ -67,8 +80,7 @@ export async function forgotPassword(payload: {
   reset_code?: string;
   new_password: string;
 }): Promise<{ ok: boolean; message: string }> {
-  const { data } = await api.post<{ ok: boolean; message: string }>('/auth/forgot-password', payload);
-  return data;
+  return postPublicAuth<{ ok: boolean; message: string }>('/auth/forgot-password', payload);
 }
 
 export async function changePassword(payload: {

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Alert, Pressable, ScrollView, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { HubListRow, PrimaryBanner, SectionTitle } from '../components/ui-kit';
+import { ListRow, ProfileCard, SectionLabel } from '../components/kit';
 import { useAuth } from '../auth/AuthContext';
 import type { RootStackParamList } from '../navigation/types';
 import { listNotifications } from '../api/notifications';
@@ -47,177 +47,67 @@ export function AdminMoreScreen() {
   const companyName = user?.full_name?.trim() || 'ReestrPro';
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: colors.bg }} contentContainerStyle={{ paddingBottom: 32 }}>
-      <PrimaryBanner
-        icon="🏢"
-        title={companyName}
-        subtitle={`${user?.email ?? ''} · Администратор`}
+    <ScrollView style={{ flex: 1, backgroundColor: colors.bg }} contentContainerStyle={{ padding: spacing.md, paddingBottom: 32 }}>
+      <ProfileCard title={companyName} subtitle={`${user?.email ?? ''} · Администратор`} icon="home" />
+
+      <SectionLabel>Операции</SectionLabel>
+      <ListRow icon="users" title="Водители" subtitle="Автопарк и контакты" accent={colors.primary} onPress={() => navigation.navigate('Drivers')} />
+      <ListRow icon="file-text" title="Реестр рейсов" subtitle="ТТН и выгрузка Excel" accent={colors.profit} onPress={() => navigation.navigate('RegistryReport')} />
+      <ListRow icon="briefcase" title="Финансы" subtitle="Отчёты и зарплаты" accent={colors.warning} onPress={() => navigation.navigate('FinancesHub')} />
+      <ListRow
+        icon="clipboard"
+        title="Заявки на регистрацию"
+        subtitle="Водители и учредители"
+        accent={colors.warning}
+        trailing={pendingRegistrationRequests > 0 ? <Text style={{ color: colors.loss, fontWeight: '700' }}>{pendingRegistrationRequests}</Text> : undefined}
+        onPress={() => navigation.navigate('AdminRegistrationRequests')}
+      />
+      <ListRow
+        icon="bell"
+        title="Уведомления"
+        subtitle="События и долги"
+        accent={colors.accent}
+        trailing={unreadNotifications > 0 ? <Text style={{ color: colors.loss, fontWeight: '700' }}>{unreadNotifications}</Text> : undefined}
+        onPress={() => navigation.navigate('Notifications')}
       />
 
-      <View style={{ paddingHorizontal: spacing.md, paddingTop: spacing.md, gap: spacing.lg }}>
-        <View>
-          <SectionTitle>Операции</SectionTitle>
-          <View style={hubCardStyle}>
-            <HubListRow
-              icon="👤"
-              title="Водители"
-              subtitle="Автопарк и контакты"
-              tone="info"
-              onPress={() => navigation.navigate('Drivers')}
-            />
-            <HubListRow
-              icon="📑"
-              title="Реестр рейсов"
-              subtitle="ТТН и выгрузка Excel"
-              tone="positive"
-              onPress={() => navigation.navigate('RegistryReport')}
-            />
-            <HubListRow
-              icon="💼"
-              title="Финансы"
-              subtitle="Отчёты и зарплаты"
-              tone="warning"
-              onPress={() => navigation.navigate('FinancesHub')}
-            />
-            <HubListRow
-              icon="📋"
-              title="Заявки на регистрацию"
-              subtitle="Водители и учредители"
-              tone="warning"
-              badge={pendingRegistrationRequests}
-              onPress={() => navigation.navigate('AdminRegistrationRequests')}
-            />
-            <HubListRow
-              icon="🔔"
-              title="Уведомления"
-              subtitle="События и долги"
-              tone="danger"
-              badge={unreadNotifications}
-              onPress={() => navigation.navigate('Notifications')}
-            />
-          </View>
-        </View>
+      <SectionLabel>Справочники</SectionLabel>
+      <ListRow icon="truck" title="Автомобили" subtitle="Техника и госномера" accent={colors.primary} onPress={() => navigation.navigate('Vehicles')} />
+      <ListRow icon="box" title="Материалы" subtitle="Песок, щебень, ПГС" accent={colors.profit} onPress={() => navigation.navigate('Materials')} />
+      <ListRow icon="folder" title="Документы и ТТН" subtitle="Шаблоны и сканы" accent={colors.warning} onPress={() => navigation.navigate('Documents')} />
 
-        <View>
-          <SectionTitle>Справочники</SectionTitle>
-          <View style={hubCardStyle}>
-            <HubListRow
-              icon="🚛"
-              title="Автомобили"
-              subtitle="Техника и госномера"
-              tone="neutral"
-              onPress={() => navigation.navigate('Vehicles')}
-            />
-            <HubListRow
-              icon="🧱"
-              title="Материалы"
-              subtitle="Песок, щебень, ПГС"
-              tone="neutral"
-              onPress={() => navigation.navigate('Materials')}
-            />
-            <HubListRow
-              icon="📁"
-              title="Документы и ТТН"
-              subtitle="Шаблоны и сканы"
-              tone="neutral"
-              onPress={() => navigation.navigate('Documents')}
-            />
-          </View>
-        </View>
+      <SectionLabel>Заказы и логистика</SectionLabel>
+      <ListRow icon="copy" title="Шаблоны заказов" subtitle="Быстрое создание" accent={colors.primaryLight} onPress={() => navigation.navigate('OrderTemplates')} />
+      <ListRow icon="image" title="Фото ТТН" subtitle="Все накладные" accent={colors.primaryLight} onPress={() => navigation.navigate('AllPhotos')} />
+      <ListRow icon="bar-chart-2" title="Отчёты" subtitle="Сводка доходов" accent={colors.primaryLight} onPress={() => navigation.navigate('Reports')} />
 
-        <View>
-          <SectionTitle>Заказы и логистика</SectionTitle>
-          <View style={hubCardStyle}>
-            <HubListRow
-              icon="🗂"
-              title="Шаблоны заказов"
-              subtitle="Быстрое создание заказов"
-              tone="info"
-              onPress={() => navigation.navigate('OrderTemplates')}
-            />
-            <HubListRow
-              icon="🖼"
-              title="Фото ТТН"
-              subtitle="Все накладные по рейсам"
-              tone="info"
-              onPress={() => navigation.navigate('AllPhotos')}
-            />
-            <HubListRow
-              icon="📊"
-              title="Отчёты"
-              subtitle="Сводка доходов и рейсов"
-              tone="info"
-              onPress={() => navigation.navigate('Reports')}
-            />
-          </View>
-        </View>
+      <SectionLabel>Система</SectionLabel>
+      <ListRow icon="globe" title="Настройки сервера" subtitle="Адрес API" accent={colors.textMuted} onPress={() => navigation.navigate('ServerSetup', {})} />
+      <ListRow icon="download" title="Проверить обновление" subtitle={`Версия: ${updateLabel}`} accent={colors.primaryLight} onPress={() => void checkAndApplyUpdate(true)} />
+      <ListRow icon="save" title="Резервные копии" subtitle="БД и документы" accent={colors.profit} onPress={() => navigation.navigate('Backups')} />
+      <ListRow icon="activity" title="Журнал действий" subtitle="История изменений" accent={colors.textMuted} onPress={() => navigation.navigate('ActivityLog')} />
 
-        <View>
-          <SectionTitle>Система</SectionTitle>
-          <View style={hubCardStyle}>
-            <HubListRow
-              icon="🔄"
-              title="Проверить обновление"
-              subtitle={`Версия: ${updateLabel}`}
-              tone="info"
-              onPress={() => void checkAndApplyUpdate(true)}
-            />
-            <HubListRow
-              icon="🌐"
-              title="Настройки сервера"
-              subtitle="Адрес API"
-              tone="info"
-              onPress={() =>
-                navigation.navigate('ServerSetup', {
-                  reason: 'Измените адрес сервера при необходимости',
-                })
-              }
-            />
-            <HubListRow
-              icon="💾"
-              title="Резервные копии"
-              subtitle="БД, ТТН, документы — скачать архив"
-              tone="positive"
-              onPress={() => navigation.navigate('Backups')}
-            />
-            <HubListRow
-              icon="📝"
-              title="Журнал действий"
-              subtitle="История изменений"
-              tone="neutral"
-              onPress={() => navigation.navigate('ActivityLog')}
-            />
-          </View>
-        </View>
+      <Pressable
+        onPress={onLogout}
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 8,
+          marginTop: spacing.md,
+          borderRadius: radii.lg,
+          borderWidth: 1,
+          borderColor: `${colors.loss}66`,
+          backgroundColor: colors.lossMuted,
+          paddingVertical: 14,
+        }}
+      >
+        <Text style={{ fontSize: 15, fontWeight: '600', color: colors.loss }}>Выйти из аккаунта</Text>
+      </Pressable>
 
-        <Pressable
-          onPress={onLogout}
-          style={{
-            minHeight: 48,
-            borderRadius: radii.md,
-            backgroundColor: colors.surfaceElevated,
-            alignItems: 'center',
-            justifyContent: 'center',
-            flexDirection: 'row',
-            gap: 8,
-          }}
-        >
-          <Text style={{ fontSize: 14, fontWeight: '700', color: colors.loss }}>Выйти из аккаунта</Text>
-        </Pressable>
-
-        <Text style={{ textAlign: 'center', fontSize: 11, color: colors.textMuted }}>
-          ReestrPro · {updateLabel}
-        </Text>
-      </View>
+      <Text style={{ textAlign: 'center', fontSize: 11, color: colors.textMuted, marginTop: spacing.md }}>
+        ReestrPro · {updateLabel}
+      </Text>
     </ScrollView>
   );
 }
-
-const hubCardStyle = {
-  backgroundColor: colors.surface,
-  borderRadius: radii.lg,
-  borderWidth: 1,
-  borderColor: colors.border,
-  paddingHorizontal: spacing.sm,
-  paddingVertical: 4,
-};

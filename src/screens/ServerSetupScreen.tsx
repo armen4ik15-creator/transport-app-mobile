@@ -13,7 +13,6 @@ import {
   getServerUrl,
   setServerUrl,
   clearServerUrl,
-  SERVER_URL_KEY,
 } from '../api/client';
 import {
   getCurrentProductionHost,
@@ -83,7 +82,7 @@ export function ServerSetupScreen({ route, onConfigured }: ComponentProps) {
       }
       await setServerUrl(apiUrl);
       onConfigured?.();
-      Alert.alert('Подключение успешно', `Сервер сохранён в ${SERVER_URL_KEY}`);
+      Alert.alert('Подключение успешно', `Сервер сохранён:\n${apiUrl.replace(/\/api\/?$/, '')}`);
     } catch {
       await clearServerUrl();
       setError('Не удалось подключиться к серверу');

@@ -28,6 +28,22 @@ const NETWORK_FAILURE_THRESHOLD = 2;
 const NETWORK_FAILURE_WINDOW_MS = 45_000;
 const MAX_NETWORK_RETRIES = 2;
 
+const PUBLIC_AUTH_PATHS = [
+  '/auth/login',
+  '/auth/register',
+  '/auth/forgot-password',
+  '/auth/security-config',
+] as const;
+
+function isPublicAuthRequest(url: string | undefined): boolean {
+  if (!url) return false;
+  return PUBLIC_AUTH_PATHS.some((path) => url.includes(path));
+}
+
+export function resetAuthTokenCache(): void {
+  cachedToken = null;
+}
+
 export function primeApiClientCache(baseUrl: string, token: string | null): void {
   cachedBaseUrl = baseUrl;
   cachedToken = token;
@@ -238,18 +254,29 @@ export async function getServerHost(): Promise<string> {
 export const api = axios.create({
   baseURL: FALLBACK_API_URL,
   timeout: 20000,
+  headers: {
+    Accept: 'application/json',
+    'Content-Type': 'application/json',
+  },
 });
 
 api.interceptors.request.use(async (cfg) => {
   cfg.baseURL = await getApiBaseUrl();
-  let token = cachedToken;
-  if (token === undefined) {
-    token = await getStoredToken();
-    cachedToken = token;
-  }
-  if (token) {
+  const isPublicAuth = isPublicAuthRequest(cfg.url);
+
+  if (isPublicAuth) {
     cfg.headers = cfg.headers ?? {};
-    cfg.headers.Authorization = `Bearer ${token}`;
+    delete cfg.headers.Authorization;
+  } else {
+    let token = cachedToken;
+    if (token === undefined) {
+      token = await getStoredToken();
+      cachedToken = token;
+    }
+    if (token) {
+      cfg.headers = cfg.headers ?? {};
+      cfg.headers.Authorization = `Bearer ${token}`;
+    }
   }
   return cfg;
 });
@@ -297,8 +324,11 @@ export function apiErrorMessage(err: unknown, fallback = 'Ошибка'): string
     if (axErr.response?.status === 503 || axErr.response?.status === 504) {
       return 'Сервер перегружен или недоступен. Попробуйте позже.';
     }
+    if (axErr.code === 'ECONNABORTED' || axErr.message.includes('timeout')) {
+      return 'Сервер не ответил вовремя. Возможно, backend завис — перезапустите ReestrPro Backend на Timeweb и попробуйте снова.';
+    }
     if (axErr.message === 'Network Error') {
-      return 'Нет связи с сервером. Проверьте интернет или настройки сервера.';
+      return 'Нет связи с сервером. Проверьте интернет, отключите VPN или настройки сервера.';
     }
     return axErr.message;
   }

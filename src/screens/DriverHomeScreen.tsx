@@ -2,9 +2,16 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert, Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { StatSummaryCard } from '../components/dashboard/StatSummaryCard';
 import { DriverTripActionCard } from '../components/DriverTripActionCard';
 import { QuickAccessGrid, type QuickAccessItem } from '../components/QuickAccessGrid';
+import {
+  AppHeader,
+  DriverTaskStepper,
+  KitIcon,
+  SectionLabel,
+  StatCard,
+  rub,
+} from '../components/kit';
 import { ErrorText, LoadingScreen } from '../components/ui';
 import { useAuth } from '../auth/AuthContext';
 import type { RootStackParamList } from '../navigation/types';
@@ -13,7 +20,8 @@ import { getEarningsSummary } from '../api/earnings';
 import { listNotifications } from '../api/notifications';
 import { apiErrorMessage } from '../api/client';
 import { screenUi } from '../styles/screenUi';
-import { colors, spacing } from '../theme';
+import { colors, radii, spacing } from '../theme';
+import { initialsFromName } from '../utils/format';
 import { withFallback } from '../utils/safeRequest';
 import type { Order } from '../types';
 
@@ -93,86 +101,89 @@ export function DriverHomeScreen() {
       contentContainerStyle={[screenUi.content, { paddingBottom: 24 }]}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
     >
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: spacing.md }}>
-        <View style={{ flex: 1 }}>
-          <Text style={{ fontSize: 13, color: colors.textMuted }}>Главная</Text>
-          <Text style={{ fontSize: 22, fontWeight: '700', color: colors.text, marginTop: 2 }}>{displayName}</Text>
-          <Text style={{ fontSize: 12, color: colors.textMuted, marginTop: 4 }}>
-            {driver?.car_number ? `Водитель · ${driver.car_number}` : 'Водитель'}
-          </Text>
-        </View>
-        <Pressable
-          onPress={onLogout}
-          style={{
-            backgroundColor: colors.loss,
-            borderRadius: 8,
-            paddingHorizontal: 14,
-            paddingVertical: 10,
-          }}
-        >
-          <Text style={{ color: colors.text, fontWeight: '700' }}>Выйти</Text>
-        </Pressable>
-      </View>
+      <AppHeader
+        title={displayName}
+        subtitle={driver?.car_number ? `Водитель · ${driver.car_number}` : 'Водитель'}
+        initials={initialsFromName(displayName)}
+        notifications={unreadNotifications}
+        onNotifications={() => navigation.navigate('Notifications')}
+        onLogout={onLogout}
+      />
 
       <ErrorText message={error} />
 
       {primaryOrder ? (
-        <View style={{ marginBottom: spacing.md }}>
-          <Text style={{ fontSize: 16, fontWeight: '700', color: colors.text, marginBottom: 8 }}>
-            Ваша задача сейчас
-          </Text>
-          <DriverTripActionCard
-            orderId={primaryOrder.id}
-            taskLabel={
-              primaryOrder.task_name ||
-              [primaryOrder.material, primaryOrder.load_address].filter(Boolean).join(' · ') ||
-              undefined
-            }
-          />
+        <>
+          <SectionLabel>Ваша задача сейчас</SectionLabel>
+          <View
+            style={{
+              borderWidth: 2,
+              borderColor: `${colors.primary}99`,
+              backgroundColor: colors.primaryMuted,
+              borderRadius: radii.lg,
+              padding: spacing.md,
+              marginBottom: spacing.sm,
+            }}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <KitIcon name="truck" color={colors.primaryLight} />
+              <Text style={{ fontSize: 16, fontWeight: '700', color: colors.text }}>
+                Рейс по заказу #{primaryOrder.id}
+              </Text>
+            </View>
+            <Text style={{ fontSize: 13, color: colors.textMuted, marginTop: 4 }}>
+              Шаг 1 из 3: отметьте прибытие на погрузку
+            </Text>
+            <DriverTaskStepper activeStep={0} />
+            <DriverTripActionCard
+              orderId={primaryOrder.id}
+              taskLabel={
+                primaryOrder.task_name ||
+                [primaryOrder.material, primaryOrder.load_address].filter(Boolean).join(' · ') ||
+                undefined
+              }
+            />
+          </View>
           <Pressable
             onPress={() => navigation.navigate('OrderDetail', { id: primaryOrder.id })}
-            style={{ paddingVertical: 8, alignItems: 'center' }}
+            style={{ alignItems: 'center', marginBottom: spacing.md }}
           >
-            <Text style={{ color: colors.primary, fontSize: 13 }}>Подробнее о заказе</Text>
+            <Text style={{ fontSize: 14, fontWeight: '500', color: colors.primaryLight }}>Подробнее о заказе</Text>
           </Pressable>
-        </View>
+        </>
       ) : (
-        <View style={[screenUi.card, { marginBottom: spacing.md }]}>
+        <View
+          style={{
+            backgroundColor: colors.surface,
+            borderRadius: radii.lg,
+            borderWidth: 1,
+            borderColor: colors.border,
+            padding: spacing.md,
+            marginBottom: spacing.md,
+          }}
+        >
           <Text style={{ fontSize: 14, color: colors.textMuted, textAlign: 'center' }}>
             Активных заказов нет. Новые задачи появятся в «Мои заказы».
           </Text>
         </View>
       )}
 
-      <Text style={{ fontSize: 15, fontWeight: '700', color: colors.text, marginBottom: spacing.sm }}>
-        Сегодня
-      </Text>
-      <View style={{ flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md }}>
-        <StatSummaryCard
-          label="Активные заказы"
-          value={String(activeOrders)}
-          accentColor={colors.primary}
-          icon="📦"
-        />
-        <StatSummaryCard
-          label="Заработок"
-          value={`${Math.round(estimatedIncome)} ₽`}
-          accentColor={colors.profit}
-          icon="💰"
-        />
-      </View>
-      <View style={{ flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.lg }}>
-        <StatSummaryCard
-          label="Уведомления"
-          value={String(unreadNotifications)}
-          accentColor={colors.accent}
-          icon="🔔"
-        />
+      <SectionLabel>Сегодня</SectionLabel>
+      <View
+        style={{
+          flexDirection: 'row',
+          flexWrap: 'wrap',
+          justifyContent: 'space-between',
+          rowGap: spacing.sm,
+          marginBottom: spacing.lg,
+        }}
+      >
+        <StatCard icon="package" label="Активные заказы" value={String(activeOrders)} valueColor={colors.primaryLight} onPress={() => navigation.replace('DriverOrders')} />
+        <StatCard icon="dollar-sign" label="Заработок" value={rub(estimatedIncome)} valueColor={colors.profit} />
+        <StatCard icon="bell" label="Уведомления" value={String(unreadNotifications)} />
       </View>
 
-      <Text style={{ fontSize: 15, fontWeight: '700', color: colors.text, marginBottom: spacing.sm }}>
-        Разделы
-      </Text>
+      <SectionLabel>Разделы</SectionLabel>
       <QuickAccessGrid items={quickItems} />
     </ScrollView>
   );

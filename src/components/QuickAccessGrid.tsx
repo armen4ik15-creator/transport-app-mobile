@@ -16,14 +16,23 @@ interface QuickAccessGridProps {
 /** v0-style 4-column quick access grid with card tiles. */
 export function QuickAccessGrid({ items }: QuickAccessGridProps) {
   return (
-    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
+    <View
+      style={{
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        justifyContent: 'space-between',
+        rowGap: spacing.sm,
+        marginBottom: spacing.lg,
+      }}
+    >
       {items.map((item) => (
         <Pressable
           key={item.title}
           onPress={item.onPress}
           style={{
             width: '23%',
-            minWidth: 76,
+            flexGrow: 0,
+            flexShrink: 0,
             alignItems: 'center',
             backgroundColor: colors.surface,
             borderRadius: radii.lg,
@@ -31,7 +40,6 @@ export function QuickAccessGrid({ items }: QuickAccessGridProps) {
             paddingHorizontal: 4,
             borderWidth: 1,
             borderColor: colors.border,
-            marginBottom: spacing.sm,
           }}
         >
           <View

@@ -177,6 +177,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         err.pending = true;
         throw err;
       }
+      if (!('token' in res)) {
+        throw new Error('Unexpected registration response');
+      }
       await setStoredToken(res.token);
       setUser(res.user);
       await refresh();

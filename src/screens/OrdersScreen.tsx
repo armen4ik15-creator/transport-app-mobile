@@ -6,12 +6,11 @@ import {
   Pressable,
   RefreshControl,
   Text,
-  TextInput,
   View,
 } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { CollapsiblePanel } from '../components/CollapsiblePanel';
+import { FAB, FilterChips, SearchBar } from '../components/kit';
 import { ScreenHeader } from '../components/ScreenHeader';
 import { LoadingScreen } from '../components/ui';
 import { listDrivers } from '../api/drivers';
@@ -19,7 +18,7 @@ import { deleteOrder, listOrders, updateOrder } from '../api/orders';
 import { apiErrorMessage } from '../api/client';
 import type { RootStackParamList } from '../navigation/types';
 import { screenUi } from '../styles/screenUi';
-import { colors } from '../theme';
+import { colors, spacing } from '../theme';
 import { fetchCached, invalidateCache } from '../utils/apiCache';
 import { STATUS_LABEL, type Driver, type Order } from '../types';
 
@@ -174,59 +173,33 @@ export function OrdersScreen() {
         ListHeaderComponent={
           <View style={screenUi.content}>
             <ScreenHeader
-              pageTitle="📦 Заказы"
+              pageTitle="Заказы"
               title="Задачи"
               showBack
               onBack={() => navigation.navigate('AdminHome')}
-              actionLabel="+ Создать"
-              onAction={() => navigation.navigate('OrderCreate')}
             />
 
-            <CollapsiblePanel
-              title="Фильтры"
-              subtitle={`Показано: ${filteredOrders.length} ${tab === 'active' ? 'активных' : 'архивных'} задач`}
-              defaultExpanded
-            >
-              <View style={screenUi.tabs}>
-                <Pressable
-                  style={[screenUi.tabBtn, tab === 'active' && screenUi.tabBtnActive]}
-                  onPress={() => setTab('active')}
-                >
-                  <Text style={[screenUi.tabBtnText, tab === 'active' && screenUi.tabBtnTextActive]}>
-                    ✅ Активные ({activeOrders.length})
-                  </Text>
-                </Pressable>
-                <Pressable
-                  style={[screenUi.tabBtn, tab === 'archive' && screenUi.tabBtnActive]}
-                  onPress={() => setTab('archive')}
-                >
-                  <Text style={[screenUi.tabBtnText, tab === 'archive' && screenUi.tabBtnTextActive]}>
-                    📦 Архив ({archivedOrders.length})
-                  </Text>
-                </Pressable>
-              </View>
+            <SearchBar
+              value={searchQuery}
+              onChange={setSearchQuery}
+              placeholder="Поиск по заказчику, материалу…"
+            />
 
-              <View style={screenUi.searchContainer}>
-                <Text style={{ fontSize: 16 }}>🔍</Text>
-                <TextInput
-                  style={screenUi.searchInput}
-                  placeholder="Поиск по заказчику, материалу..."
-                  value={searchQuery}
-                  onChangeText={setSearchQuery}
-                  placeholderTextColor={colors.textMuted}
-                />
-                {searchQuery ? (
-                  <Pressable onPress={() => setSearchQuery('')}>
-                    <Text style={{ fontSize: 16, color: colors.textMuted }}>✕</Text>
-                  </Pressable>
-                ) : null}
-              </View>
+            <FilterChips
+              value={tab}
+              onChange={(id) => setTab(id as OrdersTab)}
+              options={[
+                { key: 'active', label: `Активные (${activeOrders.length})` },
+                { key: 'archive', label: `Архив (${archivedOrders.length})` },
+              ]}
+            />
 
-              <Text style={screenUi.filterLabel}>Водитель:</Text>
-              <Pressable onPress={pickDriver} style={[screenUi.primaryPill, { marginBottom: 8 }]}>
-                <Text style={screenUi.primaryPillText}>👥 {driverFilterLabel}</Text>
-              </Pressable>
-            </CollapsiblePanel>
+            <Pressable onPress={pickDriver} style={[screenUi.primaryPill, { marginBottom: 8 }]}>
+              <Text style={screenUi.primaryPillText}>Водитель: {driverFilterLabel}</Text>
+            </Pressable>
+            <Text style={{ fontSize: 12, color: colors.textMuted, marginBottom: spacing.sm }}>
+              Показано: {filteredOrders.length}
+            </Text>
           </View>
         }
         ListEmptyComponent={
@@ -326,6 +299,7 @@ export function OrdersScreen() {
           </View>
         )}
       />
+      <FAB label="Создать" icon="package" onPress={() => navigation.navigate('OrderCreate')} />
     </View>
   );
 }
