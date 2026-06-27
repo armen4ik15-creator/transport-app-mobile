@@ -81,9 +81,8 @@ export function RootNavigator() {
     try {
       void logStartup('server_config_check_start');
       await ensureDefaultServerUrl();
-      const url = await getServerUrl();
-      setServerReady(Boolean(url));
-      void logStartup('server_config_check_done', url ? 'configured' : 'missing');
+      setServerReady(true);
+      void logStartup('server_config_check_done', 'production default applied');
     } catch (e: unknown) {
       const message = e instanceof Error ? e.message : 'Ошибка настройки сервера';
       void logStartup('server_config_check_error', message);
