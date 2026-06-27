@@ -52,9 +52,9 @@ export function ServerSetupScreen({ route, onConfigured }: ComponentProps) {
     })();
   }, []);
 
-  const onConnect = async () => {
-    const cleanIp = ip.trim();
-    const cleanPort = port.trim() || DEFAULT_PRODUCTION_PORT;
+  const onConnect = async (hostOverride?: string, portOverride?: string) => {
+    const cleanIp = (hostOverride ?? ip).trim();
+    const cleanPort = (portOverride ?? port).trim() || DEFAULT_PRODUCTION_PORT;
 
     if (!cleanIp) {
       setError('Введите IP-адрес сервера');
@@ -62,6 +62,7 @@ export function ServerSetupScreen({ route, onConfigured }: ComponentProps) {
     }
     if (isDeprecatedServerHost(cleanIp)) {
       setIp(getCurrentProductionHost());
+      setPort(DEFAULT_PRODUCTION_PORT);
       setError('Этот сервер устарел. Нажмите «Подключиться» ещё раз — подставлен актуальный адрес.');
       return;
     }
@@ -74,22 +75,39 @@ export function ServerSetupScreen({ route, onConfigured }: ComponentProps) {
     setError(null);
     const apiUrl = buildApiUrl(cleanIp, cleanPort);
 
-    try {
-      const response = await axios.get(`${apiUrl}/health/live`, { timeout: 15000 });
-      const status = response.data?.status;
-      if (status !== 'ok' && status !== 'degraded') {
-        throw new Error('Некорректный ответ health');
+    const maxAttempts = 3;
+    let lastError: unknown = null;
+
+    for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+      try {
+        const response = await axios.get(`${apiUrl}/health/live`, { timeout: 25000 });
+        const status = response.data?.status;
+        if (status !== 'ok' && status !== 'degraded') {
+          throw new Error('Некорректный ответ health');
+        }
+        await setServerUrl(apiUrl);
+        setIp(cleanIp);
+        setPort(cleanPort);
+        onConfigured?.();
+        Alert.alert('Подключение успешно', `Сервер сохранён:\n${apiUrl.replace(/\/api\/?$/, '')}`);
+        setBusy(false);
+        return;
+      } catch (error) {
+        lastError = error;
+        if (attempt < maxAttempts) {
+          await new Promise((resolve) => setTimeout(resolve, 1200 * attempt));
+        }
       }
-      await setServerUrl(apiUrl);
-      onConfigured?.();
-      Alert.alert('Подключение успешно', `Сервер сохранён:\n${apiUrl.replace(/\/api\/?$/, '')}`);
-    } catch {
-      await clearServerUrl();
-      setError('Не удалось подключиться к серверу');
-      Alert.alert('Ошибка', 'Не удалось подключиться к серверу');
-    } finally {
-      setBusy(false);
     }
+
+    await clearServerUrl();
+    setError('Не удалось подключиться к серверу');
+    const detail =
+      axios.isAxiosError(lastError) && lastError.code === 'ECONNABORTED'
+        ? 'Сервер не ответил вовремя. Попробуйте мобильный интернет без VPN или повторите через минуту.'
+        : 'Проверьте адрес, порт 443 и интернет.';
+    Alert.alert('Ошибка', `Не удалось подключиться к серверу.\n\n${detail}`);
+    setBusy(false);
   };
 
   return (
@@ -110,12 +128,17 @@ export function ServerSetupScreen({ route, onConfigured }: ComponentProps) {
           />
           <Field label="Порт" value={port} onChangeText={setPort} keyboardType="number-pad" placeholder="443" />
           <ErrorText message={error} />
-          <PrimaryButton label="🔗 Подключиться" onPress={onConnect} loading={busy} />
+          <PrimaryButton
+            label="🔗 Подключиться"
+            onPress={() => {
+              void onConnect();
+            }}
+            loading={busy}
+          />
           <MenuButton
             label="☁️ Использовать продакшен-сервер"
             onPress={() => {
-              setIp(DEFAULT_PRODUCTION_HOST);
-              setPort(DEFAULT_PRODUCTION_PORT);
+              void onConnect(DEFAULT_PRODUCTION_HOST, DEFAULT_PRODUCTION_PORT);
             }}
             variant="secondary"
           />
