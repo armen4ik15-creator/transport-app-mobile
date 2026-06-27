@@ -32,7 +32,16 @@ interface ParsedFormData {
   fieldName?: string;
 }
 
+function isSslTrustError(err: unknown): boolean {
+  if (!(err instanceof Error)) return false;
+  return (
+    err.message.includes('CertPathValidatorException') ||
+    err.message.includes('Trust anchor')
+  );
+}
+
 function isNetworkFailure(err: unknown): boolean {
+  if (isSslTrustError(err)) return false;
   if (err instanceof TypeError) return true;
   if (err instanceof Error) {
     return (
@@ -261,6 +270,11 @@ async function requestWithFallback<T>(
     return await fetchJson<T>(method, url, headers, timeoutMs, options?.fetchBody);
   } catch (err) {
     if (err instanceof HttpError && err.response) throw err;
+    if (isSslTrustError(err)) {
+      throw new HttpError(err instanceof Error ? err.message : 'SSL trust error', {
+        code: 'ERR_SSL',
+      });
+    }
     if (!isNetworkFailure(err)) {
       throw err instanceof HttpError
         ? err
@@ -409,6 +423,11 @@ export async function nativeDownloadBlob(
     }
   } catch (err) {
     if (err instanceof HttpError && err.response) throw err;
+    if (isSslTrustError(err)) {
+      throw new HttpError(err instanceof Error ? err.message : 'SSL trust error', {
+        code: 'ERR_SSL',
+      });
+    }
     if (!isNetworkFailure(err)) {
       throw err instanceof HttpError
         ? err

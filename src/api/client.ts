@@ -476,6 +476,12 @@ export function apiErrorMessage(err: unknown, fallback = 'Ошибка'): string
     if (err.message === 'Network Error') {
       return 'Нет связи с сервером. Проверьте интернет и адрес сервера в настройках.';
     }
+    if (
+      err.message.includes('CertPathValidatorException') ||
+      err.message.includes('Trust anchor')
+    ) {
+      return 'Ошибка защищённого соединения с сервером. Обновите приложение или обратитесь в поддержку.';
+    }
     return err.message;
   }
   if (err instanceof Error) return err.message;

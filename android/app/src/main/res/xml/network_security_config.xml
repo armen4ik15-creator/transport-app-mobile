@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+  <domain-config cleartextTrafficPermitted="false">
+    <domain includeSubdomains="true">twc1.net</domain>
+    <trust-anchors>
+      <certificates src="system" />
+      <certificates src="@raw/globalsign_gcc_r3_dv_tls_ca_2020" />
+    </trust-anchors>
+  </domain-config>
+  <base-config cleartextTrafficPermitted="false">
+    <trust-anchors>
+      <certificates src="system" />
+    </trust-anchors>
+  </base-config>
+</network-security-config>
