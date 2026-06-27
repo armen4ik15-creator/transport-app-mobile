@@ -9,6 +9,16 @@ import {
   getStoredToken,
   TOKEN_KEY,
 } from '../storage/sessionStorage';
+import {
+  HttpError,
+  nativeDeleteJson,
+  nativeDownloadBlob,
+  nativeGetJson,
+  nativePatchJson,
+  nativePostJson,
+  nativePutJson,
+  nativeSendFormData,
+} from '../utils/nativeHttpTransport';
 
 export { TOKEN_KEY };
 
@@ -44,20 +54,7 @@ export interface ApiRequestConfig {
   responseType?: 'json' | 'blob';
 }
 
-export class HttpError extends Error {
-  response?: { status: number; data: { error?: string } };
-  code?: string;
-
-  constructor(
-    message: string,
-    options?: { response?: { status: number; data: { error?: string } }; code?: string },
-  ) {
-    super(message);
-    this.name = 'HttpError';
-    this.response = options?.response;
-    this.code = options?.code;
-  }
-}
+export { HttpError };
 
 export function isHttpError(err: unknown): err is HttpError {
   return err instanceof HttpError;
@@ -331,12 +328,53 @@ function buildRequestHeaders(
   return headers;
 }
 
-async function parseErrorResponse(response: Response): Promise<{ error?: string }> {
-  try {
-    const data = (await response.json()) as { error?: string };
-    return data;
-  } catch {
-    return {};
+async function executeNativeRequest<T>(
+  method: HttpMethod,
+  requestUrl: string,
+  headers: Record<string, string>,
+  timeoutMs: number,
+  body?: unknown,
+  responseType?: ApiRequestConfig['responseType'],
+): Promise<{ data: T }> {
+  if (responseType === 'blob') {
+    const result = await nativeDownloadBlob(requestUrl, headers, timeoutMs);
+    return { data: result.data as T };
+  }
+
+  if (isFormDataBody(body)) {
+    const result = await nativeSendFormData<T>(
+      method as 'POST' | 'PUT' | 'PATCH',
+      requestUrl,
+      body,
+      headers,
+      timeoutMs,
+    );
+    return { data: result.data };
+  }
+
+  switch (method) {
+    case 'GET': {
+      const result = await nativeGetJson<T>(requestUrl, headers, timeoutMs);
+      return { data: result.data };
+    }
+    case 'POST': {
+      const result = await nativePostJson<T>(requestUrl, body, headers, timeoutMs);
+      return { data: result.data };
+    }
+    case 'PUT': {
+      const result = await nativePutJson<T>(requestUrl, body, headers, timeoutMs);
+      return { data: result.data };
+    }
+    case 'PATCH': {
+      const result = await nativePatchJson<T>(requestUrl, body, headers, timeoutMs);
+      return { data: result.data };
+    }
+    case 'DELETE': {
+      const result = await nativeDeleteJson<T>(requestUrl, headers, timeoutMs);
+      return { data: result.data };
+    }
+    default:
+      throw new HttpError(`Unsupported method ${method}`);
   }
 }
 
@@ -363,84 +401,22 @@ async function executeRequest<T>(
 
   const headers = buildRequestHeaders(config?.headers, body, authToken, isPublicAuth);
   const timeoutMs = config?.timeout ?? DEFAULT_TIMEOUT_MS;
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-
-  let fetchBody: BodyInit | undefined;
-  if (body != null && body !== undefined) {
-    fetchBody = isFormDataBody(body) ? body : JSON.stringify(body);
-  }
 
   try {
-    const response = await fetch(requestUrl, {
+    const result = await executeNativeRequest<T>(
       method,
+      requestUrl,
       headers,
-      body: method === 'GET' || method === 'DELETE' ? undefined : fetchBody,
-      signal: controller.signal,
-    });
-
-    clearTimeout(timeoutId);
-
-    if (!response.ok) {
-      const errorData = await parseErrorResponse(response);
-      const httpError = new HttpError(`Request failed with status ${response.status}`, {
-        response: { status: response.status, data: errorData },
-      });
-
-      if (isRetryableNetworkError(httpError) && retryCount < MAX_NETWORK_RETRIES) {
-        await sleep(800 * (retryCount + 1));
-        return executeRequest<T>(method, url, body, config, retryCount + 1);
-      }
-
-      if (isRetryableNetworkError(httpError)) {
-        registerNetworkFailure();
-      }
-
-      if (response.status === 401) {
-        cachedToken = null;
-        await clearStoredToken();
-        if (unauthorizedHandler) {
-          await unauthorizedHandler();
-        }
-      }
-
-      throw httpError;
-    }
-
-    registerNetworkSuccess();
-
-    if (config?.responseType === 'blob') {
-      const blob = await response.blob();
-      return { data: blob as T };
-    }
-
-    const contentType = response.headers.get('content-type') ?? '';
-    if (contentType.includes('application/json')) {
-      const data = (await response.json()) as T;
-      return { data };
-    }
-
-    const text = await response.text();
-    return { data: text as T };
-  } catch (err) {
-    clearTimeout(timeoutId);
-
-    if (isHttpError(err)) {
-      throw err;
-    }
-
-    const isAbort = err instanceof Error && err.name === 'AbortError';
-    const isNetwork =
-      err instanceof TypeError ||
-      (err instanceof Error &&
-        (err.message === 'Network request failed' ||
-          err.message.includes('Failed to fetch') ||
-          err.message === 'Network Error'));
-
-    const httpError = new HttpError(
-      isAbort ? 'timeout' : isNetwork ? 'Network Error' : err instanceof Error ? err.message : 'Network Error',
-      { code: isAbort ? 'ECONNABORTED' : isNetwork ? 'ERR_NETWORK' : undefined },
+      timeoutMs,
+      body,
+      config?.responseType,
     );
+    registerNetworkSuccess();
+    return result;
+  } catch (err) {
+    const httpError = isHttpError(err)
+      ? err
+      : new HttpError(err instanceof Error ? err.message : 'Network Error', { code: 'ERR_NETWORK' });
 
     if (isRetryableNetworkError(httpError) && retryCount < MAX_NETWORK_RETRIES) {
       await sleep(800 * (retryCount + 1));
@@ -449,6 +425,14 @@ async function executeRequest<T>(
 
     if (isRetryableNetworkError(httpError)) {
       registerNetworkFailure();
+    }
+
+    if (httpError.response?.status === 401) {
+      cachedToken = null;
+      await clearStoredToken();
+      if (unauthorizedHandler) {
+        await unauthorizedHandler();
+      }
     }
 
     throw httpError;

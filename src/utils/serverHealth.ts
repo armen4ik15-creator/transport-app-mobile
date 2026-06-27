@@ -1,50 +1,26 @@
-import * as FileSystem from 'expo-file-system/legacy';
 import { DEFAULT_PRODUCTION_HOST } from '../constants/config';
+import { nativeGetJson } from './nativeHttpTransport';
 
 interface HealthLiveResponse {
   status?: string;
 }
 
-async function probeWithFetch(apiUrl: string, timeoutMs: number): Promise<boolean> {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
-
-  try {
-    const response = await fetch(`${apiUrl.replace(/\/$/, '')}/health/live`, {
-      method: 'GET',
-      headers: { Accept: 'application/json' },
-      signal: controller.signal,
-    });
-    if (!response.ok) return false;
-    const data = (await response.json()) as HealthLiveResponse;
-    return data.status === 'ok' || data.status === 'degraded';
-  } catch {
-    return false;
-  } finally {
-    clearTimeout(timer);
-  }
-}
-
-async function probeWithFileSystem(apiUrl: string): Promise<boolean> {
-  const target = `${FileSystem.cacheDirectory ?? ''}health-live-${Date.now()}.json`;
-  try {
-    const result = await FileSystem.downloadAsync(
-      `${apiUrl.replace(/\/$/, '')}/health/live`,
-      target
-    );
-    if (result.status !== 200) return false;
-    const raw = await FileSystem.readAsStringAsync(target);
-    const data = JSON.parse(raw) as HealthLiveResponse;
-    return data.status === 'ok' || data.status === 'degraded';
-  } catch {
-    return false;
-  }
+function isHealthyStatus(data: HealthLiveResponse): boolean {
+  return data.status === 'ok' || data.status === 'degraded';
 }
 
 export async function probeServerHealth(apiUrl: string, timeoutMs = 25000): Promise<boolean> {
-  const fetchOk = await probeWithFetch(apiUrl, timeoutMs);
-  if (fetchOk) return true;
-  return probeWithFileSystem(apiUrl);
+  const healthUrl = `${apiUrl.replace(/\/$/, '')}/health/live`;
+  try {
+    const { data } = await nativeGetJson<HealthLiveResponse>(
+      healthUrl,
+      { Accept: 'application/json' },
+      timeoutMs,
+    );
+    return isHealthyStatus(data);
+  } catch {
+    return false;
+  }
 }
 
 export async function probeServerHealthWithRetry(
