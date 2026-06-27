@@ -254,6 +254,7 @@ export async function getServerHost(): Promise<string> {
 export const api = axios.create({
   baseURL: FALLBACK_API_URL,
   timeout: 20000,
+  adapter: 'fetch',
   headers: {
     Accept: 'application/json',
     'Content-Type': 'application/json',

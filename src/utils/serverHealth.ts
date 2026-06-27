@@ -1,10 +1,11 @@
+import * as FileSystem from 'expo-file-system/legacy';
 import { DEFAULT_PRODUCTION_HOST } from '../constants/config';
 
 interface HealthLiveResponse {
   status?: string;
 }
 
-export async function probeServerHealth(apiUrl: string, timeoutMs = 25000): Promise<boolean> {
+async function probeWithFetch(apiUrl: string, timeoutMs: number): Promise<boolean> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
 
@@ -22,6 +23,28 @@ export async function probeServerHealth(apiUrl: string, timeoutMs = 25000): Prom
   } finally {
     clearTimeout(timer);
   }
+}
+
+async function probeWithFileSystem(apiUrl: string): Promise<boolean> {
+  const target = `${FileSystem.cacheDirectory ?? ''}health-live-${Date.now()}.json`;
+  try {
+    const result = await FileSystem.downloadAsync(
+      `${apiUrl.replace(/\/$/, '')}/health/live`,
+      target
+    );
+    if (result.status !== 200) return false;
+    const raw = await FileSystem.readAsStringAsync(target);
+    const data = JSON.parse(raw) as HealthLiveResponse;
+    return data.status === 'ok' || data.status === 'degraded';
+  } catch {
+    return false;
+  }
+}
+
+export async function probeServerHealth(apiUrl: string, timeoutMs = 25000): Promise<boolean> {
+  const fetchOk = await probeWithFetch(apiUrl, timeoutMs);
+  if (fetchOk) return true;
+  return probeWithFileSystem(apiUrl);
 }
 
 export async function probeServerHealthWithRetry(

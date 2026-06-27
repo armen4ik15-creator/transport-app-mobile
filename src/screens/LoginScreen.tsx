@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Alert, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
-import axios from 'axios';
 import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { KitIcon, KitTextField, PrimaryButton } from '../components/kit';
@@ -8,6 +7,7 @@ import { ErrorText } from '../components/ui';
 import { useAuth } from '../auth/AuthContext';
 import { apiErrorMessage, getServerUrl, primeApiClientCache, resetAuthTokenCache } from '../api/client';
 import { DEFAULT_PRODUCTION_HOST } from '../constants/config';
+import { probeServerHealthWithRetry } from '../utils/serverHealth';
 import type { RootStackParamList } from '../navigation/types';
 import { colors, radii, spacing } from '../theme';
 
@@ -53,33 +53,11 @@ export function LoginScreen({ navigation }: Props) {
     }
     setCheckingServer(true);
     try {
-      const [healthRes, loginProbe] = await Promise.all([
-        axios.get(`${url}/health/live`, { timeout: 15000 }),
-        axios
-          .post(`${url}/auth/login`, { email: 'probe@test.local', password: 'probe' }, { timeout: 12000 })
-          .catch((err: unknown) => err),
-      ]);
-
-      const status = healthRes.data?.status;
-      if (status !== 'ok' && status !== 'degraded') {
-        throw new Error('unexpected health status');
+      const ok = await probeServerHealthWithRetry(url, 2, 20000);
+      if (!ok) {
+        throw new Error('health failed');
       }
-
-      const loginTimedOut =
-        axios.isAxiosError(loginProbe) &&
-        (loginProbe.code === 'ECONNABORTED' || loginProbe.message === 'Network Error') &&
-        !loginProbe.response;
-
-      if (loginTimedOut) {
-        Alert.alert(
-          'Сервер частично недоступен',
-          `Health OK, но вход не отвечает (backend завис).\n\n${url.replace(/\/api\/?$/, '')}\n\nПерезапустите ReestrPro Backend на Timeweb (приложение 26b3).`,
-          [{ text: 'OK' }]
-        );
-        return;
-      }
-
-      Alert.alert('Сервер доступен', `${url.replace(/\/api\/?$/, '')}\n\nВход и health отвечают.`);
+      Alert.alert('Сервер доступен', `${url.replace(/\/api\/?$/, '')}\n\nМожно входить в аккаунт.`);
     } catch {
       Alert.alert(
         'Сервер недоступен',

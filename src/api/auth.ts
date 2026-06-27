@@ -12,6 +12,7 @@ async function postPublicAuth<T>(path: string, body: unknown): Promise<T> {
   const baseURL = await getApiBaseUrl();
   const { data } = await axios.post<T>(`${baseURL}${path}`, body, {
     timeout: 20000,
+    adapter: 'fetch',
     headers: JSON_HEADERS,
   });
   return data;
