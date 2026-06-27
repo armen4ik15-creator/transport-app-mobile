@@ -1,8 +1,8 @@
 {
   "expo": {
-    "name": "Р РµРµСЃС‚СЂРџСЂРѕ",
+    "name": "ReestrPro",
     "slug": "reestrpro-mobile",
-    "version": "1.3.0",
+    "version": "1.3.1",
     "orientation": "portrait",
     "scheme": "reestrpro",
     "userInterfaceStyle": "dark",
@@ -25,13 +25,13 @@
     "ios": {
       "supportsTablet": true,
       "infoPlist": {
-        "NSCameraUsageDescription": "Р”РѕСЃС‚СѓРї Рє РєР°РјРµСЂРµ РЅСѓР¶РµРЅ РґР»СЏ С„РѕС‚Рѕ РўРўРќ РїРѕ Р·Р°РєР°Р·Сѓ.",
-        "NSPhotoLibraryUsageDescription": "Р”РѕСЃС‚СѓРї Рє С„РѕС‚Рѕ РЅСѓР¶РµРЅ РґР»СЏ РїСЂРёРєСЂРµРїР»РµРЅРёСЏ РўРўРќ."
+        "NSCameraUsageDescription": "Доступ к камере нужен для фото ТТН по заказу.",
+        "NSPhotoLibraryUsageDescription": "Доступ к фото нужен для прикрепления ТТН."
       }
     },
     "android": {
       "package": "com.reestrpro.mobile",
-      "versionCode": 24,
+      "versionCode": 25,
       "permissions": [
         "android.permission.CAMERA",
         "android.permission.READ_EXTERNAL_STORAGE",
@@ -43,8 +43,8 @@
       [
         "expo-image-picker",
         {
-          "cameraPermission": "Р Р°Р·СЂРµС€РёС‚Рµ РґРѕСЃС‚СѓРї Рє РєР°РјРµСЂРµ РґР»СЏ С„РѕС‚Рѕ РўРўРќ.",
-          "photosPermission": "Р Р°Р·СЂРµС€РёС‚Рµ РґРѕСЃС‚СѓРї Рє С„РѕС‚РѕРіР°Р»РµСЂРµРµ РґР»СЏ РїСЂРёРєСЂРµРїР»РµРЅРёСЏ РўРўРќ."
+          "cameraPermission": "Разрешите доступ к камере для фото ТТН.",
+          "photosPermission": "Разрешите доступ к фотогалерее для прикрепления ТТН."
         }
       ],
       "expo-updates"
