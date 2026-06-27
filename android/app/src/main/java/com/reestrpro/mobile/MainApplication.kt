@@ -6,6 +6,7 @@ import android.content.res.Configuration
 import com.facebook.react.PackageList
 import com.facebook.react.ReactApplication
 import com.facebook.react.ReactNativeApplicationEntryPoint.loadReactNative
+import com.facebook.react.modules.network.OkHttpClientProvider
 import com.facebook.react.ReactNativeHost
 import com.facebook.react.ReactPackage
 import com.facebook.react.ReactHost
@@ -47,6 +48,7 @@ class MainApplication : Application(), ReactApplication {
     } catch (e: IllegalArgumentException) {
       ReleaseLevel.STABLE
     }
+    OkHttpClientProvider.setOkHttpClientFactory(Twc1OkHttpClientFactory(applicationContext))
     loadReactNative(this)
     ApplicationLifecycleDispatcher.onApplicationCreate(this)
   }

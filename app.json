@@ -2,7 +2,7 @@
   "expo": {
     "name": "ReestrPro",
     "slug": "reestrpro-mobile",
-    "version": "1.3.5",
+    "version": "1.3.6",
     "orientation": "portrait",
     "scheme": "reestrpro",
     "userInterfaceStyle": "dark",
@@ -31,7 +31,7 @@
     },
     "android": {
       "package": "com.reestrpro.mobile",
-      "versionCode": 29,
+      "versionCode": 30,
       "permissions": [
         "android.permission.CAMERA",
         "android.permission.READ_EXTERNAL_STORAGE",

@@ -1,0 +1,47 @@
+diff --git a/node_modules/expo-file-system/android/src/main/java/expo/modules/filesystem/FileSystemModule.kt b/node_modules/expo-file-system/android/src/main/java/expo/modules/filesystem/FileSystemModule.kt
+index 0db6200..c4fb73e 100644
+--- a/node_modules/expo-file-system/android/src/main/java/expo/modules/filesystem/FileSystemModule.kt
++++ b/node_modules/expo-file-system/android/src/main/java/expo/modules/filesystem/FileSystemModule.kt
+@@ -7,6 +7,7 @@ import android.util.Base64
+ import android.webkit.URLUtil
+ import androidx.annotation.RequiresApi
+ import expo.modules.interfaces.filesystem.Permission
++import com.facebook.react.modules.network.OkHttpClientProvider
+ import expo.modules.kotlin.activityresult.AppContextActivityResultLauncher
+ import expo.modules.kotlin.apifeatures.EitherType
+ import expo.modules.kotlin.devtools.await
+@@ -67,7 +68,7 @@ class FileSystemModule : Module() {
+       }
+ 
+       val request = requestBuilder.build()
+-      val client = OkHttpClient()
++      val client = OkHttpClientProvider.createClient(context)
+       val response = request.await(client)
+ 
+       if (!response.isSuccessful) {
+diff --git a/node_modules/expo-file-system/android/src/main/java/expo/modules/filesystem/legacy/FileSystemLegacyModule.kt b/node_modules/expo-file-system/android/src/main/java/expo/modules/filesystem/legacy/FileSystemLegacyModule.kt
+index 73a8bd5..eeda06f 100644
+--- a/node_modules/expo-file-system/android/src/main/java/expo/modules/filesystem/legacy/FileSystemLegacyModule.kt
++++ b/node_modules/expo-file-system/android/src/main/java/expo/modules/filesystem/legacy/FileSystemLegacyModule.kt
+@@ -20,6 +20,7 @@ import expo.modules.kotlin.Promise
+ import expo.modules.kotlin.exception.Exceptions
+ import expo.modules.kotlin.modules.Module
+ import expo.modules.kotlin.modules.ModuleDefinition
++import com.facebook.react.modules.network.OkHttpClientProvider
+ import kotlinx.coroutines.CoroutineScope
+ import kotlinx.coroutines.Dispatchers
+ import kotlinx.coroutines.cancel
+@@ -1004,12 +1005,7 @@ open class FileSystemLegacyModule : Module() {
+   private val okHttpClient: OkHttpClient?
+     get() {
+       if (client == null) {
+-        val builder = OkHttpClient.Builder()
+-          .connectTimeout(60, TimeUnit.SECONDS)
+-          .readTimeout(60, TimeUnit.SECONDS)
+-          .writeTimeout(60, TimeUnit.SECONDS)
+-
+-        client = builder.build()
++        client = OkHttpClientProvider.createClient(context)
+       }
+       return client
+     }
