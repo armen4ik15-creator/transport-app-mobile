@@ -34,7 +34,12 @@ export async function triggerFuelSync(): Promise<{
   fetched: number;
   error?: string;
 }> {
-  const { data } = await api.post('/fuel/sync');
+  const { data } = await api.post<{
+    ok: boolean;
+    created: number;
+    fetched: number;
+    error?: string;
+  }>('/fuel/sync');
   return data;
 }
 

@@ -1,4 +1,3 @@
-import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { DEFAULT_PRODUCTION_API_URL } from '../constants/config';
 import {
@@ -15,6 +14,7 @@ export { TOKEN_KEY };
 
 export const SERVER_URL_KEY = 'SERVER_URL';
 const FALLBACK_API_URL = DEFAULT_PRODUCTION_API_URL;
+const DEFAULT_TIMEOUT_MS = 20_000;
 
 let unauthorizedHandler: (() => Promise<void> | void) | null = null;
 let serverIssueHandler: (() => Promise<void> | void) | null = null;
@@ -34,6 +34,34 @@ const PUBLIC_AUTH_PATHS = [
   '/auth/forgot-password',
   '/auth/security-config',
 ] as const;
+
+type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
+
+export interface ApiRequestConfig {
+  params?: object;
+  headers?: Record<string, string>;
+  timeout?: number;
+  responseType?: 'json' | 'blob';
+}
+
+export class HttpError extends Error {
+  response?: { status: number; data: { error?: string } };
+  code?: string;
+
+  constructor(
+    message: string,
+    options?: { response?: { status: number; data: { error?: string } }; code?: string },
+  ) {
+    super(message);
+    this.name = 'HttpError';
+    this.response = options?.response;
+    this.code = options?.code;
+  }
+}
+
+export function isHttpError(err: unknown): err is HttpError {
+  return err instanceof HttpError;
+}
 
 function isPublicAuthRequest(url: string | undefined): boolean {
   if (!url) return false;
@@ -103,7 +131,7 @@ function registerNetworkSuccess(): void {
   }
 }
 
-function isRetryableNetworkError(error: AxiosError): boolean {
+function isRetryableNetworkError(error: HttpError): boolean {
   return (
     !error.response ||
     error.message === 'Network Error' ||
@@ -251,87 +279,220 @@ export async function getServerHost(): Promise<string> {
   return apiUrl.replace(/\/api\/?$/, '');
 }
 
-export const api = axios.create({
-  baseURL: FALLBACK_API_URL,
-  timeout: 20000,
-  adapter: 'fetch',
-  headers: {
-    Accept: 'application/json',
-    'Content-Type': 'application/json',
-  },
-});
+function appendQueryParams(url: string, params?: object): string {
+  if (!params) return url;
+  const searchParams = new URLSearchParams();
+  for (const [key, value] of Object.entries(params as Record<string, unknown>)) {
+    if (value != null && value !== '') {
+      searchParams.append(key, String(value));
+    }
+  }
+  const query = searchParams.toString();
+  if (!query) return url;
+  return `${url}${url.includes('?') ? '&' : '?'}${query}`;
+}
 
-api.interceptors.request.use(async (cfg) => {
-  cfg.baseURL = await getApiBaseUrl();
-  const isPublicAuth = isPublicAuthRequest(cfg.url);
+function resolveRequestUrl(baseUrl: string, path: string): string {
+  if (/^https?:\/\//i.test(path)) return path;
+  const normalizedBase = baseUrl.replace(/\/$/, '');
+  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+  return `${normalizedBase}${normalizedPath}`;
+}
+
+function isFormDataBody(body: unknown): body is FormData {
+  return typeof FormData !== 'undefined' && body instanceof FormData;
+}
+
+function buildRequestHeaders(
+  configHeaders: Record<string, string> | undefined,
+  body: unknown,
+  authToken: string | null,
+  isPublicAuth: boolean,
+): Record<string, string> {
+  const headers: Record<string, string> = {
+    Accept: 'application/json',
+    ...configHeaders,
+  };
+
+  if (isFormDataBody(body)) {
+    delete headers['Content-Type'];
+    delete headers['content-type'];
+  } else if (body != null && body !== undefined && !(body instanceof Blob)) {
+    headers['Content-Type'] = headers['Content-Type'] ?? 'application/json';
+  }
 
   if (isPublicAuth) {
-    cfg.headers = cfg.headers ?? {};
-    delete cfg.headers.Authorization;
-  } else {
+    delete headers.Authorization;
+    delete headers.authorization;
+  } else if (authToken) {
+    headers.Authorization = `Bearer ${authToken}`;
+  }
+
+  return headers;
+}
+
+async function parseErrorResponse(response: Response): Promise<{ error?: string }> {
+  try {
+    const data = (await response.json()) as { error?: string };
+    return data;
+  } catch {
+    return {};
+  }
+}
+
+async function executeRequest<T>(
+  method: HttpMethod,
+  url: string,
+  body?: unknown,
+  config?: ApiRequestConfig,
+  retryCount = 0,
+): Promise<{ data: T }> {
+  const baseUrl = await getApiBaseUrl();
+  const requestUrl = appendQueryParams(resolveRequestUrl(baseUrl, url), config?.params);
+  const isPublicAuth = isPublicAuthRequest(url);
+
+  let authToken: string | null = null;
+  if (!isPublicAuth) {
     let token = cachedToken;
     if (token === undefined) {
       token = await getStoredToken();
       cachedToken = token;
     }
-    if (token) {
-      cfg.headers = cfg.headers ?? {};
-      cfg.headers.Authorization = `Bearer ${token}`;
-    }
+    authToken = token;
   }
-  return cfg;
-});
 
-api.interceptors.response.use(
-  (response) => {
-    registerNetworkSuccess();
-    return response;
-  },
-  async (error: AxiosError<{ error?: string }>) => {
-    const config = error.config as (InternalAxiosRequestConfig & { __retryCount?: number }) | undefined;
-    const retryCount = config?.__retryCount ?? 0;
+  const headers = buildRequestHeaders(config?.headers, body, authToken, isPublicAuth);
+  const timeoutMs = config?.timeout ?? DEFAULT_TIMEOUT_MS;
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
-    if (config && isRetryableNetworkError(error) && retryCount < MAX_NETWORK_RETRIES) {
-      config.__retryCount = retryCount + 1;
-      await sleep(800 * (retryCount + 1));
-      return api.request(config);
+  let fetchBody: BodyInit | undefined;
+  if (body != null && body !== undefined) {
+    fetchBody = isFormDataBody(body) ? body : JSON.stringify(body);
+  }
+
+  try {
+    const response = await fetch(requestUrl, {
+      method,
+      headers,
+      body: method === 'GET' || method === 'DELETE' ? undefined : fetchBody,
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      const errorData = await parseErrorResponse(response);
+      const httpError = new HttpError(`Request failed with status ${response.status}`, {
+        response: { status: response.status, data: errorData },
+      });
+
+      if (isRetryableNetworkError(httpError) && retryCount < MAX_NETWORK_RETRIES) {
+        await sleep(800 * (retryCount + 1));
+        return executeRequest<T>(method, url, body, config, retryCount + 1);
+      }
+
+      if (isRetryableNetworkError(httpError)) {
+        registerNetworkFailure();
+      }
+
+      if (response.status === 401) {
+        cachedToken = null;
+        await clearStoredToken();
+        if (unauthorizedHandler) {
+          await unauthorizedHandler();
+        }
+      }
+
+      throw httpError;
     }
 
-    if (isRetryableNetworkError(error)) {
+    registerNetworkSuccess();
+
+    if (config?.responseType === 'blob') {
+      const blob = await response.blob();
+      return { data: blob as T };
+    }
+
+    const contentType = response.headers.get('content-type') ?? '';
+    if (contentType.includes('application/json')) {
+      const data = (await response.json()) as T;
+      return { data };
+    }
+
+    const text = await response.text();
+    return { data: text as T };
+  } catch (err) {
+    clearTimeout(timeoutId);
+
+    if (isHttpError(err)) {
+      throw err;
+    }
+
+    const isAbort = err instanceof Error && err.name === 'AbortError';
+    const isNetwork =
+      err instanceof TypeError ||
+      (err instanceof Error &&
+        (err.message === 'Network request failed' ||
+          err.message.includes('Failed to fetch') ||
+          err.message === 'Network Error'));
+
+    const httpError = new HttpError(
+      isAbort ? 'timeout' : isNetwork ? 'Network Error' : err instanceof Error ? err.message : 'Network Error',
+      { code: isAbort ? 'ECONNABORTED' : isNetwork ? 'ERR_NETWORK' : undefined },
+    );
+
+    if (isRetryableNetworkError(httpError) && retryCount < MAX_NETWORK_RETRIES) {
+      await sleep(800 * (retryCount + 1));
+      return executeRequest<T>(method, url, body, config, retryCount + 1);
+    }
+
+    if (isRetryableNetworkError(httpError)) {
       registerNetworkFailure();
     }
 
-    if (error.response?.status === 401) {
-      cachedToken = null;
-      await clearStoredToken();
-      if (unauthorizedHandler) {
-        await unauthorizedHandler();
-      }
-    }
-    return Promise.reject(error);
+    throw httpError;
   }
-);
+}
+
+export const api = {
+  baseURL: FALLBACK_API_URL,
+  get<T>(url: string, config?: ApiRequestConfig): Promise<{ data: T }> {
+    return executeRequest<T>('GET', url, undefined, config);
+  },
+  post<T>(url: string, body?: unknown, config?: ApiRequestConfig): Promise<{ data: T }> {
+    return executeRequest<T>('POST', url, body, config);
+  },
+  put<T>(url: string, body?: unknown, config?: ApiRequestConfig): Promise<{ data: T }> {
+    return executeRequest<T>('PUT', url, body, config);
+  },
+  patch<T>(url: string, body?: unknown, config?: ApiRequestConfig): Promise<{ data: T }> {
+    return executeRequest<T>('PATCH', url, body, config);
+  },
+  delete<T = void>(url: string, config?: ApiRequestConfig): Promise<{ data: T }> {
+    return executeRequest<T>('DELETE', url, undefined, config);
+  },
+};
 
 export function apiErrorMessage(err: unknown, fallback = 'Ошибка'): string {
-  if (axios.isAxiosError(err)) {
-    const axErr = err as AxiosError<{ error?: string }>;
-    if (axErr.response?.data?.error) return axErr.response.data.error;
-    if (axErr.response?.status === 404) {
+  if (isHttpError(err)) {
+    if (err.response?.data?.error) return err.response.data.error;
+    if (err.response?.status === 404) {
       return 'Раздел недоступен на сервере (404). Обновите сервер до последней версии.';
     }
-    if (axErr.response?.status === 502) {
+    if (err.response?.status === 502) {
       return 'Сервер временно недоступен (502). Подождите минуту и нажмите «Повторить».';
     }
-    if (axErr.response?.status === 503 || axErr.response?.status === 504) {
+    if (err.response?.status === 503 || err.response?.status === 504) {
       return 'Сервер перегружен или недоступен. Попробуйте позже.';
     }
-    if (axErr.code === 'ECONNABORTED' || axErr.message.includes('timeout')) {
+    if (err.code === 'ECONNABORTED' || err.message.includes('timeout')) {
       return 'Сервер не ответил вовремя. Возможно, backend завис — перезапустите ReestrPro Backend на Timeweb и попробуйте снова.';
     }
-    if (axErr.message === 'Network Error') {
-      return 'Нет связи с сервером. Проверьте интернет, отключите VPN или настройки сервера.';
+    if (err.message === 'Network Error') {
+      return 'Нет связи с сервером. Проверьте интернет и адрес сервера в настройках.';
     }
-    return axErr.message;
+    return err.message;
   }
   if (err instanceof Error) return err.message;
   return fallback;

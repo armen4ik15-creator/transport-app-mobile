@@ -1,5 +1,4 @@
-import axios from 'axios';
-import { api, getApiBaseUrl, resetAuthTokenCache } from './client';
+import { api, resetAuthTokenCache } from './client';
 import type { Driver, User } from '../types';
 
 const JSON_HEADERS = {
@@ -9,10 +8,8 @@ const JSON_HEADERS = {
 
 async function postPublicAuth<T>(path: string, body: unknown): Promise<T> {
   resetAuthTokenCache();
-  const baseURL = await getApiBaseUrl();
-  const { data } = await axios.post<T>(`${baseURL}${path}`, body, {
+  const { data } = await api.post<T>(path, body, {
     timeout: 20000,
-    adapter: 'fetch',
     headers: JSON_HEADERS,
   });
   return data;
