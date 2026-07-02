@@ -10,10 +10,20 @@ import {
   TOKEN_KEY,
 } from '../storage/sessionStorage';
 import {
+  clearDeviceSecrets,
   getStoredDeviceId,
   getStoredDeviceSecret,
 } from '../utils/cryptoBundle';
-import { buildHmacPayload, signRequestPayload } from '../utils/hmacSign';
+import {
+  isDeviceSecurityReady,
+  markDeviceSecurityReady,
+  resetDeviceSecurityReady,
+} from '../utils/deviceSecurity';
+import {
+  buildHmacPayload,
+  extractSigningPath,
+  signRequestPayload,
+} from '../utils/hmacSign';
 import {
   HttpError,
   nativeDeleteJson,
@@ -364,11 +374,10 @@ function buildRequestHeaders(
 async function applyHmacHeaders(
   headers: Record<string, string>,
   method: HttpMethod,
-  url: string,
-  baseUrl: string,
+  requestUrl: string,
   body: unknown,
 ): Promise<Record<string, string>> {
-  if (isHmacExcludedRequest(url)) return headers;
+  if (!isDeviceSecurityReady()) return headers;
 
   const [deviceSecret, deviceId] = await Promise.all([
     getStoredDeviceSecret(),
@@ -377,8 +386,7 @@ async function applyHmacHeaders(
   if (!deviceSecret || !deviceId) return headers;
 
   const timestamp = Date.now();
-  const normalizedUrl = url.startsWith('/') ? url : `/${url}`;
-  const apiPath = normalizedUrl.startsWith('/api') ? normalizedUrl : `/api${normalizedUrl}`;
+  const apiPath = extractSigningPath(requestUrl);
   const payload = buildHmacPayload(timestamp, method, apiPath, body);
   const signature = signRequestPayload(deviceSecret, payload);
 
@@ -388,6 +396,29 @@ async function applyHmacHeaders(
     'X-Request-Timestamp': String(timestamp),
     'X-Request-Signature': signature,
   };
+}
+
+function isHmacInvalidError(error: HttpError): boolean {
+  const payload = error.response?.data as { code?: string; error?: string } | undefined;
+  return (
+    error.response?.status === 403 &&
+    (payload?.code === 'HMAC_INVALID' ||
+      payload?.error?.toLowerCase().includes('подпись') === true)
+  );
+}
+
+async function resyncDeviceSecurity(): Promise<boolean> {
+  resetDeviceSecurityReady();
+  await clearDeviceSecrets();
+  try {
+    const { registerDeviceWithServer } = await import('./device');
+    await registerDeviceWithServer();
+    markDeviceSecurityReady(true);
+    return true;
+  } catch {
+    markDeviceSecurityReady(false);
+    return false;
+  }
 }
 
 async function executeNativeRequest<T>(
@@ -446,6 +477,7 @@ async function executeRequest<T>(
   body?: unknown,
   config?: ApiRequestConfig,
   retryCount = 0,
+  hmacResyncAttempted = false,
 ): Promise<{ data: T }> {
   const baseUrl = await getApiBaseUrl();
   const requestUrl = appendQueryParams(resolveRequestUrl(baseUrl, url), config?.params);
@@ -461,8 +493,20 @@ async function executeRequest<T>(
     authToken = token;
   }
 
+  const signingBody =
+    body == null
+      ? undefined
+      : isFormDataBody(body)
+        ? undefined
+        : typeof body === 'string'
+          ? body
+          : body;
+
   const headers = buildRequestHeaders(config?.headers, body, authToken, isPublicAuth);
-  const signedHeaders = await applyHmacHeaders(headers, method, url, baseUrl, body);
+  const shouldSign = isDeviceSecurityReady() && !isHmacExcludedRequest(url);
+  const signedHeaders = shouldSign
+    ? await applyHmacHeaders(headers, method, requestUrl, signingBody)
+    : headers;
   const timeoutMs = config?.timeout ?? DEFAULT_TIMEOUT_MS;
 
   try {
@@ -481,9 +525,16 @@ async function executeRequest<T>(
       ? err
       : new HttpError(err instanceof Error ? err.message : 'Network Error', { code: 'ERR_NETWORK' });
 
+    if (isHmacInvalidError(httpError) && !hmacResyncAttempted) {
+      const resynced = await resyncDeviceSecurity();
+      if (resynced) {
+        return executeRequest<T>(method, url, body, config, retryCount, true);
+      }
+    }
+
     if (isRetryableNetworkError(httpError) && retryCount < MAX_NETWORK_RETRIES) {
       await sleep(400 * (retryCount + 1));
-      return executeRequest<T>(method, url, body, config, retryCount + 1);
+      return executeRequest<T>(method, url, body, config, retryCount + 1, hmacResyncAttempted);
     }
 
     if (isRetryableNetworkError(httpError)) {

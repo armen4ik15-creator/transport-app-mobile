@@ -238,7 +238,7 @@ export async function nativePutJson<T>(
   headers: Record<string, string> = {},
   timeoutMs = 20_000,
 ): Promise<NativeHttpResult<T>> {
-  const jsonBody = JSON.stringify(body ?? {});
+  const jsonBody = body != null && body !== undefined ? JSON.stringify(body) : undefined;
   return requestWithRetry<T>(
     'PUT',
     url,
@@ -254,7 +254,7 @@ export async function nativePatchJson<T>(
   headers: Record<string, string> = {},
   timeoutMs = 20_000,
 ): Promise<NativeHttpResult<T>> {
-  const jsonBody = JSON.stringify(body ?? {});
+  const jsonBody = body != null && body !== undefined ? JSON.stringify(body) : undefined;
   return requestWithRetry<T>(
     'PATCH',
     url,

@@ -6,6 +6,11 @@ import {
   setStoredDeviceId,
   setStoredDeviceSecret,
 } from '../utils/cryptoBundle';
+import {
+  markDeviceSecurityReady,
+  resetDeviceSecurityReady,
+  runDeviceRegistrationOnce,
+} from '../utils/deviceSecurity';
 import { getOrCreateDeviceId } from '../utils/deviceId';
 
 export interface DeviceRegistrationResponse {
@@ -28,6 +33,23 @@ export async function registerDeviceWithServer(): Promise<DeviceRegistrationResp
   await setStoredDeviceId(data.device_id);
   await setStoredDeviceSecret(data.secret);
   await setStoredActivationToken(data.activation_token);
+  markDeviceSecurityReady(true);
 
   return data;
+}
+
+export async function ensureDeviceRegistered(): Promise<boolean> {
+  return runDeviceRegistrationOnce(async () => {
+    try {
+      await registerDeviceWithServer();
+      return true;
+    } catch {
+      markDeviceSecurityReady(false);
+      return false;
+    }
+  });
+}
+
+export function resetDeviceRegistrationState(): void {
+  resetDeviceSecurityReady();
 }

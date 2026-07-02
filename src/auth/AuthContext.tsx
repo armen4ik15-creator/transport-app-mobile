@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import type { ReactNode } from 'react';
 import { AppState, type AppStateStatus } from 'react-native';
 import { getMe, login, registerDriver } from '../api/auth';
+import { ensureDeviceRegistered, resetDeviceRegistrationState } from '../api/device';
 import { clearApiClientCache, getApiBaseUrl, primeApiClientCache, setUnauthorizedHandler } from '../api/client';
 import {
   clearSession,
@@ -73,6 +74,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setDriver(null);
       return;
     }
+
+    await ensureDeviceRegistered().catch(() => false);
 
     try {
       const me = await getMe();
@@ -162,7 +165,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       primeApiClientCache(await getApiBaseUrl(), res.token);
       await applySession(res.user, null);
       setNetworkIssue(false);
-      void refresh();
+      await ensureDeviceRegistered().catch(() => false);
+      await refresh();
       return res.user;
     },
     [applySession, refresh]
@@ -188,6 +192,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const signOut = useCallback(async () => {
+    resetDeviceRegistrationState();
     await clearLocalSession();
   }, [clearLocalSession]);
 

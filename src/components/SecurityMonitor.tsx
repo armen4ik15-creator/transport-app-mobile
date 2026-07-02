@@ -7,8 +7,7 @@ import {
   startHeartbeat,
   stopHeartbeat,
 } from '../utils/heartbeat';
-import { hasDeviceCredentials } from '../utils/cryptoBundle';
-import { registerDeviceWithServer } from '../api/device';
+import { ensureDeviceRegistered, resetDeviceRegistrationState } from '../api/device';
 import { runAntiDebugCheck } from '../utils/antiDebug';
 
 interface SecurityMonitorProps {
@@ -45,10 +44,7 @@ export function SecurityMonitor({ children }: SecurityMonitorProps) {
     const bootstrapSecurity = async () => {
       setInitializing(true);
       try {
-        const hasCredentials = await hasDeviceCredentials();
-        if (!hasCredentials) {
-          await registerDeviceWithServer();
-        }
+        await ensureDeviceRegistered();
         if (!cancelled) {
           startHeartbeat();
         }
