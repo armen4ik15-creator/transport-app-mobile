@@ -304,29 +304,8 @@ async function requestWithFallback<T>(
       return downloadJson<T>(url, headers, timeoutMs);
     }
 
-    if (method === 'DELETE') {
-      throw new HttpError('Network Error', { code: 'ERR_NETWORK' });
-    }
-
-    if (options?.formData) {
-      return uploadMultipart<T>(method as 'POST' | 'PUT' | 'PATCH', url, options.formData, headers, timeoutMs);
-    }
-
-    if (options?.jsonBody != null) {
-      return uploadJson<T>(
-        method as 'POST' | 'PUT' | 'PATCH',
-        url,
-        options.jsonBody,
-        headers,
-        timeoutMs,
-      );
-    }
-
-    if (method === 'POST' || method === 'PUT' || method === 'PATCH') {
-      return uploadJson<T>(method as 'POST' | 'PUT' | 'PATCH', url, '', headers, timeoutMs);
-    }
-
-    throw new HttpError('Network Error', { code: 'ERR_NETWORK' });
+    const message = err instanceof Error ? err.message : 'Network Error';
+    throw new HttpError(message, { code: 'ERR_NETWORK' });
   }
 }
 

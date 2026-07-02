@@ -491,7 +491,7 @@ export function apiErrorMessage(err: unknown, fallback = 'Ошибка'): string
       return 'Сервер не найден (DNS). Отключите VPN и Private DNS, переключите Wi‑Fi или мобильный интернет.';
     }
     if (err.message.toLowerCase().includes('connection closed')) {
-      return 'Соединение оборвалось. Подождите и нажмите «Повторить».';
+      return 'Соединение оборвалось. Отключите VPN (значок ключа вверху экрана) и Private DNS, затем попробуйте снова.';
     }
     if (err.message === 'Network Error') {
       return 'Нет связи с сервером. Проверьте интернет и адрес сервера в настройках.';
