@@ -24,7 +24,7 @@ export { TOKEN_KEY };
 
 export const SERVER_URL_KEY = 'SERVER_URL';
 const FALLBACK_API_URL = DEFAULT_PRODUCTION_API_URL;
-const DEFAULT_TIMEOUT_MS = 12_000;
+const DEFAULT_TIMEOUT_MS = 20_000;
 
 let unauthorizedHandler: (() => Promise<void> | void) | null = null;
 let serverIssueHandler: (() => Promise<void> | void) | null = null;
@@ -34,9 +34,9 @@ let cachedToken: string | null | undefined;
 let consecutiveNetworkFailures = 0;
 let lastNetworkFailureAt = 0;
 
-const NETWORK_FAILURE_THRESHOLD = 5;
-const NETWORK_FAILURE_WINDOW_MS = 60_000;
-const MAX_NETWORK_RETRIES = 1;
+const NETWORK_FAILURE_THRESHOLD = 8;
+const NETWORK_FAILURE_WINDOW_MS = 90_000;
+const MAX_NETWORK_RETRIES = 2;
 
 const PUBLIC_AUTH_PATHS = [
   '/auth/login',
@@ -493,8 +493,8 @@ export function apiErrorMessage(err: unknown, fallback = 'Ошибка'): string
     if (err.message.toLowerCase().includes('connection closed')) {
       return 'Соединение оборвалось. Отключите VPN (значок ключа вверху экрана) и Private DNS, затем попробуйте снова.';
     }
-    if (err.message === 'Network Error') {
-      return 'Нет связи с сервером. Проверьте интернет и адрес сервера в настройках.';
+    if (err.message === 'Network request failed' || err.message === 'Network Error') {
+      return 'Не удалось связаться с сервером. Проверьте интернет, отключите VPN и попробуйте снова.';
     }
     if (
       err.code === 'ERR_SSL' ||

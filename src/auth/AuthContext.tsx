@@ -160,11 +160,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const res = await login(email, password);
       await setStoredToken(res.token);
       primeApiClientCache(await getApiBaseUrl(), res.token);
-      setUser(res.user);
-      await refresh();
+      await applySession(res.user, null);
+      setNetworkIssue(false);
+      void refresh();
       return res.user;
     },
-    [refresh]
+    [applySession, refresh]
   );
 
   const signUp = useCallback<AuthState['signUp']>(

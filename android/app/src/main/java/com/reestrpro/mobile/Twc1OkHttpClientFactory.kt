@@ -3,26 +3,34 @@ package com.reestrpro.mobile
 import android.content.Context
 import com.facebook.react.modules.network.OkHttpClientFactory
 import com.facebook.react.modules.network.OkHttpClientProvider
+import okhttp3.ConnectionPool
 import okhttp3.OkHttpClient
-import okhttp3.Protocol
 import java.util.concurrent.TimeUnit
 
+/**
+ * Единый OkHttp для React Native и expo-file-system:
+ * DNS fallback, SSL chain fix, keep-alive pool (без Connection: close).
+ */
 class Twc1OkHttpClientFactory(
   private val context: Context,
 ) : OkHttpClientFactory {
 
+  private val sslContextPair by lazy { Twc1SslSupport.createSslContext(context) }
+
   override fun createNewNetworkModuleClient(): OkHttpClient {
+    val (sslContext, trustManager) = sslContextPair
     return OkHttpClientProvider.createClientBuilder(context)
       .dns(Twc1FallbackDns)
-      .protocols(listOf(Protocol.HTTP_1_1))
+      .sslSocketFactory(sslContext.socketFactory, trustManager)
       .retryOnConnectionFailure(true)
-      .connectTimeout(30, TimeUnit.SECONDS)
-      .readTimeout(30, TimeUnit.SECONDS)
-      .writeTimeout(30, TimeUnit.SECONDS)
+      .connectTimeout(20, TimeUnit.SECONDS)
+      .readTimeout(20, TimeUnit.SECONDS)
+      .writeTimeout(20, TimeUnit.SECONDS)
+      .connectionPool(ConnectionPool(8, 5, TimeUnit.MINUTES))
       .addInterceptor { chain ->
         val request = chain.request().newBuilder()
-          .header("User-Agent", "ReestrPro/1.4.2 Android")
-          .header("Connection", "close")
+          .header("User-Agent", "ReestrPro/1.5.0 Android")
+          .header("Accept", "application/json")
           .build()
         chain.proceed(request)
       }

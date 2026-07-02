@@ -22,16 +22,6 @@ export interface NativeHttpResult<T> {
   data: T;
 }
 
-type FormDataPart = [string, string | { uri: string; name?: string; type?: string }];
-
-interface ParsedFormData {
-  parameters: Record<string, string>;
-  fileUri?: string;
-  fileName?: string;
-  mimeType?: string;
-  fieldName?: string;
-}
-
 function isSslTrustError(err: unknown): boolean {
   if (!(err instanceof Error)) return false;
   return (
@@ -80,21 +70,6 @@ async function removeTempFile(path: string | null): Promise<void> {
   }
 }
 
-async function withTimeout<T>(promise: Promise<T>, timeoutMs: number, label: string): Promise<T> {
-  let timeoutId: ReturnType<typeof setTimeout> | undefined;
-  const timeoutPromise = new Promise<never>((_, reject) => {
-    timeoutId = setTimeout(() => {
-      reject(new HttpError(`${label} timeout`, { code: 'ECONNABORTED' }));
-    }, timeoutMs);
-  });
-
-  try {
-    return await Promise.race([promise, timeoutPromise]);
-  } finally {
-    if (timeoutId) clearTimeout(timeoutId);
-  }
-}
-
 function parseJsonBody<T>(raw: string): T {
   if (!raw.trim()) return undefined as T;
   try {
@@ -118,35 +93,56 @@ function throwHttpError(status: number, rawBody: string): never {
   });
 }
 
-async function fetchJson<T>(
+/** XMLHttpRequest — стабильнее fetch на Android через общий OkHttp-клиент */
+function xhrJson<T>(
   method: HttpMethod,
   url: string,
   headers: Record<string, string>,
   timeoutMs: number,
-  body?: BodyInit,
+  body?: string | null,
 ): Promise<NativeHttpResult<T>> {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open(method, url);
+    xhr.timeout = timeoutMs;
+    xhr.responseType = 'text';
 
-  try {
-    const response = await fetch(url, {
-      method,
-      headers,
-      body: method === 'GET' || method === 'DELETE' ? undefined : body,
-      signal: controller.signal,
-    });
-
-    const raw = await response.text();
-    if (!response.ok) {
-      throwHttpError(response.status, raw);
+    for (const [key, value] of Object.entries(headers)) {
+      if (key.toLowerCase() === 'content-type' && body == null) continue;
+      try {
+        xhr.setRequestHeader(key, value);
+      } catch {
+        // ignore duplicate or forbidden headers
+      }
     }
 
-    const contentType = response.headers.get('content-type') ?? '';
-    const data = contentType.includes('application/json') ? parseJsonBody<T>(raw) : (raw as T);
-    return { status: response.status, data };
-  } finally {
-    clearTimeout(timeoutId);
-  }
+    xhr.onload = () => {
+      const raw = xhr.responseText ?? '';
+      if (xhr.status < 200 || xhr.status >= 300) {
+        reject(
+          new HttpError(`Request failed with status ${xhr.status}`, {
+            response: { status: xhr.status, data: parseErrorData(raw) },
+          }),
+        );
+        return;
+      }
+      resolve({ status: xhr.status, data: parseJsonBody<T>(raw) });
+    };
+
+    xhr.onerror = () => {
+      reject(new HttpError('Network request failed', { code: 'ERR_NETWORK' }));
+    };
+
+    xhr.ontimeout = () => {
+      reject(new HttpError('timeout', { code: 'ECONNABORTED' }));
+    };
+
+    xhr.onabort = () => {
+      reject(new HttpError('timeout', { code: 'ECONNABORTED' }));
+    };
+
+    xhr.send(body ?? undefined);
+  });
 }
 
 async function downloadJson<T>(
@@ -156,130 +152,33 @@ async function downloadJson<T>(
 ): Promise<NativeHttpResult<T>> {
   const target = createTempPath('json');
   try {
-    const result = await withTimeout(
-      FileSystem.downloadAsync(url, target, { headers }),
-      timeoutMs,
-      'GET',
-    );
-    const raw = await FileSystem.readAsStringAsync(target);
-    if (result.status < 200 || result.status >= 300) {
-      throwHttpError(result.status, raw);
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      const result = await FileSystem.downloadAsync(url, target, { headers });
+      const raw = await FileSystem.readAsStringAsync(target);
+      if (result.status < 200 || result.status >= 300) {
+        throwHttpError(result.status, raw);
+      }
+      return { status: result.status, data: parseJsonBody<T>(raw) };
+    } finally {
+      clearTimeout(timer);
     }
-    return { status: result.status, data: parseJsonBody<T>(raw) };
   } finally {
     await removeTempFile(target);
   }
 }
 
-async function uploadJson<T>(
-  method: 'POST' | 'PUT' | 'PATCH',
-  url: string,
-  jsonBody: string,
-  headers: Record<string, string>,
-  timeoutMs: number,
-): Promise<NativeHttpResult<T>> {
-  const source = createTempPath('json');
-  try {
-    await FileSystem.writeAsStringAsync(source, jsonBody);
-    const uploadHeaders = { ...headers };
-    delete uploadHeaders['Content-Type'];
-    delete uploadHeaders['content-type'];
-
-    const result = await withTimeout(
-      FileSystem.uploadAsync(url, source, {
-        httpMethod: method,
-        uploadType: FileSystem.FileSystemUploadType.BINARY_CONTENT,
-        headers: {
-          ...uploadHeaders,
-          'Content-Type': headers['Content-Type'] ?? headers['content-type'] ?? 'application/json',
-        },
-      }),
-      timeoutMs,
-      method,
-    );
-
-    if (result.status < 200 || result.status >= 300) {
-      throwHttpError(result.status, result.body);
-    }
-
-    return { status: result.status, data: parseJsonBody<T>(result.body) };
-  } finally {
-    await removeTempFile(source);
-  }
-}
-
-function parseFormData(formData: FormData): ParsedFormData {
-  const parts =
-    (formData as unknown as { _parts?: FormDataPart[] })._parts ?? [];
-  const parameters: Record<string, string> = {};
-  let fileUri: string | undefined;
-  let fileName: string | undefined;
-  let mimeType: string | undefined;
-  let fieldName: string | undefined;
-
-  for (const [name, value] of parts) {
-    if (typeof value === 'object' && value !== null && 'uri' in value) {
-      fileUri = value.uri;
-      fileName = value.name ?? 'file';
-      mimeType = value.type ?? 'application/octet-stream';
-      fieldName = name;
-      continue;
-    }
-    parameters[name] = String(value);
-  }
-
-  return { parameters, fileUri, fileName, mimeType, fieldName };
-}
-
-async function uploadMultipart<T>(
-  method: 'POST' | 'PUT' | 'PATCH',
-  url: string,
-  formData: FormData,
-  headers: Record<string, string>,
-  timeoutMs: number,
-): Promise<NativeHttpResult<T>> {
-  const parsed = parseFormData(formData);
-  if (!parsed.fileUri || !parsed.fieldName) {
-    throw new HttpError('FormData fallback requires a file part', { code: 'ERR_FORM_DATA' });
-  }
-
-  const uploadHeaders = { ...headers };
-  delete uploadHeaders['Content-Type'];
-  delete uploadHeaders['content-type'];
-
-  const result = await withTimeout(
-    FileSystem.uploadAsync(url, parsed.fileUri, {
-      httpMethod: method,
-      uploadType: FileSystem.FileSystemUploadType.MULTIPART,
-      fieldName: parsed.fieldName,
-      mimeType: parsed.mimeType,
-      parameters: parsed.parameters,
-      headers: uploadHeaders,
-    }),
-    timeoutMs,
-    method,
-  );
-
-  if (result.status < 200 || result.status >= 300) {
-    throwHttpError(result.status, result.body);
-  }
-
-  return { status: result.status, data: parseJsonBody<T>(result.body) };
-}
-
-async function requestWithFallback<T>(
+async function requestWithRetry<T>(
   method: HttpMethod,
   url: string,
   headers: Record<string, string>,
   timeoutMs: number,
-  options?: {
-    jsonBody?: string;
-    formData?: FormData;
-    fetchBody?: BodyInit;
-  },
+  body?: string | null,
+  attempt = 0,
 ): Promise<NativeHttpResult<T>> {
   try {
-    return await fetchJson<T>(method, url, headers, timeoutMs, options?.fetchBody);
+    return await xhrJson<T>(method, url, headers, timeoutMs, body);
   } catch (err) {
     if (err instanceof HttpError && err.response) throw err;
     if (isSslTrustError(err)) {
@@ -292,20 +191,18 @@ async function requestWithFallback<T>(
         code: 'ERR_DNS',
       });
     }
-    if (!isNetworkFailure(err)) {
-      throw err instanceof HttpError
-        ? err
-        : new HttpError(err instanceof Error ? err.message : 'Network Error', {
-            code: 'ERR_NETWORK',
-          });
+    if (attempt < 2 && isNetworkFailure(err)) {
+      await new Promise((r) => setTimeout(r, 600 * (attempt + 1)));
+      return requestWithRetry<T>(method, url, headers, timeoutMs, body, attempt + 1);
     }
-
-    if (method === 'GET') {
+    if (method === 'GET' && isNetworkFailure(err)) {
       return downloadJson<T>(url, headers, timeoutMs);
     }
-
-    const message = err instanceof Error ? err.message : 'Network Error';
-    throw new HttpError(message, { code: 'ERR_NETWORK' });
+    throw err instanceof HttpError
+      ? err
+      : new HttpError(err instanceof Error ? err.message : 'Network Error', {
+          code: 'ERR_NETWORK',
+        });
   }
 }
 
@@ -314,7 +211,7 @@ export async function nativeGetJson<T>(
   headers: Record<string, string> = {},
   timeoutMs = 20_000,
 ): Promise<NativeHttpResult<T>> {
-  return requestWithFallback<T>('GET', url, headers, timeoutMs);
+  return requestWithRetry<T>('GET', url, { Accept: 'application/json', ...headers }, timeoutMs);
 }
 
 export async function nativePostJson<T>(
@@ -327,15 +224,12 @@ export async function nativePostJson<T>(
     Accept: 'application/json',
     ...headers,
   };
-  if (body != null) {
+  const jsonBody = body != null ? JSON.stringify(body) : undefined;
+  if (jsonBody != null) {
     requestHeaders['Content-Type'] =
       requestHeaders['Content-Type'] ?? requestHeaders['content-type'] ?? 'application/json';
   }
-  const jsonBody = body != null ? JSON.stringify(body) : undefined;
-  return requestWithFallback<T>('POST', url, requestHeaders, timeoutMs, {
-    jsonBody,
-    fetchBody: jsonBody,
-  });
+  return requestWithRetry<T>('POST', url, requestHeaders, timeoutMs, jsonBody ?? null);
 }
 
 export async function nativePutJson<T>(
@@ -345,15 +239,13 @@ export async function nativePutJson<T>(
   timeoutMs = 20_000,
 ): Promise<NativeHttpResult<T>> {
   const jsonBody = JSON.stringify(body ?? {});
-  const requestHeaders: Record<string, string> = {
-    Accept: 'application/json',
-    'Content-Type': 'application/json',
-    ...headers,
-  };
-  return requestWithFallback<T>('PUT', url, requestHeaders, timeoutMs, {
+  return requestWithRetry<T>(
+    'PUT',
+    url,
+    { Accept: 'application/json', 'Content-Type': 'application/json', ...headers },
+    timeoutMs,
     jsonBody,
-    fetchBody: jsonBody,
-  });
+  );
 }
 
 export async function nativePatchJson<T>(
@@ -363,15 +255,13 @@ export async function nativePatchJson<T>(
   timeoutMs = 20_000,
 ): Promise<NativeHttpResult<T>> {
   const jsonBody = JSON.stringify(body ?? {});
-  const requestHeaders: Record<string, string> = {
-    Accept: 'application/json',
-    'Content-Type': 'application/json',
-    ...headers,
-  };
-  return requestWithFallback<T>('PATCH', url, requestHeaders, timeoutMs, {
+  return requestWithRetry<T>(
+    'PATCH',
+    url,
+    { Accept: 'application/json', 'Content-Type': 'application/json', ...headers },
+    timeoutMs,
     jsonBody,
-    fetchBody: jsonBody,
-  });
+  );
 }
 
 export async function nativeDeleteJson<T = void>(
@@ -379,7 +269,7 @@ export async function nativeDeleteJson<T = void>(
   headers: Record<string, string> = {},
   timeoutMs = 20_000,
 ): Promise<NativeHttpResult<T>> {
-  return requestWithFallback<T>('DELETE', url, { Accept: 'application/json', ...headers }, timeoutMs);
+  return requestWithRetry<T>('DELETE', url, { Accept: 'application/json', ...headers }, timeoutMs);
 }
 
 export async function nativeSendFormData<T>(
@@ -389,13 +279,21 @@ export async function nativeSendFormData<T>(
   headers: Record<string, string> = {},
   timeoutMs = 20_000,
 ): Promise<NativeHttpResult<T>> {
-  const requestHeaders: Record<string, string> = { Accept: 'application/json', ...headers };
-  delete requestHeaders['Content-Type'];
-  delete requestHeaders['content-type'];
-  return requestWithFallback<T>(method, url, requestHeaders, timeoutMs, {
-    formData,
-    fetchBody: formData,
-  });
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await fetch(url, {
+      method,
+      headers: { Accept: 'application/json', ...headers },
+      body: formData,
+      signal: controller.signal,
+    });
+    const raw = await response.text();
+    if (!response.ok) throwHttpError(response.status, raw);
+    return { status: response.status, data: parseJsonBody<T>(raw) };
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 export async function nativeDownloadBlob(
@@ -404,44 +302,18 @@ export async function nativeDownloadBlob(
   timeoutMs = 20_000,
 ): Promise<NativeHttpResult<Blob>> {
   try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-    try {
-      const response = await fetch(url, { method: 'GET', headers, signal: controller.signal });
-      if (!response.ok) {
-        const raw = await response.text();
-        throwHttpError(response.status, raw);
-      }
-      const data = await response.blob();
-      return { status: response.status, data };
-    } finally {
-      clearTimeout(timeoutId);
+    const response = await fetch(url, { method: 'GET', headers });
+    if (!response.ok) {
+      const raw = await response.text();
+      throwHttpError(response.status, raw);
     }
+    const data = await response.blob();
+    return { status: response.status, data };
   } catch (err) {
     if (err instanceof HttpError && err.response) throw err;
-    if (isSslTrustError(err)) {
-      throw new HttpError(err instanceof Error ? err.message : 'SSL trust error', {
-        code: 'ERR_SSL',
-      });
-    }
-    if (isDnsFailure(err)) {
-      throw new HttpError(err instanceof Error ? err.message : 'DNS resolution failed', {
-        code: 'ERR_DNS',
-      });
-    }
-    if (!isNetworkFailure(err)) {
-      throw err instanceof HttpError
-        ? err
-        : new HttpError(err instanceof Error ? err.message : 'Network Error', { code: 'ERR_NETWORK' });
-    }
-
     const target = createTempPath('bin');
     try {
-      const result = await withTimeout(
-        FileSystem.downloadAsync(url, target, { headers }),
-        timeoutMs,
-        'GET',
-      );
+      const result = await FileSystem.downloadAsync(url, target, { headers });
       if (result.status < 200 || result.status >= 300) {
         const raw = await FileSystem.readAsStringAsync(target);
         throwHttpError(result.status, raw);
@@ -450,7 +322,7 @@ export async function nativeDownloadBlob(
         encoding: FileSystem.EncodingType.Base64,
       });
       const data = await fetch(`data:${result.mimeType ?? 'application/octet-stream'};base64,${base64}`).then(
-        (response) => response.blob(),
+        (r) => r.blob(),
       );
       return { status: result.status, data };
     } finally {
