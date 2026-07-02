@@ -64,7 +64,6 @@ export function DriversScreen() {
     } catch (e) {
       const msg = apiErrorMessage(e, 'Не удалось загрузить водителей');
       setError(msg);
-      Alert.alert('Ошибка', msg);
     }
   }, []);
 

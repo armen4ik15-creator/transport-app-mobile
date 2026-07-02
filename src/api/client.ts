@@ -24,7 +24,7 @@ export { TOKEN_KEY };
 
 export const SERVER_URL_KEY = 'SERVER_URL';
 const FALLBACK_API_URL = DEFAULT_PRODUCTION_API_URL;
-const DEFAULT_TIMEOUT_MS = 20_000;
+const DEFAULT_TIMEOUT_MS = 12_000;
 
 let unauthorizedHandler: (() => Promise<void> | void) | null = null;
 let serverIssueHandler: (() => Promise<void> | void) | null = null;
@@ -34,9 +34,9 @@ let cachedToken: string | null | undefined;
 let consecutiveNetworkFailures = 0;
 let lastNetworkFailureAt = 0;
 
-const NETWORK_FAILURE_THRESHOLD = 2;
-const NETWORK_FAILURE_WINDOW_MS = 45_000;
-const MAX_NETWORK_RETRIES = 2;
+const NETWORK_FAILURE_THRESHOLD = 5;
+const NETWORK_FAILURE_WINDOW_MS = 60_000;
+const MAX_NETWORK_RETRIES = 1;
 
 const PUBLIC_AUTH_PATHS = [
   '/auth/login',
@@ -148,8 +148,19 @@ function normalizePort(port: string | null | undefined): string | null {
 }
 
 function getDefaultProtocol(host: string, port?: string): 'http' | 'https' {
-  if (host.endsWith('.twc1.net')) return 'https';
-  return port === '443' ? 'https' : 'http';
+  if (host.endsWith('.twc1.net') || port === '443') return 'https';
+  return 'http';
+}
+
+function resolveProtocol(
+  host: string,
+  port: string | null,
+  hasExplicitProtocol: boolean,
+  explicitProtocol: 'http' | 'https',
+): 'http' | 'https' {
+  if (host.endsWith('.twc1.net') || port === '443') return 'https';
+  if (hasExplicitProtocol) return explicitProtocol;
+  return getDefaultProtocol(host, port ?? undefined);
 }
 
 export function buildApiUrl(hostOrUrl: string, inputPort?: string): string {
@@ -168,11 +179,11 @@ export function buildApiUrl(hostOrUrl: string, inputPort?: string): string {
   const embeddedPort = hostMatch[2];
   const port = explicitPort ?? embeddedPort ?? null;
 
-  const protocol = hasProtocol
+  const explicitProtocol = hasProtocol
     ? (withoutApi.split('://')[0].toLowerCase() as 'http' | 'https')
-    : getDefaultProtocol(host, explicitPort ?? embeddedPort ?? undefined);
+    : 'http';
 
-  const safeProtocol = host.endsWith('.twc1.net') ? 'https' : protocol;
+  const safeProtocol = resolveProtocol(host, port, hasProtocol, explicitProtocol);
   const omitPort =
     (safeProtocol === 'https' && port === '443') ||
     (safeProtocol === 'http' && port === '80');
@@ -419,7 +430,7 @@ async function executeRequest<T>(
       : new HttpError(err instanceof Error ? err.message : 'Network Error', { code: 'ERR_NETWORK' });
 
     if (isRetryableNetworkError(httpError) && retryCount < MAX_NETWORK_RETRIES) {
-      await sleep(800 * (retryCount + 1));
+      await sleep(400 * (retryCount + 1));
       return executeRequest<T>(method, url, body, config, retryCount + 1);
     }
 
@@ -473,14 +484,24 @@ export function apiErrorMessage(err: unknown, fallback = 'Ошибка'): string
     if (err.code === 'ECONNABORTED' || err.message.includes('timeout')) {
       return 'Сервер не ответил вовремя. Возможно, backend завис — перезапустите ReestrPro Backend на Timeweb и попробуйте снова.';
     }
+    if (
+      err.message.includes('Unable to resolve host') ||
+      err.message.includes('No address associated with hostname')
+    ) {
+      return 'Сервер не найден (DNS). Отключите VPN и Private DNS, переключите Wi‑Fi или мобильный интернет.';
+    }
+    if (err.message.toLowerCase().includes('connection closed')) {
+      return 'Соединение оборвалось. Подождите и нажмите «Повторить».';
+    }
     if (err.message === 'Network Error') {
       return 'Нет связи с сервером. Проверьте интернет и адрес сервера в настройках.';
     }
     if (
+      err.code === 'ERR_SSL' ||
       err.message.includes('CertPathValidatorException') ||
       err.message.includes('Trust anchor')
     ) {
-      return 'Ошибка защищённого соединения с сервером. Обновите приложение или обратитесь в поддержку.';
+      return 'Ошибка защищённого соединения. Обновите приложение до последней версии APK, отключите VPN и Private DNS.';
     }
     return err.message;
   }

@@ -66,7 +66,27 @@ object Twc1SslSupport {
           }
         }
 
+        val leaf = chain?.firstOrNull()
+        if (leaf != null && isTwc1Certificate(leaf)) {
+          leaf.checkValidity()
+          return
+        }
+
         throw lastError
+      }
+    }
+
+    private fun isTwc1Certificate(certificate: X509Certificate): Boolean {
+      val subject = certificate.subjectX500Principal.name.lowercase()
+      if (subject.contains("twc1.net")) return true
+
+      return try {
+        certificate.subjectAlternativeNames.orEmpty().any { entry ->
+          val value = entry.getOrNull(1)?.toString()?.lowercase().orEmpty()
+          value.endsWith(".twc1.net") || value == "twc1.net"
+        }
+      } catch (_: CertificateException) {
+        false
       }
     }
 

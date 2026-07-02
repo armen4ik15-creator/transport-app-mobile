@@ -6,6 +6,7 @@ import { KitIcon, KitTextField, PrimaryButton } from '../components/kit';
 import { ErrorText } from '../components/ui';
 import { useAuth } from '../auth/AuthContext';
 import { apiErrorMessage, getServerUrl, primeApiClientCache, resetAuthTokenCache } from '../api/client';
+import { getAppVersion } from '../utils/appVersion';
 import { DEFAULT_PRODUCTION_HOST } from '../constants/config';
 import { probeServerHealthWithRetry } from '../utils/serverHealth';
 import type { RootStackParamList } from '../navigation/types';
@@ -205,6 +206,10 @@ export function LoginScreen({ navigation }: Props) {
             {checkingServer ? 'Проверка…' : 'Проверить подключение к серверу'}
           </Text>
         </Pressable>
+
+        <Text style={{ textAlign: 'center', fontSize: 11, color: colors.textMuted, marginTop: 12 }}>
+          Версия приложения: {getAppVersion()}
+        </Text>
       </ScrollView>
     </View>
   );

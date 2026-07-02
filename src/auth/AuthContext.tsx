@@ -83,13 +83,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return;
       }
       if (isNetworkAuthError(err)) {
-        // Сеть недоступна — восстанавливаем кэш, токен не трогаем
         const snapshot = await getUserSnapshot();
         if (snapshot) {
           setUser(snapshot.user);
           setDriver(snapshot.driver);
         }
-        setNetworkIssue(true);
         return;
       }
       await clearLocalSession();

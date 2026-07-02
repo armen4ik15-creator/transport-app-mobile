@@ -44,14 +44,26 @@ function isNetworkFailure(err: unknown): boolean {
   if (isSslTrustError(err)) return false;
   if (err instanceof TypeError) return true;
   if (err instanceof Error) {
+    const message = err.message.toLowerCase();
     return (
       err.name === 'AbortError' ||
       err.message === 'Network request failed' ||
       err.message.includes('Failed to fetch') ||
-      err.message === 'Network Error'
+      err.message === 'Network Error' ||
+      err.message.includes('Unable to resolve host') ||
+      err.message.includes('No address associated with hostname') ||
+      message.includes('connection closed')
     );
   }
   return false;
+}
+
+function isDnsFailure(err: unknown): boolean {
+  if (!(err instanceof Error)) return false;
+  return (
+    err.message.includes('Unable to resolve host') ||
+    err.message.includes('No address associated with hostname')
+  );
 }
 
 function createTempPath(suffix: string): string {
@@ -275,6 +287,11 @@ async function requestWithFallback<T>(
         code: 'ERR_SSL',
       });
     }
+    if (isDnsFailure(err)) {
+      throw new HttpError(err instanceof Error ? err.message : 'DNS resolution failed', {
+        code: 'ERR_DNS',
+      });
+    }
     if (!isNetworkFailure(err)) {
       throw err instanceof HttpError
         ? err
@@ -426,6 +443,11 @@ export async function nativeDownloadBlob(
     if (isSslTrustError(err)) {
       throw new HttpError(err instanceof Error ? err.message : 'SSL trust error', {
         code: 'ERR_SSL',
+      });
+    }
+    if (isDnsFailure(err)) {
+      throw new HttpError(err instanceof Error ? err.message : 'DNS resolution failed', {
+        code: 'ERR_DNS',
       });
     }
     if (!isNetworkFailure(err)) {

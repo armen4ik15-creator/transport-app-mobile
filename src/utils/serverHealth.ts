@@ -9,8 +9,12 @@ function isHealthyStatus(data: HealthLiveResponse): boolean {
   return data.status === 'ok' || data.status === 'degraded';
 }
 
-export async function probeServerHealth(apiUrl: string, timeoutMs = 25000): Promise<boolean> {
-  const healthUrl = `${apiUrl.replace(/\/$/, '')}/health/live`;
+async function probeHealthPath(
+  apiUrl: string,
+  path: '/health' | '/health/live',
+  timeoutMs: number,
+): Promise<boolean> {
+  const healthUrl = `${apiUrl.replace(/\/$/, '')}${path}`;
   try {
     const { data } = await nativeGetJson<HealthLiveResponse>(
       healthUrl,
@@ -23,10 +27,16 @@ export async function probeServerHealth(apiUrl: string, timeoutMs = 25000): Prom
   }
 }
 
+export async function probeServerHealth(apiUrl: string, timeoutMs = 25000): Promise<boolean> {
+  const primaryOk = await probeHealthPath(apiUrl, '/health', timeoutMs);
+  if (primaryOk) return true;
+  return probeHealthPath(apiUrl, '/health/live', timeoutMs);
+}
+
 export async function probeServerHealthWithRetry(
   apiUrl: string,
-  attempts = 3,
-  timeoutMs = 25000
+  attempts = 2,
+  timeoutMs = 8000
 ): Promise<boolean> {
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
     const ok = await probeServerHealth(apiUrl, timeoutMs);

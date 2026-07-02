@@ -3,6 +3,7 @@ import { Alert, FlatList, Pressable, RefreshControl, Text, View } from 'react-na
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { apiErrorMessage } from '../api/client';
+import { DEFAULT_PRODUCTION_HOST } from '../constants/config';
 import type { RootStackParamList } from '../navigation/types';
 import { ScreenHeader } from '../components/ScreenHeader';
 import { ScreenHero } from '../components/ScreenHero';
@@ -179,7 +180,7 @@ export function AdminRegistrationRequestsScreen() {
                 label="⚙️ Проверить адрес сервера"
                 onPress={() =>
                   navigation.navigate('ServerSetup', {
-                    reason: 'Укажите продакшен-сервер armen4ik15-creator-transport-app-server-43b9.twc1.net порт 443',
+                    reason: `Укажите продакшен-сервер ${DEFAULT_PRODUCTION_HOST} порт 443`,
                   })
                 }
                 variant="secondary"

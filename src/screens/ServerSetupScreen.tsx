@@ -164,38 +164,28 @@ export function ServerSetupScreen({ route, onConfigured }: ComponentProps) {
 
     const apiUrl = buildApiUrl(cleanIp, cleanPort);
 
-    const ok = await probeServerHealthWithRetry(apiUrl, 3, 25000);
-
-
-
-    if (ok) {
-
-      await setServerUrl(apiUrl);
-
-      onConfigured?.();
-
-      Alert.alert('Подключение успешно', `Сервер сохранён:\n${apiUrl.replace(/\/api\/?$/, '')}`);
-
-      setBusy(false);
-
-      return;
-
-    }
-
-
-
     if (isProductionHost(cleanIp)) {
       await setServerUrl(apiUrl);
       setBusy(false);
+      onConfigured?.();
+      void probeServerHealthWithRetry(apiUrl, 1, 8000);
       Alert.alert(
         'Сервер сохранён',
         'Продакшен-сервер настроен. Нажмите OK — откроется экран входа.',
-        [{ text: 'OK', onPress: () => onConfigured?.() }]
+        [{ text: 'OK' }]
       );
       return;
     }
 
+    const ok = await probeServerHealthWithRetry(apiUrl, 2, 8000);
 
+    if (ok) {
+      await setServerUrl(apiUrl);
+      onConfigured?.();
+      Alert.alert('Подключение успешно', `Сервер сохранён:\n${apiUrl.replace(/\/api\/?$/, '')}`);
+      setBusy(false);
+      return;
+    }
 
     setError('Не удалось подключиться к серверу');
 
