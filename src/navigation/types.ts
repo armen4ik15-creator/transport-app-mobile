@@ -50,6 +50,7 @@ export type RootStackParamList = {
   FinanceReport: undefined;
   CompleteProfile: undefined;
   Documents: undefined;
+  VehicleDocuments: { vehicleId?: number } | undefined;
   Reports: undefined;
   TripCreate: { orderId: number; openAction?: 'loading' | 'unloading' };
   TripPhotos: undefined;

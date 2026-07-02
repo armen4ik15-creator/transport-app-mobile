@@ -49,21 +49,30 @@ export function ScreenHeader({
           {displayPageTitle}
         </Text>
       ) : null}
-      <View style={screenUi.header}>
+      <View style={[screenUi.header, { gap: 8 }]}>
         {showBackButton ? (
-          <Pressable onPress={handleBack} hitSlop={8}>
-            <Text style={screenUi.back}>← Назад</Text>
+          <Pressable onPress={handleBack} hitSlop={8} style={{ minWidth: 56, maxWidth: 88, flexShrink: 0 }}>
+            <Text style={screenUi.back} numberOfLines={1}>
+              ← Назад
+            </Text>
           </Pressable>
         ) : (
-          <View style={{ width: 72 }} />
+          <View style={{ width: 56 }} />
         )}
-        <Text style={screenUi.title}>{title}</Text>
+        <Text style={[screenUi.title, { flex: 1, textAlign: 'center' }]} numberOfLines={2}>
+          {title}
+        </Text>
         {actionLabel && onAction ? (
-          <Pressable style={screenUi.addBtn} onPress={onAction}>
-            <Text style={screenUi.addBtnText}>{actionLabel}</Text>
+          <Pressable
+            style={[screenUi.addBtn, { minWidth: 56, maxWidth: 96, flexShrink: 0 }]}
+            onPress={onAction}
+          >
+            <Text style={screenUi.addBtnText} numberOfLines={1}>
+              {actionLabel}
+            </Text>
           </Pressable>
         ) : (
-          <View style={{ width: 72 }} />
+          <View style={{ width: 56 }} />
         )}
       </View>
     </View>

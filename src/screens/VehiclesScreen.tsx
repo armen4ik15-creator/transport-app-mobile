@@ -1,6 +1,7 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Alert, FlatList, Pressable, RefreshControl, Text, View } from 'react-native';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { FormBottomModal } from '../components/FormBottomModal';
 import { ScreenHeader } from '../components/ScreenHeader';
 import { ScreenHero } from '../components/ScreenHero';
@@ -10,9 +11,12 @@ import { apiErrorMessage } from '../api/client';
 import { createVehicle, deleteVehicle, listVehicles } from '../api/vehicles';
 import { useAuth } from '../auth/AuthContext';
 import { screenUi } from '../styles/screenUi';
+import { colors } from '../theme';
+import type { RootStackParamList } from '../navigation/types';
 import type { Vehicle } from '../types';
 
 export function VehiclesScreen() {
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
@@ -123,7 +127,11 @@ export function VehiclesScreen() {
           </View>
         }
         renderItem={({ item }) => (
-          <Pressable style={screenUi.card} onLongPress={() => isAdmin && onDelete(item)}>
+          <Pressable
+            style={screenUi.card}
+            onPress={() => navigation.navigate('VehicleDocuments', { vehicleId: item.id })}
+            onLongPress={() => isAdmin && onDelete(item)}
+          >
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
               <View style={{ flex: 1 }}>
                 <Text style={{ fontSize: 16, fontWeight: '600', color: '#111827' }}>{item.plate_number}</Text>
@@ -131,6 +139,7 @@ export function VehiclesScreen() {
                   {item.model ?? 'Модель не указана'}
                   {item.capacity != null ? ` · ⚖️ ${item.capacity}` : ''}
                 </Text>
+                <Text style={{ fontSize: 12, color: colors.primary, marginTop: 6 }}>📁 Документы машины</Text>
               </View>
               {isAdmin ? (
                 <Pressable onPress={() => onDelete(item)} hitSlop={8}>

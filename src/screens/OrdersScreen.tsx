@@ -168,7 +168,7 @@ export function OrdersScreen() {
         maxToRenderPerBatch={8}
         windowSize={7}
         removeClippedSubviews
-        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 24, flexGrow: 1 }}
+        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 100, flexGrow: 1 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
         ListHeaderComponent={
           <View style={screenUi.content}>

@@ -7,7 +7,7 @@ import { ScreenHeader } from '../components/ScreenHeader';
 import { ScreenHero } from '../components/ScreenHero';
 import { ErrorText, Field, LoadingScreen, MenuButton } from '../components/ui';
 import { apiErrorMessage } from '../api/client';
-import { createOrderTemplate, deleteOrderTemplate, listOrderTemplates } from '../api/orderTemplates';
+import { createOrderTemplate, deleteOrderTemplate, listOrderTemplates, updateOrderTemplate } from '../api/orderTemplates';
 import type { OrderTemplate } from '../types';
 import type { RootStackParamList } from '../navigation/RootNavigator';
 import { screenUi } from '../styles/screenUi';
@@ -21,6 +21,7 @@ export function OrderTemplatesScreen({ navigation }: Props) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [formVisible, setFormVisible] = useState(false);
+  const [editingId, setEditingId] = useState<number | null>(null);
   const [name, setName] = useState('');
   const [material, setMaterial] = useState('');
   const [unit, setUnit] = useState('м3');
@@ -56,6 +57,7 @@ export function OrderTemplatesScreen({ navigation }: Props) {
   };
 
   const resetForm = () => {
+    setEditingId(null);
     setName('');
     setMaterial('');
     setUnit('м3');
@@ -69,7 +71,28 @@ export function OrderTemplatesScreen({ navigation }: Props) {
     setUnloadAddress('');
   };
 
-  const onCreate = async () => {
+  const openCreate = () => {
+    resetForm();
+    setFormVisible(true);
+  };
+
+  const openEdit = (item: OrderTemplate) => {
+    setEditingId(item.id);
+    setName(item.name);
+    setMaterial(item.material ?? '');
+    setUnit(item.unit ?? 'м3');
+    setQuantity(item.default_quantity != null ? String(item.default_quantity) : '');
+    setDriverRate(item.driver_rate != null ? String(item.driver_rate) : '');
+    setCompanyRate(item.company_rate != null ? String(item.company_rate) : '');
+    setDistanceKm(item.distance_km != null ? String(item.distance_km) : '');
+    setNotes(item.notes ?? '');
+    setDescription(item.description ?? '');
+    setLoadAddress(item.load_address ?? '');
+    setUnloadAddress(item.unload_address ?? '');
+    setFormVisible(true);
+  };
+
+  const onSave = async () => {
     if (!name.trim()) {
       Alert.alert('Ошибка', 'Введите название шаблона');
       return;
@@ -79,27 +102,33 @@ export function OrderTemplatesScreen({ navigation }: Props) {
     const parsedCompanyRate = companyRate.trim() ? Number(companyRate.replace(',', '.')) : null;
     const parsedDistance = distanceKm.trim() ? Number(distanceKm.replace(',', '.')) : null;
 
+    const payload = {
+      name: name.trim(),
+      material: material.trim() || undefined,
+      unit: unit.trim() || undefined,
+      default_quantity: Number.isFinite(parsedQty as number) ? parsedQty : null,
+      driver_rate: Number.isFinite(parsedDriverRate as number) ? parsedDriverRate : null,
+      company_rate: Number.isFinite(parsedCompanyRate as number) ? parsedCompanyRate : null,
+      distance_km: Number.isFinite(parsedDistance as number) ? parsedDistance : null,
+      notes: notes.trim() || undefined,
+      description: description.trim() || undefined,
+      load_address: loadAddress.trim() || undefined,
+      unload_address: unloadAddress.trim() || undefined,
+    };
+
     setSaving(true);
     try {
-      await createOrderTemplate({
-        name: name.trim(),
-        material: material.trim() || undefined,
-        unit: unit.trim() || undefined,
-        default_quantity: Number.isFinite(parsedQty as number) ? parsedQty : null,
-        driver_rate: Number.isFinite(parsedDriverRate as number) ? parsedDriverRate : null,
-        company_rate: Number.isFinite(parsedCompanyRate as number) ? parsedCompanyRate : null,
-        distance_km: Number.isFinite(parsedDistance as number) ? parsedDistance : null,
-        notes: notes.trim() || undefined,
-        description: description.trim() || undefined,
-        load_address: loadAddress.trim() || undefined,
-        unload_address: unloadAddress.trim() || undefined,
-      });
+      if (editingId != null) {
+        await updateOrderTemplate(editingId, payload);
+      } else {
+        await createOrderTemplate(payload);
+      }
       resetForm();
       setFormVisible(false);
       await load();
-      Alert.alert('Готово', 'Шаблон заказа создан');
+      Alert.alert('Готово', editingId != null ? 'Шаблон обновлён' : 'Шаблон заказа создан');
     } catch (e) {
-      Alert.alert('Ошибка', apiErrorMessage(e, 'Не удалось создать шаблон'));
+      Alert.alert('Ошибка', apiErrorMessage(e, 'Не удалось сохранить шаблон'));
     } finally {
       setSaving(false);
     }
@@ -134,7 +163,12 @@ export function OrderTemplatesScreen({ navigation }: Props) {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         ListHeaderComponent={
           <View style={screenUi.content}>
-            <ScreenHeader title="📦 Шаблоны заказов" actionLabel="+ Создать" onAction={() => setFormVisible(true)} />
+            <ScreenHeader
+              title="Шаблоны заказов"
+              showPageTitle={false}
+              actionLabel="Добавить"
+              onAction={openCreate}
+            />
             <ScreenHero title="🗂 Шаблоны заказов" subtitle="Быстрое создание типовых задач" />
             <ErrorText message={error} />
           </View>
@@ -157,8 +191,14 @@ export function OrderTemplatesScreen({ navigation }: Props) {
                 <Text style={{ color: '#fff', fontSize: 12, fontWeight: '600' }}>Создать заказ</Text>
               </Pressable>
               <Pressable
+                onPress={() => openEdit(item)}
+                style={{ flex: 1, backgroundColor: '#7c3aed', paddingVertical: 8, borderRadius: 7, alignItems: 'center' }}
+              >
+                <Text style={{ color: '#fff', fontSize: 12, fontWeight: '600' }}>Изменить</Text>
+              </Pressable>
+              <Pressable
                 onPress={() => onDelete(item)}
-                style={{ flex: 1, backgroundColor: '#ef4444', paddingVertical: 8, borderRadius: 7, alignItems: 'center' }}
+                style={{ width: 44, backgroundColor: '#ef4444', paddingVertical: 8, borderRadius: 7, alignItems: 'center' }}
               >
                 <Text style={{ color: '#fff', fontSize: 12, fontWeight: '600' }}>🗑</Text>
               </Pressable>
@@ -170,10 +210,10 @@ export function OrderTemplatesScreen({ navigation }: Props) {
 
       <FormBottomModal
         visible={formVisible}
-        title="➕ Шаблон заказа"
-        saveLabel="Создать шаблон"
+        title={editingId != null ? '✏️ Редактировать шаблон' : '➕ Шаблон заказа'}
+        saveLabel={editingId != null ? 'Сохранить' : 'Создать шаблон'}
         saving={saving}
-        onSave={onCreate}
+        onSave={onSave}
         onClose={() => {
           setFormVisible(false);
           resetForm();

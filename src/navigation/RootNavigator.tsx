@@ -27,6 +27,7 @@ import { TripPhotosScreen } from '../screens/TripPhotosScreen';
 import { AllPhotosScreen } from '../screens/AllPhotosScreen';
 import { MaterialsScreen } from '../screens/MaterialsScreen';
 import { VehiclesScreen } from '../screens/VehiclesScreen';
+import { VehicleDocumentsScreen } from '../screens/VehicleDocumentsScreen';
 import { WaybillsScreen } from '../screens/WaybillsScreen';
 import { InvoicesScreen } from '../screens/InvoicesScreen';
 import { NotificationsScreen } from '../screens/NotificationsScreen';
@@ -181,6 +182,7 @@ export function RootNavigator() {
             <Stack.Screen name="OrderTemplates" component={OrderTemplatesScreen} options={{ title: 'Шаблоны заказов' }} />
             <Stack.Screen name="Materials" component={MaterialsScreen} options={{ title: 'Материалы' }} />
             <Stack.Screen name="Vehicles" component={VehiclesScreen} options={{ title: 'Автомобили' }} />
+            <Stack.Screen name="VehicleDocuments" component={VehicleDocumentsScreen} options={{ title: 'Документы на авто' }} />
             <Stack.Screen name="Waybills" component={WaybillsScreen} options={{ title: 'Путевые листы' }} />
             <Stack.Screen name="Invoices" component={InvoicesScreen} options={{ title: 'Счета' }} />
             <Stack.Screen name="Notifications" component={NotificationsScreen} options={{ title: 'Уведомления' }} />

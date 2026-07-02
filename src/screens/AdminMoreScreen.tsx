@@ -73,6 +73,7 @@ export function AdminMoreScreen() {
 
       <SectionLabel>Справочники</SectionLabel>
       <ListRow icon="truck" title="Автомобили" subtitle="Техника и госномера" accent={colors.primary} onPress={() => navigation.navigate('Vehicles')} />
+      <ListRow icon="file-text" title="Документы на авто" subtitle="СТС, ПТС, страховка, паспорт" accent={colors.primaryLight} onPress={() => navigation.navigate('VehicleDocuments')} />
       <ListRow icon="box" title="Материалы" subtitle="Песок, щебень, ПГС" accent={colors.profit} onPress={() => navigation.navigate('Materials')} />
       <ListRow icon="folder" title="Документы и ТТН" subtitle="Шаблоны и сканы" accent={colors.warning} onPress={() => navigation.navigate('Documents')} />
 

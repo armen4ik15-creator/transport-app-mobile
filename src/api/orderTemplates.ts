@@ -24,6 +24,27 @@ export async function createOrderTemplate(payload: {
   return data;
 }
 
+export async function updateOrderTemplate(
+  id: number,
+  payload: {
+    name?: string;
+    contractor_id?: number | null;
+    material?: string;
+    unit?: string;
+    default_quantity?: number | null;
+    driver_rate?: number | null;
+    company_rate?: number | null;
+    distance_km?: number | null;
+    notes?: string;
+    description?: string;
+    load_address?: string;
+    unload_address?: string;
+  }
+): Promise<OrderTemplate> {
+  const { data } = await api.put<OrderTemplate>(`/order-templates/${id}`, payload);
+  return data;
+}
+
 export async function deleteOrderTemplate(id: number): Promise<void> {
   await api.delete(`/order-templates/${id}`);
 }

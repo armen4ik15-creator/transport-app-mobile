@@ -244,6 +244,24 @@ export interface Vehicle {
   created_at: string;
 }
 
+export type VehicleDocumentType =
+  | 'sts'
+  | 'contract'
+  | 'pts'
+  | 'insurance'
+  | 'driver_passport';
+
+export interface VehicleDocument {
+  id: number;
+  vehicle_id: number;
+  doc_type: VehicleDocumentType;
+  file_path: string;
+  created_by: number | null;
+  created_at: string;
+  vehicle_plate?: string;
+  created_by_email?: string | null;
+}
+
 export interface Waybill {
   id: number;
   order_id: number;
