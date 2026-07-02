@@ -6,15 +6,24 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { AuthProvider } from './src/auth/AuthContext';
 import { RootNavigator } from './src/navigation/RootNavigator';
 import { AppErrorBoundary } from './src/components/AppErrorBoundary';
+import {
+  isLicenseAccepted,
+  markLicenseAccepted,
+  SecurityMonitor,
+} from './src/components/SecurityMonitor';
+import { LicenseAgreementScreen } from './src/screens/LicenseAgreementScreen';
 import { logStartup } from './src/utils/startupLogger';
 import { installGlobalErrorHandler } from './src/utils/installGlobalErrorHandler';
+import { runAntiDebugCheck } from './src/utils/antiDebug';
 
 function AppShell() {
   return (
     <AppErrorBoundary>
       <AuthProvider>
-        <StatusBar style="dark" />
-        <RootNavigator />
+        <SecurityMonitor>
+          <StatusBar style="dark" />
+          <RootNavigator />
+        </SecurityMonitor>
       </AuthProvider>
     </AppErrorBoundary>
   );
@@ -22,10 +31,17 @@ function AppShell() {
 
 export default function App() {
   const [ready, setReady] = useState(false);
+  const [licenseAccepted, setLicenseAccepted] = useState<boolean | null>(null);
 
   useEffect(() => {
     void logStartup('app_mount');
     installGlobalErrorHandler();
+    void runAntiDebugCheck();
+
+    void isLicenseAccepted().then((accepted) => {
+      setLicenseAccepted(accepted);
+    });
+
     const frame = requestAnimationFrame(() => {
       setReady(true);
       void logStartup('app_ready');
@@ -33,11 +49,25 @@ export default function App() {
     return () => cancelAnimationFrame(frame);
   }, []);
 
-  if (!ready) {
+  if (!ready || licenseAccepted === null) {
     return (
       <View style={styles.boot}>
         <Text style={styles.bootText}>Loading...</Text>
       </View>
+    );
+  }
+
+  if (!licenseAccepted) {
+    return (
+      <GestureHandlerRootView style={styles.root}>
+        <SafeAreaProvider>
+          <LicenseAgreementScreen
+            onAccept={() => {
+              void markLicenseAccepted().then(() => setLicenseAccepted(true));
+            }}
+          />
+        </SafeAreaProvider>
+      </GestureHandlerRootView>
     );
   }
 

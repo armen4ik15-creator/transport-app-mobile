@@ -10,6 +10,11 @@ import {
   TOKEN_KEY,
 } from '../storage/sessionStorage';
 import {
+  getStoredDeviceId,
+  getStoredDeviceSecret,
+} from '../utils/cryptoBundle';
+import { buildHmacPayload, signRequestPayload } from '../utils/hmacSign';
+import {
   HttpError,
   nativeDeleteJson,
   nativeDownloadBlob,
@@ -29,6 +34,7 @@ const DEFAULT_TIMEOUT_MS = 20_000;
 let unauthorizedHandler: (() => Promise<void> | void) | null = null;
 let serverIssueHandler: (() => Promise<void> | void) | null = null;
 let serverIssueClearHandler: (() => Promise<void> | void) | null = null;
+let blockedHandler: ((reason: string) => Promise<void> | void) | null = null;
 let cachedBaseUrl: string | null = null;
 let cachedToken: string | null | undefined;
 let consecutiveNetworkFailures = 0;
@@ -43,6 +49,13 @@ const PUBLIC_AUTH_PATHS = [
   '/auth/register',
   '/auth/forgot-password',
   '/auth/security-config',
+] as const;
+
+const HMAC_EXCLUDED_PATHS = [
+  ...PUBLIC_AUTH_PATHS,
+  '/device/register',
+  '/heartbeat',
+  '/health',
 ] as const;
 
 type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
@@ -63,6 +76,11 @@ export function isHttpError(err: unknown): err is HttpError {
 function isPublicAuthRequest(url: string | undefined): boolean {
   if (!url) return false;
   return PUBLIC_AUTH_PATHS.some((path) => url.includes(path));
+}
+
+function isHmacExcludedRequest(url: string | undefined): boolean {
+  if (!url) return false;
+  return HMAC_EXCLUDED_PATHS.some((path) => url.includes(path));
 }
 
 export function resetAuthTokenCache(): void {
@@ -89,6 +107,10 @@ export function setServerIssueHandler(handler: (() => Promise<void> | void) | nu
 
 export function setServerIssueClearHandler(handler: (() => Promise<void> | void) | null) {
   serverIssueClearHandler = handler;
+}
+
+export function setBlockedHandler(handler: ((reason: string) => Promise<void> | void) | null) {
+  blockedHandler = handler;
 }
 
 function extractHostFromApiUrl(url: string): string | null {
@@ -339,6 +361,35 @@ function buildRequestHeaders(
   return headers;
 }
 
+async function applyHmacHeaders(
+  headers: Record<string, string>,
+  method: HttpMethod,
+  url: string,
+  baseUrl: string,
+  body: unknown,
+): Promise<Record<string, string>> {
+  if (isHmacExcludedRequest(url)) return headers;
+
+  const [deviceSecret, deviceId] = await Promise.all([
+    getStoredDeviceSecret(),
+    getStoredDeviceId(),
+  ]);
+  if (!deviceSecret || !deviceId) return headers;
+
+  const timestamp = Date.now();
+  const normalizedUrl = url.startsWith('/') ? url : `/${url}`;
+  const apiPath = normalizedUrl.startsWith('/api') ? normalizedUrl : `/api${normalizedUrl}`;
+  const payload = buildHmacPayload(timestamp, method, apiPath, body);
+  const signature = signRequestPayload(deviceSecret, payload);
+
+  return {
+    ...headers,
+    'X-Device-Id': deviceId,
+    'X-Request-Timestamp': String(timestamp),
+    'X-Request-Signature': signature,
+  };
+}
+
 async function executeNativeRequest<T>(
   method: HttpMethod,
   requestUrl: string,
@@ -411,13 +462,14 @@ async function executeRequest<T>(
   }
 
   const headers = buildRequestHeaders(config?.headers, body, authToken, isPublicAuth);
+  const signedHeaders = await applyHmacHeaders(headers, method, url, baseUrl, body);
   const timeoutMs = config?.timeout ?? DEFAULT_TIMEOUT_MS;
 
   try {
     const result = await executeNativeRequest<T>(
       method,
       requestUrl,
-      headers,
+      signedHeaders,
       timeoutMs,
       body,
       config?.responseType,
@@ -444,6 +496,11 @@ async function executeRequest<T>(
       if (unauthorizedHandler) {
         await unauthorizedHandler();
       }
+    }
+
+    const blockedPayload = httpError.response?.data as { blocked?: boolean; error?: string; reason?: string } | undefined;
+    if (httpError.response?.status === 403 && blockedPayload?.blocked && blockedHandler) {
+      await blockedHandler(blockedPayload.reason ?? blockedPayload.error ?? 'Доступ заблокирован');
     }
 
     throw httpError;

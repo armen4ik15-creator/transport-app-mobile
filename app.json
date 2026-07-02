@@ -39,6 +39,16 @@
     },
     "plugins": [
       [
+        "expo-build-properties",
+        {
+          "android": {
+            "enableMinifyInReleaseBuilds": true,
+            "enableShrinkResourcesInReleaseBuilds": true,
+            "extraProguardRules": "-keep class com.reestrpro.mobile.** { *; }\n-keep class expo.modules.** { *; }"
+          }
+        }
+      ],
+      [
         "expo-image-picker",
         {
           "cameraPermission": "Разрешите доступ к камере для фото ТТН.",

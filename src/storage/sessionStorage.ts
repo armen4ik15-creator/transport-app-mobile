@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { Driver, User } from '../types';
+import { clearDeviceSecrets } from '../utils/cryptoBundle';
 import { logStartup } from '../utils/startupLogger';
 
 export const TOKEN_KEY = 'reestrpro.token';
@@ -75,4 +76,5 @@ export async function clearUserSnapshot(): Promise<void> {
 export async function clearSession(): Promise<void> {
   await clearStoredToken();
   await clearUserSnapshot();
+  await clearDeviceSecrets();
 }

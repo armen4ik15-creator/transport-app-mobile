@@ -11,5 +11,12 @@
 -keep class com.swmansion.reanimated.** { *; }
 -keep class com.facebook.react.turbomodule.** { *; }
 
-# expo-updates (disabled at launch but keep classes if re-enabled)
--keep class expo.modules.updates.** { *; }
+# ReestrPro security / networking
+-keep class com.reestrpro.mobile.** { *; }
+-keep class okhttp3.** { *; }
+-keep class okio.** { *; }
+-dontwarn okhttp3.**
+-dontwarn okio.**
+
+# crypto-js (JS bundle, but keep if reflected)
+-keep class javax.crypto.** { *; }

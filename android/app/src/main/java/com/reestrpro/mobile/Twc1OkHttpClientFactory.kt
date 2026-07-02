@@ -3,6 +3,7 @@ package com.reestrpro.mobile
 import android.content.Context
 import com.facebook.react.modules.network.OkHttpClientFactory
 import com.facebook.react.modules.network.OkHttpClientProvider
+import okhttp3.CertificatePinner
 import okhttp3.ConnectionPool
 import okhttp3.OkHttpClient
 import java.util.concurrent.TimeUnit
@@ -19,9 +20,23 @@ class Twc1OkHttpClientFactory(
 
   override fun createNewNetworkModuleClient(): OkHttpClient {
     val (sslContext, trustManager) = sslContextPair
-    return OkHttpClientProvider.createClientBuilder(context)
+    val builder = OkHttpClientProvider.createClientBuilder(context)
       .dns(Twc1FallbackDns)
       .sslSocketFactory(sslContext.socketFactory, trustManager)
+
+    val hasRealPins = Twc1CertificatePins.SHA256_PINS.any { pin ->
+      !pin.contains("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=")
+    }
+    if (hasRealPins) {
+      val pinnerBuilder = CertificatePinner.Builder()
+      Twc1CertificatePins.SHA256_PINS.forEach { pin ->
+        pinnerBuilder.add(Twc1CertificatePins.HOST, pin)
+        pinnerBuilder.add(Twc1CertificatePins.WILDCARD_HOST, pin)
+      }
+      builder.certificatePinner(pinnerBuilder.build())
+    }
+
+    return builder
       .retryOnConnectionFailure(true)
       .connectTimeout(20, TimeUnit.SECONDS)
       .readTimeout(20, TimeUnit.SECONDS)
