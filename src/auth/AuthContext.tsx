@@ -75,8 +75,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    await ensureDeviceRegistered().catch(() => false);
-
     try {
       const me = await getMe();
       await applySession(me.user, me.driver);
@@ -165,8 +163,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       primeApiClientCache(await getApiBaseUrl(), res.token);
       await applySession(res.user, null);
       setNetworkIssue(false);
-      await ensureDeviceRegistered().catch(() => false);
-      await refresh();
+      void ensureDeviceRegistered();
+      void refresh();
       return res.user;
     },
     [applySession, refresh]

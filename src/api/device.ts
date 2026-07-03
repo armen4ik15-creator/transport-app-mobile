@@ -38,10 +38,29 @@ export async function registerDeviceWithServer(): Promise<DeviceRegistrationResp
   return data;
 }
 
+const REGISTRATION_TIMEOUT_MS = 8_000;
+
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      reject(new Error('Device registration timeout'));
+    }, timeoutMs);
+    promise
+      .then((value) => {
+        clearTimeout(timer);
+        resolve(value);
+      })
+      .catch((error) => {
+        clearTimeout(timer);
+        reject(error);
+      });
+  });
+}
+
 export async function ensureDeviceRegistered(): Promise<boolean> {
   return runDeviceRegistrationOnce(async () => {
     try {
-      await registerDeviceWithServer();
+      await withTimeout(registerDeviceWithServer(), REGISTRATION_TIMEOUT_MS);
       return true;
     } catch {
       markDeviceSecurityReady(false);

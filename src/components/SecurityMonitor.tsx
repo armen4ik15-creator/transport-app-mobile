@@ -17,7 +17,6 @@ interface SecurityMonitorProps {
 export function SecurityMonitor({ children }: SecurityMonitorProps) {
   const { user, signOut } = useAuth();
   const [blockedReason, setBlockedReason] = useState<string | null>(null);
-  const [initializing, setInitializing] = useState(false);
 
   const handleBlocked = useCallback(
     (reason: string) => {
@@ -36,26 +35,19 @@ export function SecurityMonitor({ children }: SecurityMonitorProps) {
   useEffect(() => {
     if (!user) {
       stopHeartbeat();
+      resetDeviceRegistrationState();
       return;
     }
 
     let cancelled = false;
 
-    const bootstrapSecurity = async () => {
-      setInitializing(true);
-      try {
-        await ensureDeviceRegistered();
-        if (!cancelled) {
-          startHeartbeat();
-        }
-      } catch {
-        // Регистрация устройства не должна блокировать вход — HMAC включится при успехе
-      } finally {
-        if (!cancelled) setInitializing(false);
+    void (async () => {
+      const registered = await ensureDeviceRegistered();
+      if (cancelled) return;
+      if (registered) {
+        startHeartbeat();
       }
-    };
-
-    void bootstrapSecurity();
+    })();
 
     return () => {
       cancelled = true;
@@ -65,10 +57,6 @@ export function SecurityMonitor({ children }: SecurityMonitorProps) {
 
   if (blockedReason) {
     return <BlockedScreen reason={blockedReason} onSignOut={signOut} />;
-  }
-
-  if (user && initializing) {
-    return null;
   }
 
   return <>{children}</>;

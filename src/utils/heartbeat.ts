@@ -47,6 +47,9 @@ async function sendHeartbeat(): Promise<void> {
     failureCount = 0;
   } catch (err: unknown) {
     const response = (err as { response?: { status?: number; data?: HeartbeatResponse } }).response;
+    if (response?.status === 404 || response?.status === 501) {
+      return;
+    }
     if (response?.status === 403 && response.data?.blocked) {
       triggerBlock(response.data.reason ?? response.data.error ?? 'Доступ заблокирован');
       return;
