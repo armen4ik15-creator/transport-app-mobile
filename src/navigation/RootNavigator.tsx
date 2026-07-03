@@ -5,6 +5,7 @@ import { useAuth } from '../auth/AuthContext';
 import { BootstrapErrorScreen } from '../components/BootstrapErrorScreen';
 import { SplashScreen } from '../components/SplashScreen';
 import { NetworkIssueBanner } from '../components/NetworkIssueBanner';
+import { HmacRecoveryBanner } from '../components/HmacRecoveryBanner';
 import { LoginScreen } from '../screens/LoginScreen';
 import { RegisterScreen } from '../screens/RegisterScreen';
 import { ForgotPasswordScreen } from '../screens/ForgotPasswordScreen';
@@ -57,6 +58,7 @@ import {
   DriverOrdersTabScreen,
 } from './DriverMainLayout';
 import { ensureDefaultServerUrl, getServerUrl, setServerIssueHandler, setServerIssueClearHandler } from '../api/client';
+import { setHmacRecoveryListener } from '../api/hmacRecovery';
 import { logStartup } from '../utils/startupLogger';
 import type { RootStackParamList } from './types';
 
@@ -78,6 +80,7 @@ export function RootNavigator() {
   } = useAuth();
   const [serverReady, setServerReady] = useState<boolean | null>(null);
   const [showNetworkBanner, setShowNetworkBanner] = useState(false);
+  const [showHmacRecoveryBanner, setShowHmacRecoveryBanner] = useState(false);
 
   const checkServerConfigured = useCallback(async () => {
     try {
@@ -95,6 +98,25 @@ export function RootNavigator() {
   useEffect(() => {
     checkServerConfigured();
   }, [checkServerConfigured]);
+
+  useEffect(() => {
+    let hideTimer: ReturnType<typeof setTimeout> | null = null;
+    setHmacRecoveryListener((active) => {
+      if (active) {
+        if (hideTimer) {
+          clearTimeout(hideTimer);
+          hideTimer = null;
+        }
+        setShowHmacRecoveryBanner(true);
+        return;
+      }
+      hideTimer = setTimeout(() => setShowHmacRecoveryBanner(false), 2000);
+    });
+    return () => {
+      setHmacRecoveryListener(null);
+      if (hideTimer) clearTimeout(hideTimer);
+    };
+  }, []);
 
   useEffect(() => {
     setServerIssueHandler(() => {
@@ -146,6 +168,7 @@ export function RootNavigator() {
   return (
     <NavigationContainer>
       <NetworkIssueBanner visible={showNetworkBanner} onRetry={onRetryConnection} />
+      <HmacRecoveryBanner visible={showHmacRecoveryBanner} />
       <Stack.Navigator
         screenOptions={{
           headerStyle: { backgroundColor: '#121212' },

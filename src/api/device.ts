@@ -18,6 +18,22 @@ export interface DeviceRegistrationResponse {
   secret: string;
   activation_token: string;
   reused?: boolean;
+  reset?: boolean;
+  rebound?: boolean;
+}
+
+export async function resetDeviceOnServer(): Promise<DeviceRegistrationResponse> {
+  const deviceId = await getOrCreateDeviceId();
+  const { data } = await api.post<DeviceRegistrationResponse>('/auth/reset-device', {
+    device_id: deviceId,
+  });
+
+  await setStoredDeviceId(data.device_id);
+  await setStoredDeviceSecret(data.secret);
+  await setStoredActivationToken(data.activation_token);
+  markDeviceSecurityReady(true);
+
+  return data;
 }
 
 export async function registerDeviceWithServer(): Promise<DeviceRegistrationResponse | null> {

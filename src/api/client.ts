@@ -34,6 +34,7 @@ import {
   nativePutJson,
   nativeSendFormData,
 } from '../utils/nativeHttpTransport';
+import { notifyHmacRecovery } from './hmacRecovery';
 
 export { TOKEN_KEY };
 
@@ -63,6 +64,7 @@ const PUBLIC_AUTH_PATHS = [
 
 const HMAC_EXCLUDED_PATHS = [
   ...PUBLIC_AUTH_PATHS,
+  '/auth/reset-device',
   '/device/register',
   '/heartbeat',
   '/health',
@@ -415,24 +417,34 @@ async function applyHmacHeaders(
 
 function isHmacInvalidError(error: HttpError): boolean {
   const payload = error.response?.data as { code?: string; error?: string } | undefined;
+  const errorText = payload?.error?.toLowerCase() ?? '';
   return (
     error.response?.status === 403 &&
     (payload?.code === 'HMAC_INVALID' ||
-      payload?.error?.toLowerCase().includes('подпись') === true)
+      errorText.includes('подпись') ||
+      errorText.includes('invalid signature'))
   );
 }
 
 async function resyncDeviceSecurity(): Promise<boolean> {
   resetDeviceSecurityReady();
   await clearDeviceSecrets();
+  notifyHmacRecovery(true);
+
   try {
-    const { registerDeviceWithServer } = await import('./device');
-    await registerDeviceWithServer();
+    const { resetDeviceOnServer, registerDeviceWithServer } = await import('./device');
+    try {
+      await resetDeviceOnServer();
+    } catch {
+      await registerDeviceWithServer();
+    }
     markDeviceSecurityReady(true);
     return true;
   } catch {
     markDeviceSecurityReady(false);
     return false;
+  } finally {
+    notifyHmacRecovery(false);
   }
 }
 
