@@ -66,6 +66,10 @@ export async function createTrip(payload: {
   return data;
 }
 
+export async function deleteTrip(tripId: number): Promise<void> {
+  await api.delete(`/trips/${tripId}`);
+}
+
 export function isTripCompleted(trip: TripRecord): boolean {
   return trip.status === 'completed' || (trip.status == null && trip.stage === 'unloading');
 }

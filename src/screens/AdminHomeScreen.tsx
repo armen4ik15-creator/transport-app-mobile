@@ -204,6 +204,7 @@ export function AdminHomeScreen() {
     { icon: '📦', title: 'Заказы', color: colors.primary, onPress: () => navigation.navigate('Orders') },
     { icon: '👤', title: 'Водители', color: colors.profit, onPress: () => navigation.navigate('Drivers') },
     { icon: '🏢', title: 'Контраг.', color: colors.textMuted, onPress: () => navigation.navigate('Contractors') },
+    { icon: 'ℹ️', title: 'О приложении', color: colors.textMuted, onPress: () => navigation.navigate('About') },
   ];
 
   return (

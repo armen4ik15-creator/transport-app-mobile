@@ -19,6 +19,7 @@ import { TemplatesScreen } from '../screens/TemplatesScreen';
 import { OrderTemplatesScreen } from '../screens/OrderTemplatesScreen';
 import { ServerSetupScreen } from '../screens/ServerSetupScreen';
 import { TripCreateScreen } from '../screens/TripCreateScreen';
+import { AboutScreen } from '../screens/AboutScreen';
 import { EarningsScreen } from '../screens/EarningsScreen';
 import { SalaryScreen } from '../screens/SalaryScreen';
 import { ContractorDebtScreen } from '../screens/ContractorDebtScreen';
@@ -209,6 +210,7 @@ export function RootNavigator() {
             <Stack.Screen name="TripPhotos" component={TripPhotosScreen} options={{ title: 'Фото ТТН' }} />
             <Stack.Screen name="AllPhotos" component={AllPhotosScreen} options={{ title: 'Фотографии ТТН' }} />
             <Stack.Screen name="TripCreate" component={TripCreateScreen} options={{ title: 'Рейсы и ТТН' }} />
+            <Stack.Screen name="About" component={AboutScreen} options={{ title: 'О приложении' }} />
             <Stack.Screen name="ServerSetup" options={{ title: 'Настройки сервера' }}>
               {(props) => <ServerSetupScreen {...props} onConfigured={onServerConfigured} />}
             </Stack.Screen>
@@ -238,6 +240,7 @@ export function RootNavigator() {
             <Stack.Screen name="Earnings" component={EarningsScreen} options={{ title: 'Мой заработок' }} />
             <Stack.Screen name="Expenses" component={ExpensesScreen} options={{ title: 'Мои расходы' }} />
             <Stack.Screen name="TripCreate" component={TripCreateScreen} options={{ title: 'Рейсы и ТТН' }} />
+            <Stack.Screen name="About" component={AboutScreen} options={{ title: 'О приложении' }} />
             <Stack.Screen name="ServerSetup" options={{ title: 'Настройки сервера' }}>
               {(props) => <ServerSetupScreen {...props} onConfigured={onServerConfigured} />}
             </Stack.Screen>

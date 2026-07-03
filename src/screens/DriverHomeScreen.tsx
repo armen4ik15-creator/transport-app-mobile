@@ -93,6 +93,7 @@ export function DriverHomeScreen() {
     { icon: '📦', title: 'Мои заказы', color: colors.primary, onPress: () => navigation.replace('DriverOrders') },
     { icon: '💼', title: 'Мои финансы', color: colors.profit, onPress: () => navigation.replace('DriverFinancesHub') },
     { icon: '🔔', title: 'Уведомления', color: colors.accent, onPress: () => navigation.navigate('Notifications') },
+    { icon: 'ℹ️', title: 'О приложении', color: colors.textMuted, onPress: () => navigation.navigate('About') },
   ];
 
   return (

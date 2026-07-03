@@ -57,4 +57,5 @@ export type RootStackParamList = {
   AllPhotos: undefined;
   ServerSetup: { reason?: string } | undefined;
   Backups: undefined;
+  About: undefined;
 };

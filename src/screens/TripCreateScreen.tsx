@@ -6,7 +6,7 @@ import * as ImagePicker from 'expo-image-picker';
 
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 
 import { FormBottomModal } from '../components/FormBottomModal';
 
@@ -16,7 +16,8 @@ import { ErrorText, Field, LoadingScreen, MenuButton } from '../components/ui';
 
 import { apiErrorMessage } from '../api/client';
 
-import { createTrip, isTripCompleted, isTripInProgress, listTrips } from '../api/trips';
+import { createTrip, deleteTrip, isTripCompleted, isTripInProgress, listTrips } from '../api/trips';
+import { useAuth } from '../auth/AuthContext';
 
 import { screenUi } from '../styles/screenUi';
 
@@ -44,6 +45,10 @@ function tripStatusLabel(trip: TripRecord): string {
 
 export function TripCreateScreen({ route }: Props) {
 
+  const navigation = useNavigation<NativeStackScreenProps<RootStackParamList, 'TripCreate'>['navigation']>();
+
+  const { user } = useAuth();
+
   const { orderId, openAction } = route.params;
 
   const [trips, setTrips] = useState<TripRecord[]>([]);
@@ -53,6 +58,8 @@ export function TripCreateScreen({ route }: Props) {
   const [refreshing, setRefreshing] = useState(false);
 
   const [saving, setSaving] = useState(false);
+
+  const [deleting, setDeleting] = useState(false);
 
   const [error, setError] = useState<string | null>(null);
 
@@ -260,6 +267,70 @@ export function TripCreateScreen({ route }: Props) {
 
 
 
+  const isAdmin = user?.role === 'admin';
+
+  const canDeleteTrip = (trip: TripRecord): boolean => {
+
+    if (isAdmin) return true;
+
+    return isTripInProgress(trip);
+
+  };
+
+
+
+  const onDeleteTrip = (trip: TripRecord) => {
+
+    if (!canDeleteTrip(trip)) return;
+
+    Alert.alert(
+
+      'Удалить рейс?',
+
+      'Вы уверены? Рейс будет удалён, заказ останется.',
+
+      [
+
+        { text: 'Отмена', style: 'cancel' },
+
+        {
+
+          text: 'Удалить',
+
+          style: 'destructive',
+
+          onPress: async () => {
+
+            setDeleting(true);
+
+            try {
+
+              await deleteTrip(trip.id);
+
+              navigation.goBack();
+
+            } catch (e) {
+
+              Alert.alert('Ошибка', apiErrorMessage(e, 'Не удалось удалить рейс'));
+
+            } finally {
+
+              setDeleting(false);
+
+            }
+
+          },
+
+        },
+
+      ]
+
+    );
+
+  };
+
+
+
   const onSave = async () => {
 
     const parsedVolume = volume.trim() ? Number(volume.replace(',', '.')) : null;
@@ -382,6 +453,24 @@ export function TripCreateScreen({ route }: Props) {
 
                 <Text style={{ fontSize: 12, color: '#6b7280', marginTop: 4 }}>{activeTrip.created_at}</Text>
 
+                {canDeleteTrip(activeTrip) ? (
+
+                  <Pressable
+
+                    onPress={() => onDeleteTrip(activeTrip)}
+
+                    disabled={deleting}
+
+                    style={{ marginTop: 10, alignSelf: 'flex-start', opacity: deleting ? 0.6 : 1 }}
+
+                  >
+
+                    <Text style={{ fontSize: 14, fontWeight: '600', color: '#ef4444' }}>🗑 Удалить рейс</Text>
+
+                  </Pressable>
+
+                ) : null}
+
               </View>
 
             ) : null}
@@ -408,17 +497,45 @@ export function TripCreateScreen({ route }: Props) {
 
           <Pressable style={screenUi.card}>
 
-            <Text style={{ fontSize: 15, fontWeight: '600', color: '#111827' }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
 
-              #{item.id} · {tripStatusLabel(item)}
+              <View style={{ flex: 1 }}>
 
-            </Text>
+                <Text style={{ fontSize: 15, fontWeight: '600', color: '#111827' }}>
 
-            <Text style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>
+                  #{item.id} · {tripStatusLabel(item)}
 
-              {item.completed_at ?? item.created_at}
+                </Text>
 
-            </Text>
+                <Text style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>
+
+                  {item.completed_at ?? item.created_at}
+
+                </Text>
+
+              </View>
+
+              {canDeleteTrip(item) ? (
+
+                <Pressable
+
+                  onPress={() => onDeleteTrip(item)}
+
+                  disabled={deleting}
+
+                  hitSlop={8}
+
+                  style={{ opacity: deleting ? 0.6 : 1 }}
+
+                >
+
+                  <Text style={{ fontSize: 18, color: '#ef4444' }}>🗑</Text>
+
+                </Pressable>
+
+              ) : null}
+
+            </View>
 
             {item.ttn_number ? (
 
