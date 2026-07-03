@@ -15,22 +15,22 @@ export function resetDeviceSecurityReady(): void {
 }
 
 export function runDeviceRegistrationOnce(task: () => Promise<boolean>): Promise<boolean> {
-  if (deviceSecurityReady) {
-    return Promise.resolve(true);
+  if (registrationPromise) {
+    return registrationPromise;
   }
-  if (!registrationPromise) {
-    registrationPromise = task()
-      .then((ok) => {
-        deviceSecurityReady = ok;
-        return ok;
-      })
-      .catch(() => {
-        deviceSecurityReady = false;
-        return false;
-      })
-      .finally(() => {
-        registrationPromise = null;
-      });
-  }
+
+  registrationPromise = task()
+    .then((ok) => {
+      deviceSecurityReady = ok;
+      return ok;
+    })
+    .catch(() => {
+      deviceSecurityReady = false;
+      return false;
+    })
+    .finally(() => {
+      registrationPromise = null;
+    });
+
   return registrationPromise;
 }

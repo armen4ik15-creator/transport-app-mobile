@@ -35,13 +35,15 @@ export async function createTrip(payload: {
   photoUri?: string | null;
 }): Promise<TripRecord> {
   if (!payload.photoUri) {
-    const { data } = await api.post<TripRecord>('/trips', {
+    const jsonPayload: Record<string, unknown> = {
       order_id: payload.order_id,
       action: payload.action,
-      ttn_number: payload.ttn_number,
-      volume: payload.volume,
-      note: payload.note,
-    }, { timeout: 30000 });
+    };
+    if (payload.ttn_number) jsonPayload.ttn_number = payload.ttn_number;
+    if (payload.volume != null) jsonPayload.volume = payload.volume;
+    if (payload.note) jsonPayload.note = payload.note;
+
+    const { data } = await api.post<TripRecord>('/trips', jsonPayload, { timeout: 30000 });
     return data;
   }
 

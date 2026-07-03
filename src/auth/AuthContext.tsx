@@ -163,8 +163,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       primeApiClientCache(await getApiBaseUrl(), res.token);
       await applySession(res.user, null);
       setNetworkIssue(false);
-      void ensureDeviceRegistered();
-      void refresh();
+      await ensureDeviceRegistered();
+      await refresh();
       return res.user;
     },
     [applySession, refresh]
@@ -182,7 +182,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         throw new Error('Unexpected registration response');
       }
       await setStoredToken(res.token);
+      primeApiClientCache(await getApiBaseUrl(), res.token);
       setUser(res.user);
+      await ensureDeviceRegistered();
       await refresh();
       return res.user;
     },

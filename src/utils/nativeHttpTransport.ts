@@ -216,7 +216,7 @@ export async function nativeGetJson<T>(
 
 export async function nativePostJson<T>(
   url: string,
-  body: unknown | undefined,
+  body: unknown | string | undefined,
   headers: Record<string, string> = {},
   timeoutMs = 20_000,
 ): Promise<NativeHttpResult<T>> {
@@ -224,7 +224,12 @@ export async function nativePostJson<T>(
     Accept: 'application/json',
     ...headers,
   };
-  const jsonBody = body != null ? JSON.stringify(body) : undefined;
+  const jsonBody =
+    body == null
+      ? undefined
+      : typeof body === 'string'
+        ? body
+        : JSON.stringify(body);
   if (jsonBody != null) {
     requestHeaders['Content-Type'] =
       requestHeaders['Content-Type'] ?? requestHeaders['content-type'] ?? 'application/json';
@@ -234,11 +239,16 @@ export async function nativePostJson<T>(
 
 export async function nativePutJson<T>(
   url: string,
-  body: unknown,
+  body: unknown | string | undefined,
   headers: Record<string, string> = {},
   timeoutMs = 20_000,
 ): Promise<NativeHttpResult<T>> {
-  const jsonBody = body != null && body !== undefined ? JSON.stringify(body) : undefined;
+  const jsonBody =
+    body == null
+      ? undefined
+      : typeof body === 'string'
+        ? body
+        : JSON.stringify(body);
   return requestWithRetry<T>(
     'PUT',
     url,
@@ -250,11 +260,16 @@ export async function nativePutJson<T>(
 
 export async function nativePatchJson<T>(
   url: string,
-  body: unknown,
+  body: unknown | string | undefined,
   headers: Record<string, string> = {},
   timeoutMs = 20_000,
 ): Promise<NativeHttpResult<T>> {
-  const jsonBody = body != null && body !== undefined ? JSON.stringify(body) : undefined;
+  const jsonBody =
+    body == null
+      ? undefined
+      : typeof body === 'string'
+        ? body
+        : JSON.stringify(body);
   return requestWithRetry<T>(
     'PATCH',
     url,

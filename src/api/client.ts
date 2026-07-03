@@ -343,6 +343,21 @@ function isFormDataBody(body: unknown): body is FormData {
   return typeof FormData !== 'undefined' && body instanceof FormData;
 }
 
+function serializeJsonWireBody(body: unknown): string | undefined {
+  if (body == null) return undefined;
+  if (typeof body === 'string') return body;
+  return JSON.stringify(body);
+}
+
+function resolveHmacBodyString(body: unknown, wireJsonBody: string | undefined): string {
+  if (isFormDataBody(body)) return '';
+  return wireJsonBody ?? '';
+}
+
+function requestNeedsHmac(url: string, isPublicAuth: boolean): boolean {
+  return !isPublicAuth && !isHmacExcludedRequest(url);
+}
+
 function buildRequestHeaders(
   configHeaders: Record<string, string> | undefined,
   body: unknown,
@@ -375,7 +390,7 @@ async function applyHmacHeaders(
   headers: Record<string, string>,
   method: HttpMethod,
   requestUrl: string,
-  body: unknown,
+  bodyString: string,
 ): Promise<Record<string, string>> {
   if (!isDeviceSecurityReady()) return headers;
 
@@ -387,7 +402,7 @@ async function applyHmacHeaders(
 
   const timestamp = Date.now();
   const apiPath = extractSigningPath(requestUrl);
-  const payload = buildHmacPayload(timestamp, method, apiPath, body);
+  const payload = buildHmacPayload(timestamp, method, apiPath, bodyString);
   const signature = signRequestPayload(deviceSecret, payload);
 
   return {
@@ -427,6 +442,7 @@ async function executeNativeRequest<T>(
   headers: Record<string, string>,
   timeoutMs: number,
   body?: unknown,
+  wireJsonBody?: string,
   responseType?: ApiRequestConfig['responseType'],
 ): Promise<{ data: T }> {
   if (responseType === 'blob') {
@@ -445,21 +461,23 @@ async function executeNativeRequest<T>(
     return { data: result.data };
   }
 
+  const jsonPayload = wireJsonBody !== undefined ? wireJsonBody : body;
+
   switch (method) {
     case 'GET': {
       const result = await nativeGetJson<T>(requestUrl, headers, timeoutMs);
       return { data: result.data };
     }
     case 'POST': {
-      const result = await nativePostJson<T>(requestUrl, body, headers, timeoutMs);
+      const result = await nativePostJson<T>(requestUrl, jsonPayload, headers, timeoutMs);
       return { data: result.data };
     }
     case 'PUT': {
-      const result = await nativePutJson<T>(requestUrl, body, headers, timeoutMs);
+      const result = await nativePutJson<T>(requestUrl, jsonPayload, headers, timeoutMs);
       return { data: result.data };
     }
     case 'PATCH': {
-      const result = await nativePatchJson<T>(requestUrl, body, headers, timeoutMs);
+      const result = await nativePatchJson<T>(requestUrl, jsonPayload, headers, timeoutMs);
       return { data: result.data };
     }
     case 'DELETE': {
@@ -493,20 +511,19 @@ async function executeRequest<T>(
     authToken = token;
   }
 
-  const signingBody =
-    body == null
-      ? undefined
-      : isFormDataBody(body)
-        ? undefined
-        : typeof body === 'string'
-          ? body
-          : body;
+  const wireJsonBody = isFormDataBody(body) ? undefined : serializeJsonWireBody(body);
+  const hmacBodyString = resolveHmacBodyString(body, wireJsonBody);
+  const needsHmac = requestNeedsHmac(url, isPublicAuth);
+
+  if (needsHmac && !isDeviceSecurityReady()) {
+    const { ensureDeviceRegistered } = await import('./device');
+    await ensureDeviceRegistered();
+  }
 
   const headers = buildRequestHeaders(config?.headers, body, authToken, isPublicAuth);
-  const shouldSign =
-    isDeviceSecurityReady() && !isHmacExcludedRequest(url) && !isFormDataBody(body);
+  const shouldSign = isDeviceSecurityReady() && needsHmac;
   const signedHeaders = shouldSign
-    ? await applyHmacHeaders(headers, method, requestUrl, signingBody)
+    ? await applyHmacHeaders(headers, method, requestUrl, hmacBodyString)
     : headers;
   const timeoutMs = config?.timeout ?? DEFAULT_TIMEOUT_MS;
 
@@ -517,6 +534,7 @@ async function executeRequest<T>(
       signedHeaders,
       timeoutMs,
       body,
+      wireJsonBody,
       config?.responseType,
     );
     registerNetworkSuccess();
