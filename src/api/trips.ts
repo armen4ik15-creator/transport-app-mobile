@@ -34,23 +34,32 @@ export async function createTrip(payload: {
   note?: string;
   photoUri?: string | null;
 }): Promise<TripRecord> {
+  if (!payload.photoUri) {
+    const { data } = await api.post<TripRecord>('/trips', {
+      order_id: payload.order_id,
+      action: payload.action,
+      ttn_number: payload.ttn_number,
+      volume: payload.volume,
+      note: payload.note,
+    }, { timeout: 30000 });
+    return data;
+  }
+
   const formData = new FormData();
   formData.append('order_id', String(payload.order_id));
   formData.append('action', payload.action);
   if (payload.ttn_number) formData.append('ttn_number', payload.ttn_number);
   if (payload.volume != null) formData.append('volume', String(payload.volume));
   if (payload.note) formData.append('note', payload.note);
-  if (payload.photoUri) {
-    formData.append('photo', {
-      uri: payload.photoUri,
-      name: `trip_${Date.now()}.jpg`,
-      type: 'image/jpeg',
-    } as unknown as Blob);
-  }
+  formData.append('photo', {
+    uri: payload.photoUri,
+    name: `trip_${Date.now()}.jpg`,
+    type: 'image/jpeg',
+  } as unknown as Blob);
 
   const { data } = await api.post<TripRecord>('/trips', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
-    timeout: 30000,
+    timeout: 60000,
   });
   return data;
 }

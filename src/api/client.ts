@@ -503,7 +503,8 @@ async function executeRequest<T>(
           : body;
 
   const headers = buildRequestHeaders(config?.headers, body, authToken, isPublicAuth);
-  const shouldSign = isDeviceSecurityReady() && !isHmacExcludedRequest(url);
+  const shouldSign =
+    isDeviceSecurityReady() && !isHmacExcludedRequest(url) && !isFormDataBody(body);
   const signedHeaders = shouldSign
     ? await applyHmacHeaders(headers, method, requestUrl, signingBody)
     : headers;

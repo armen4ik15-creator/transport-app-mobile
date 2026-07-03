@@ -41,8 +41,8 @@ export function DriverTripActionCard({
 
   const isUnloading = nextAction === 'unloading';
   const stepHint = isUnloading
-    ? 'Шаг 2 из 2: заполните разгрузку, объём и фото ТТН'
-    : 'Шаг 1 из 2: отметьте прибытие на погрузку';
+    ? 'Шаг 2 из 2: заполните разгрузку и объём (фото ТТН — по желанию)'
+    : 'Шаг 1 из 2: отметьте погрузку (фото ТТН — по желанию)';
 
   return (
     <View

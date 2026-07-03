@@ -490,19 +490,27 @@ export function TripCreateScreen({ route }: Props) {
 
       >
 
-        <Field label="Номер ТТН" value={ttnNumber} onChangeText={setTtnNumber} />
+        <Field label="Номер ТТН (необязательно)" value={ttnNumber} onChangeText={setTtnNumber} />
 
         <Field label="Объём" value={volume} onChangeText={setVolume} keyboardType="decimal-pad" />
 
         <Field label="Комментарий" value={note} onChangeText={setNote} />
 
+        <Text style={{ fontSize: 13, color: '#6b7280', marginBottom: 8 }}>
+          Фото ТТН необязательно — можно пропустить, если на погрузке не выдали накладную
+        </Text>
+
         <MenuButton label="📷 Камера" onPress={() => onPickPhoto('camera')} variant="secondary" />
 
         <MenuButton label="🖼 Галерея" onPress={() => onPickPhoto('library')} variant="secondary" />
 
+        {photoUri ? (
+          <MenuButton label="✕ Убрать фото" onPress={() => setPhotoUri(null)} variant="secondary" />
+        ) : null}
+
         <Text style={{ fontSize: 13, color: '#6b7280', marginTop: 8 }}>
 
-          {photoUri ? '✅ Фото выбрано' : 'Фото не выбрано'}
+          {photoUri ? '✅ Фото выбрано' : 'Фото не выбрано — можно сохранить без фото'}
 
         </Text>
 
