@@ -17,7 +17,7 @@ import { ErrorText, Field, LoadingScreen, MenuButton } from '../components/ui';
 
 import { apiErrorMessage } from '../api/client';
 
-import { createTrip, deleteTrip, hasTripPhoto, isTripCompleted, isTripInProgress, isTripPhotoMissingOnServer, listTrips, needsTripPhotoAttach, uploadTripPhoto } from '../api/trips';
+import { createTrip, deleteTrip, canManageTripPhoto, getTripPhotoButtonLabel, hasTripPhoto, isTripCompleted, isTripInProgress, isTripPhotoMissingOnServer, listTrips, uploadTripPhoto } from '../api/trips';
 import { useAuth } from '../auth/AuthContext';
 
 import { screenUi } from '../styles/screenUi';
@@ -228,7 +228,7 @@ export function TripCreateScreen({ route }: Props) {
     try {
       await uploadTripPhoto(tripId, uri);
       await load();
-      Alert.alert('Готово', 'Фото ТТН прикреплено. Рейс будет учтён в зарплате.');
+      Alert.alert('Готово', 'Фото ТТН сохранено. Превью и скачивание будут доступны.');
     } catch (e) {
       Alert.alert('Ошибка', apiErrorMessage(e, 'Не удалось прикрепить фото'));
     } finally {
@@ -604,13 +604,19 @@ export function TripCreateScreen({ route }: Props) {
                   : '⚠️ Не зачтён — нет фото ТТН'}
             </Text>
 
-            {needsTripPhotoAttach(item) ? (
+            {canManageTripPhoto(item) ? (
               <Pressable
                 onPress={() => void attachPhotoToTrip(item.id)}
                 style={{ marginTop: 8, alignSelf: 'flex-start' }}
               >
-                <Text style={{ fontSize: 13, color: '#2563eb', fontWeight: '600' }}>
-                  {isTripPhotoMissingOnServer(item) ? '📷 Прикрепить фото ТТН заново' : '📷 Прикрепить фото ТТН'}
+                <Text
+                  style={{
+                    fontSize: 13,
+                    color: isTripPhotoMissingOnServer(item) || !hasTripPhoto(item) ? '#d97706' : '#2563eb',
+                    fontWeight: '600',
+                  }}
+                >
+                  {getTripPhotoButtonLabel(item)}
                 </Text>
               </Pressable>
             ) : null}

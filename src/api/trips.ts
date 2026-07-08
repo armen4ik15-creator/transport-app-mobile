@@ -88,8 +88,19 @@ export function isTripPhotoMissingOnServer(trip: TripRecord): boolean {
   return Boolean(trip.photo_path && trip.photo_path.trim() && trip.photo_available === false);
 }
 
+export function canManageTripPhoto(trip: TripRecord): boolean {
+  return isTripCompleted(trip);
+}
+
+export function getTripPhotoButtonLabel(trip: TripRecord): string {
+  if (isTripPhotoMissingOnServer(trip)) return '📷 Прикрепить фото ТТН заново';
+  if (hasTripPhoto(trip)) return '📷 Изменить фото ТТН';
+  return '📷 Прикрепить фото ТТН';
+}
+
+/** @deprecated use canManageTripPhoto */
 export function needsTripPhotoAttach(trip: TripRecord): boolean {
-  return isTripCompleted(trip) && !hasTripPhoto(trip);
+  return canManageTripPhoto(trip);
 }
 
 export async function uploadTripPhoto(tripId: number, photoUri: string): Promise<TripRecord> {
