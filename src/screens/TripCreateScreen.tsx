@@ -548,7 +548,7 @@ export function TripCreateScreen({ route }: Props) {
 
         renderItem={({ item }) => (
 
-          <Pressable style={screenUi.card}>
+          <View style={screenUi.card}>
 
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
 
@@ -605,20 +605,15 @@ export function TripCreateScreen({ route }: Props) {
             </Text>
 
             {canManageTripPhoto(item) ? (
-              <Pressable
-                onPress={() => void attachPhotoToTrip(item.id)}
-                style={{ marginTop: 8, alignSelf: 'flex-start' }}
-              >
-                <Text
-                  style={{
-                    fontSize: 13,
-                    color: isTripPhotoMissingOnServer(item) || !hasTripPhoto(item) ? '#d97706' : '#2563eb',
-                    fontWeight: '600',
-                  }}
-                >
-                  {getTripPhotoButtonLabel(item)}
-                </Text>
-              </Pressable>
+              <View style={{ marginTop: 10 }}>
+                <MenuButton
+                  label={getTripPhotoButtonLabel(item)}
+                  onPress={() => void attachPhotoToTrip(item.id)}
+                  variant={
+                    isTripPhotoMissingOnServer(item) || !hasTripPhoto(item) ? 'secondary' : 'default'
+                  }
+                />
+              </View>
             ) : null}
 
             {item.volume != null ? (
@@ -649,7 +644,7 @@ export function TripCreateScreen({ route }: Props) {
 
             ) : null}
 
-          </Pressable>
+          </View>
 
         )}
 

@@ -88,14 +88,16 @@ export function isTripPhotoMissingOnServer(trip: TripRecord): boolean {
   return Boolean(trip.photo_path && trip.photo_path.trim() && trip.photo_available === false);
 }
 
-export function canManageTripPhoto(trip: TripRecord): boolean {
-  return isTripCompleted(trip);
-}
-
 export function getTripPhotoButtonLabel(trip: TripRecord): string {
   if (isTripPhotoMissingOnServer(trip)) return '📷 Прикрепить фото ТТН заново';
   if (hasTripPhoto(trip)) return '📷 Изменить фото ТТН';
   return '📷 Прикрепить фото ТТН';
+}
+
+/** Показываем кнопку для любого завершённого рейса (включая зачтённые). */
+export function canManageTripPhoto(trip: TripRecord): boolean {
+  if (isTripCompleted(trip)) return true;
+  return trip.stage === 'unloading' || trip.status === 'completed';
 }
 
 /** @deprecated use canManageTripPhoto */
