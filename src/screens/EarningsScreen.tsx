@@ -21,6 +21,8 @@ type Props = NativeStackScreenProps<RootStackParamList, 'Earnings'>;
 
 const emptySummary: EarningsSummary = {
   total_trips: 0,
+  eligible_trips: 0,
+  ineligible_trips: 0,
   total_volume: 0,
   estimated_income: 0,
   actual_income: 0,
@@ -31,6 +33,7 @@ const emptySummary: EarningsSummary = {
   expenses_rejected: 0,
   compensations: 0,
   total_earnings: 0,
+  trips: [],
 };
 
 export function EarningsScreen({ navigation }: Props) {
@@ -133,10 +136,20 @@ export function EarningsScreen({ navigation }: Props) {
   const totalEarnings = summary.total_earnings ?? summary.estimated_income + compensations;
 
   const statCards = [
-    { label: 'Рейсов', value: String(summary.total_trips), color: '#2563eb' },
+    { label: 'Рейсов всего', value: String(summary.total_trips), color: '#2563eb' },
+    {
+      label: 'Зачтено в зарплату',
+      value: String(summary.eligible_trips ?? summary.total_trips),
+      color: '#16a34a',
+    },
+    {
+      label: 'Без фото (не зачтено)',
+      value: String(summary.ineligible_trips ?? 0),
+      color: '#d97706',
+    },
     { label: 'Объём', value: summary.total_volume.toFixed(2), color: '#7c3aed' },
     {
-      label: 'Заработок (рейсы)',
+      label: 'Заработок (с фото)',
       value: `${summary.estimated_income.toFixed(2)} ₽`,
       color: '#16a34a',
     },
@@ -176,7 +189,7 @@ export function EarningsScreen({ navigation }: Props) {
       <ScreenHeader title="🧮 Заработок и рейсы" />
       <ScreenHero
         title="💵 Начисления водителям"
-        subtitle="Ставка за рейс + одобренные компенсации личных расходов"
+        subtitle="В зарплату идут только рейсы с фото ТТН + одобренные компенсации"
       />
       <Text style={{ fontSize: 13, color: '#6b7280', marginBottom: 12 }}>
         {user?.role === 'admin'
@@ -230,6 +243,35 @@ export function EarningsScreen({ navigation }: Props) {
           </View>
         ))}
       </View>
+
+      {(summary.trips ?? []).length > 0 ? (
+        <View style={[screenUi.card, { marginTop: 12 }]}>
+          <Text style={{ fontSize: 15, fontWeight: '600', color: '#111827', marginBottom: 8 }}>Рейсы за период</Text>
+          {(summary.trips ?? []).map((trip) => (
+            <View
+              key={trip.id}
+              style={{
+                borderTopWidth: 1,
+                borderTopColor: '#f3f4f6',
+                paddingVertical: 10,
+              }}
+            >
+              <Text style={{ fontSize: 14, fontWeight: '600', color: '#111827' }}>
+                Рейс #{trip.id} · Заказ #{trip.order_id}
+              </Text>
+              <Text style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>
+                {trip.completed_at ?? trip.created_at}
+                {trip.ttn_number ? ` · ТТН ${trip.ttn_number}` : ''}
+              </Text>
+              <Text style={{ fontSize: 13, color: trip.counted_in_salary ? '#16a34a' : '#d97706', marginTop: 4 }}>
+                {trip.counted_in_salary
+                  ? `✅ Зачтён · ${trip.driver_rate.toFixed(2)} ₽`
+                  : `⚠️ Не зачтён · ${trip.driver_rate.toFixed(2)} ₽`}
+              </Text>
+            </View>
+          ))}
+        </View>
+      ) : null}
     </ScrollView>
   );
 }

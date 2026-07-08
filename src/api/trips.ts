@@ -78,5 +78,24 @@ export function isTripInProgress(trip: TripRecord): boolean {
   return trip.status === 'loading' || (trip.status == null && trip.stage === 'loading');
 }
 
+export function hasTripPhoto(trip: TripRecord): boolean {
+  return Boolean(trip.photo_path && trip.photo_path.trim());
+}
+
+export async function uploadTripPhoto(tripId: number, photoUri: string): Promise<TripRecord> {
+  const formData = new FormData();
+  formData.append('photo', {
+    uri: photoUri,
+    name: `trip_${Date.now()}.jpg`,
+    type: 'image/jpeg',
+  } as unknown as Blob);
+
+  const { data } = await api.post<TripRecord>(`/trips/${tripId}/photo`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+    timeout: 60000,
+  });
+  return data;
+}
+
 /** @deprecated use TripAction */
 export type { TripStage };

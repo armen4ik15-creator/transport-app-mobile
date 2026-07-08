@@ -124,8 +124,22 @@ export interface TripRecord {
   contractor_name?: string | null;
 }
 
+export interface EarningsTripItem {
+  id: number;
+  order_id: number;
+  ttn_number: string | null;
+  volume: number | null;
+  created_at: string;
+  completed_at: string | null;
+  driver_rate: number;
+  has_photos: boolean;
+  counted_in_salary: boolean;
+}
+
 export interface EarningsSummary {
   total_trips: number;
+  eligible_trips?: number;
+  ineligible_trips?: number;
   total_volume: number;
   estimated_income: number;
   actual_income: number;
@@ -136,6 +150,7 @@ export interface EarningsSummary {
   expenses_rejected?: number;
   compensations?: number;
   total_earnings?: number;
+  trips?: EarningsTripItem[];
 }
 
 export type DriverPaymentType = 'salary' | 'advance' | 'bonus' | 'deduction';

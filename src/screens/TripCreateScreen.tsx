@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { Alert, FlatList, Pressable, RefreshControl, Text, View } from 'react-native';
 
+import axios from 'axios';
 import * as ImagePicker from 'expo-image-picker';
 
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -16,7 +17,7 @@ import { ErrorText, Field, LoadingScreen, MenuButton } from '../components/ui';
 
 import { apiErrorMessage } from '../api/client';
 
-import { createTrip, deleteTrip, isTripCompleted, isTripInProgress, listTrips } from '../api/trips';
+import { createTrip, deleteTrip, hasTripPhoto, isTripCompleted, isTripInProgress, listTrips, uploadTripPhoto } from '../api/trips';
 import { useAuth } from '../auth/AuthContext';
 
 import { screenUi } from '../styles/screenUi';
@@ -179,36 +180,53 @@ export function TripCreateScreen({ route }: Props) {
 
 
 
-  const onPickPhoto = async (source: 'camera' | 'library') => {
-
+  const onPickPhoto = async (source: 'camera' | 'library'): Promise<string | null> => {
     const permission =
-
       source === 'camera'
-
         ? await ImagePicker.requestCameraPermissionsAsync()
-
         : await ImagePicker.requestMediaLibraryPermissionsAsync();
-
     if (!permission.granted) {
-
       Alert.alert('Доступ', 'Разрешите доступ в настройках устройства');
-
-      return;
-
+      return null;
     }
-
     const result =
-
       source === 'camera'
-
         ? await ImagePicker.launchCameraAsync({ quality: 0.8 })
-
         : await ImagePicker.launchImageLibraryAsync({ quality: 0.8 });
+    if (result.canceled || result.assets.length === 0) return null;
+    return result.assets[0].uri;
+  };
 
-    if (result.canceled || result.assets.length === 0) return;
+  const attachPhotoToTrip = async (tripId: number) => {
+    const uri = await onPickPhoto('camera');
+    if (!uri) return;
 
-    setPhotoUri(result.assets[0].uri);
+    setSaving(true);
+    try {
+      await uploadTripPhoto(tripId, uri);
+      await load();
+      Alert.alert('Готово', 'Фото ТТН прикреплено. Рейс будет учтён в зарплате.');
+    } catch (e) {
+      Alert.alert('Ошибка', apiErrorMessage(e, 'Не удалось прикрепить фото'));
+    } finally {
+      setSaving(false);
+    }
+  };
 
+  const showMissingPhotoAlert = (tripId: number) => {
+    Alert.alert(
+      'Рейс сохранён',
+      'Рейс не будет учтён в зарплате. Прикрепите фото ТТН.',
+      [
+        { text: 'Позже', style: 'cancel' },
+        {
+          text: 'Прикрепить фото',
+          onPress: () => {
+            void attachPhotoToTrip(tripId);
+          },
+        },
+      ]
+    );
   };
 
 
@@ -349,7 +367,7 @@ export function TripCreateScreen({ route }: Props) {
 
     try {
 
-      await createTrip({
+      const savedTrip = await createTrip({
 
         order_id: orderId,
 
@@ -371,6 +389,11 @@ export function TripCreateScreen({ route }: Props) {
 
       await load();
 
+      if (formMode === 'unloading' && isTripCompleted(savedTrip) && !hasTripPhoto(savedTrip)) {
+        showMissingPhotoAlert(savedTrip.id);
+        return;
+      }
+
       Alert.alert(
 
         'Готово',
@@ -381,7 +404,14 @@ export function TripCreateScreen({ route }: Props) {
 
     } catch (e) {
 
-      Alert.alert('Ошибка', apiErrorMessage(e, 'Не удалось сохранить рейс'));
+      const message = apiErrorMessage(e, 'Не удалось сохранить рейс');
+
+      if (axios.isAxiosError(e) && e.response?.status === 409) {
+        Alert.alert('Номер ТТН', message);
+        return;
+      }
+
+      Alert.alert('Ошибка', message);
 
     } finally {
 
@@ -543,6 +573,19 @@ export function TripCreateScreen({ route }: Props) {
 
             ) : null}
 
+            <Text style={{ fontSize: 13, color: hasTripPhoto(item) ? '#16a34a' : '#d97706', marginTop: 4 }}>
+              {hasTripPhoto(item) ? '✅ Зачтён в зарплате' : '⚠️ Не зачтён — нет фото ТТН'}
+            </Text>
+
+            {!hasTripPhoto(item) && isTripCompleted(item) ? (
+              <Pressable
+                onPress={() => void attachPhotoToTrip(item.id)}
+                style={{ marginTop: 8, alignSelf: 'flex-start' }}
+              >
+                <Text style={{ fontSize: 13, color: '#2563eb', fontWeight: '600' }}>📷 Прикрепить фото ТТН</Text>
+              </Pressable>
+            ) : null}
+
             {item.volume != null ? (
 
               <Text style={{ fontSize: 14, fontWeight: '600', color: '#2563eb', marginTop: 4 }}>
@@ -617,9 +660,9 @@ export function TripCreateScreen({ route }: Props) {
           Фото ТТН необязательно — можно пропустить, если на погрузке не выдали накладную
         </Text>
 
-        <MenuButton label="📷 Камера" onPress={() => onPickPhoto('camera')} variant="secondary" />
+        <MenuButton label="📷 Камера" onPress={() => void onPickPhoto('camera').then((uri) => uri && setPhotoUri(uri))} variant="secondary" />
 
-        <MenuButton label="🖼 Галерея" onPress={() => onPickPhoto('library')} variant="secondary" />
+        <MenuButton label="🖼 Галерея" onPress={() => void onPickPhoto('library').then((uri) => uri && setPhotoUri(uri))} variant="secondary" />
 
         {photoUri ? (
           <MenuButton label="✕ Убрать фото" onPress={() => setPhotoUri(null)} variant="secondary" />
