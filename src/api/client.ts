@@ -612,6 +612,10 @@ export function apiErrorMessage(err: unknown, fallback = 'Ошибка'): string
   if (isHttpError(err)) {
     if (err.response?.data?.error) return err.response.data.error;
     if (err.response?.status === 404) {
+      const serverError = err.response?.data?.error?.toLowerCase() ?? '';
+      if (serverError.includes('file not found') || serverError.includes('не найден')) {
+        return 'Файл не найден на сервере. Возможно, фото потеряно при пересборке.';
+      }
       return 'Раздел недоступен на сервере (404). Обновите сервер до последней версии.';
     }
     if (err.response?.status === 502) {
