@@ -5,6 +5,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { AuthProvider } from './src/auth/AuthContext';
 import { RootNavigator } from './src/navigation/RootNavigator';
+import { OtaUpdateManager } from './src/components/OtaUpdateManager';
 import { AppErrorBoundary } from './src/components/AppErrorBoundary';
 import {
   isLicenseAccepted,
@@ -22,6 +23,7 @@ function AppShell() {
       <AuthProvider>
         <SecurityMonitor>
           <StatusBar style="dark" />
+          <OtaUpdateManager />
           <RootNavigator />
         </SecurityMonitor>
       </AuthProvider>
