@@ -17,7 +17,7 @@ import { ErrorText, Field, LoadingScreen, MenuButton } from '../components/ui';
 
 import { apiErrorMessage } from '../api/client';
 
-import { createTrip, deleteTrip, hasTripPhoto, isTripCompleted, isTripInProgress, listTrips, uploadTripPhoto } from '../api/trips';
+import { createTrip, deleteTrip, hasTripPhoto, isTripCompleted, isTripInProgress, isTripPhotoMissingOnServer, listTrips, needsTripPhotoAttach, uploadTripPhoto } from '../api/trips';
 import { useAuth } from '../auth/AuthContext';
 
 import { screenUi } from '../styles/screenUi';
@@ -198,9 +198,32 @@ export function TripCreateScreen({ route }: Props) {
   };
 
   const attachPhotoToTrip = async (tripId: number) => {
-    const uri = await onPickPhoto('camera');
-    if (!uri) return;
+    Alert.alert('Фото ТТН', 'Откуда добавить фото?', [
+      { text: 'Отмена', style: 'cancel' },
+      {
+        text: 'Камера',
+        onPress: () => {
+          void (async () => {
+            const uri = await onPickPhoto('camera');
+            if (!uri) return;
+            await saveTripPhoto(tripId, uri);
+          })();
+        },
+      },
+      {
+        text: 'Галерея',
+        onPress: () => {
+          void (async () => {
+            const uri = await onPickPhoto('library');
+            if (!uri) return;
+            await saveTripPhoto(tripId, uri);
+          })();
+        },
+      },
+    ]);
+  };
 
+  const saveTripPhoto = async (tripId: number, uri: string) => {
     setSaving(true);
     try {
       await uploadTripPhoto(tripId, uri);
@@ -574,15 +597,21 @@ export function TripCreateScreen({ route }: Props) {
             ) : null}
 
             <Text style={{ fontSize: 13, color: hasTripPhoto(item) ? '#16a34a' : '#d97706', marginTop: 4 }}>
-              {hasTripPhoto(item) ? '✅ Зачтён в зарплате' : '⚠️ Не зачтён — нет фото ТТН'}
+              {hasTripPhoto(item)
+                ? '✅ Зачтён в зарплате'
+                : isTripPhotoMissingOnServer(item)
+                  ? '⚠️ Фото потеряно на сервере — прикрепите заново'
+                  : '⚠️ Не зачтён — нет фото ТТН'}
             </Text>
 
-            {!hasTripPhoto(item) && isTripCompleted(item) ? (
+            {needsTripPhotoAttach(item) ? (
               <Pressable
                 onPress={() => void attachPhotoToTrip(item.id)}
                 style={{ marginTop: 8, alignSelf: 'flex-start' }}
               >
-                <Text style={{ fontSize: 13, color: '#2563eb', fontWeight: '600' }}>📷 Прикрепить фото ТТН</Text>
+                <Text style={{ fontSize: 13, color: '#2563eb', fontWeight: '600' }}>
+                  {isTripPhotoMissingOnServer(item) ? '📷 Прикрепить фото ТТН заново' : '📷 Прикрепить фото ТТН'}
+                </Text>
               </Pressable>
             ) : null}
 

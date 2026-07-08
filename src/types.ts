@@ -108,6 +108,8 @@ export interface TripRecord {
   volume: number | null;
   note: string | null;
   photo_path: string | null;
+  /** Файл реально есть на сервере (false = путь в БД есть, файл потерян). */
+  photo_available?: boolean;
   created_by: number;
   created_by_email: string;
   created_at: string;

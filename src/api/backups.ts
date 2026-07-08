@@ -20,12 +20,33 @@ export interface BackupItem {
   manifest: BackupManifest | null;
 }
 
+export interface BackupStorageHealth {
+  data_dir: string;
+  data_dir_writable: boolean;
+  uploads_file_count: number;
+  uploads_size_bytes: number;
+  backup_file_count: number;
+  warnings: string[];
+  healthy: boolean;
+}
+
+export interface S3BackupItem {
+  key: string;
+  sizeBytes: number;
+  lastModified: string | null;
+  error?: string;
+}
+
 export interface BackupStatus {
   enabled: boolean;
   running: boolean;
   intervalHours: number;
   keepLocalCount: number;
+  keepLocalDays?: number;
+  cronSchedule?: string;
   remote: BackupRemoteStatus;
+  storage?: BackupStorageHealth;
+  s3Backups?: S3BackupItem[];
   lastResult: {
     ok: boolean;
     filename?: string;

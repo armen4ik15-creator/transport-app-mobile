@@ -79,7 +79,17 @@ export function isTripInProgress(trip: TripRecord): boolean {
 }
 
 export function hasTripPhoto(trip: TripRecord): boolean {
+  if (trip.photo_available === false) return false;
+  if (trip.photo_available === true) return true;
   return Boolean(trip.photo_path && trip.photo_path.trim());
+}
+
+export function isTripPhotoMissingOnServer(trip: TripRecord): boolean {
+  return Boolean(trip.photo_path && trip.photo_path.trim() && trip.photo_available === false);
+}
+
+export function needsTripPhotoAttach(trip: TripRecord): boolean {
+  return isTripCompleted(trip) && !hasTripPhoto(trip);
 }
 
 export async function uploadTripPhoto(tripId: number, photoUri: string): Promise<TripRecord> {

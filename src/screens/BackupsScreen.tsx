@@ -135,9 +135,20 @@ export function BackupsScreen() {
         <Text style={{ color: colors.textMuted, fontSize: 13, marginTop: 4 }}>
           Автобэкап: {status?.enabled ? `каждые ${status.intervalHours} ч.` : 'выключен'}
         </Text>
+        {status?.cronSchedule ? (
+          <Text style={{ color: colors.textMuted, fontSize: 13, marginTop: 4 }}>
+            Ежедневно по cron: {status.cronSchedule}
+          </Text>
+        ) : null}
         <Text style={{ color: colors.textMuted, fontSize: 13, marginTop: 4 }}>
           {status?.running ? '⏳ Выполняется…' : '✅ Готов к запуску'}
         </Text>
+        {status?.storage ? (
+          <Text style={{ color: colors.textMuted, fontSize: 13, marginTop: 4 }}>
+            Диск /data: {status.storage.data_dir_writable ? '✅ запись' : '⚠️ нет записи'} · файлов uploads:{' '}
+            {status.storage.uploads_file_count}
+          </Text>
+        ) : null}
         {status?.latest ? (
           <Text style={{ color: colors.text, fontSize: 13, marginTop: 8 }}>
             Последний: {formatDate(status.latest.createdAt)} · {formatBytes(status.latest.sizeBytes)}
@@ -146,6 +157,17 @@ export function BackupsScreen() {
           <Text style={{ color: colors.warning, fontSize: 13, marginTop: 8 }}>Бэкапов пока нет</Text>
         )}
       </View>
+
+      {(status?.storage?.warnings?.length ?? 0) > 0 ? (
+        <View style={[screenUi.card, { marginTop: spacing.sm, borderColor: colors.warning, borderWidth: 1 }]}>
+          <SectionTitle>Внимание</SectionTitle>
+          {(status?.storage?.warnings ?? []).map((warning) => (
+            <Text key={warning} style={{ fontSize: 12, color: colors.warning, marginTop: 6, lineHeight: 18 }}>
+              • {warning}
+            </Text>
+          ))}
+        </View>
+      ) : null}
 
       <View style={[screenUi.card, { marginTop: spacing.sm }]}>
         <SectionTitle>Облачное хранилище</SectionTitle>
@@ -202,6 +224,22 @@ export function BackupsScreen() {
           </View>
         ))
       )}
+
+      {(status?.s3Backups ?? []).length > 0 ? (
+        <>
+          <Text style={{ fontSize: 15, fontWeight: '700', color: colors.text, marginTop: spacing.lg, marginBottom: spacing.sm }}>
+            Архивы в облаке S3
+          </Text>
+          {(status?.s3Backups ?? []).map((item) => (
+            <View key={item.key} style={[screenUi.card, { marginBottom: spacing.sm }]}>
+              <Text style={{ fontSize: 14, fontWeight: '700', color: colors.text }}>{item.key}</Text>
+              <Text style={{ fontSize: 12, color: colors.textMuted, marginTop: 4 }}>
+                {item.lastModified ? formatDate(item.lastModified) : '—'} · {formatBytes(item.sizeBytes)}
+              </Text>
+            </View>
+          ))}
+        </>
+      ) : null}
 
       <MenuButton label="Обновить список" onPress={onRefresh} variant="secondary" />
     </ScrollView>
