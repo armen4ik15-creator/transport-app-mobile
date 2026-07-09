@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Alert, ScrollView, Text, View } from 'react-native';
+import { Alert, Linking, ScrollView, Text, View } from 'react-native';
 import * as Updates from 'expo-updates';
 import { ScreenHeader } from '../components/ScreenHeader';
 import { MenuButton } from '../components/ui';
@@ -11,6 +11,7 @@ import { colors, spacing } from '../theme';
 
 export function AboutScreen() {
   const [serverUrl, setServerUrl] = useState<string | null>(null);
+  const [apkUrl, setApkUrl] = useState<string | null>(null);
   const [checkingUpdate, setCheckingUpdate] = useState(false);
   const [reloading, setReloading] = useState(false);
 
@@ -19,7 +20,19 @@ export function AboutScreen() {
   const updateLabel = getCurrentUpdateLabel();
 
   const loadServerUrl = useCallback(async () => {
-    setServerUrl(await getServerUrl());
+    const base = await getServerUrl();
+    setServerUrl(base);
+    if (!base) return;
+    try {
+      const response = await fetch(`${base}/public/app-release`);
+      if (!response.ok) return;
+      const data = (await response.json()) as { apk_available?: boolean; download_path?: string | null };
+      if (data.apk_available && data.download_path) {
+        setApkUrl(`${base.replace(/\/api$/, '')}${data.download_path}`);
+      }
+    } catch {
+      setApkUrl(null);
+    }
   }, []);
 
   useEffect(() => {
@@ -52,6 +65,18 @@ export function AboutScreen() {
       Alert.alert('Ошибка', message);
     } finally {
       setReloading(false);
+    }
+  };
+
+  const onDownloadApk = async () => {
+    const url = apkUrl ?? (serverUrl ? `${serverUrl.replace(/\/api$/, '')}/downloads/reestrpro.apk` : null);
+    if (!url) {
+      Alert.alert('APK', 'Ссылка на APK пока недоступна. Обратитесь к администратору.');
+      return;
+    }
+    const opened = await Linking.openURL(url);
+    if (!opened) {
+      Alert.alert('APK', `Откройте в браузере:\n${url}`);
     }
   };
 
@@ -95,7 +120,16 @@ export function AboutScreen() {
           }}
           variant="secondary"
         />
+        <MenuButton
+          label="Скачать APK с сервера (без Expo)"
+          onPress={() => void onDownloadApk()}
+          variant="secondary"
+        />
       </View>
+      <Text style={{ fontSize: 12, color: colors.textMuted, marginTop: spacing.sm, lineHeight: 18 }}>
+        Если OTA пишет «Failed to download» — Expo/Google недоступны из вашей сети. Скачайте APK с сервера
+        Timeweb или через USB с компьютера.
+      </Text>
     </ScrollView>
   );
 }

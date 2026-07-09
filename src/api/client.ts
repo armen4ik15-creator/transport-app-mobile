@@ -34,6 +34,7 @@ import {
   nativePutJson,
   nativeSendFormData,
 } from '../utils/nativeHttpTransport';
+import * as FileSystem from 'expo-file-system/legacy';
 import { notifyHmacRecovery } from './hmacRecovery';
 
 export { TOKEN_KEY };
@@ -589,6 +590,77 @@ async function executeRequest<T>(
   }
 }
 
+function parseUploadResponseBody<T>(raw: string): T {
+  if (!raw.trim()) return undefined as T;
+  try {
+    return JSON.parse(raw) as T;
+  } catch {
+    return raw as T;
+  }
+}
+
+function parseUploadErrorBody(raw: string): { error?: string } {
+  try {
+    return JSON.parse(raw) as { error?: string };
+  } catch {
+    return {};
+  }
+}
+
+/** Нативная multipart-загрузка — надёжнее FormData+XHR на Android. */
+export async function uploadMultipartFile<T>(
+  path: string,
+  fileUri: string,
+  options: {
+    fieldName?: string;
+    mimeType?: string;
+    parameters?: Record<string, string>;
+    timeout?: number;
+  } = {},
+): Promise<{ data: T }> {
+  const baseUrl = await getApiBaseUrl();
+  const requestUrl = resolveRequestUrl(baseUrl, path);
+  const fieldName = options.fieldName ?? 'photo';
+
+  let token = cachedToken;
+  if (token === undefined) {
+    token = await getStoredToken();
+    cachedToken = token;
+  }
+
+  if (requestNeedsHmac(path, false) && !isDeviceSecurityReady()) {
+    const { ensureDeviceRegistered } = await import('./device');
+    await ensureDeviceRegistered();
+  }
+
+  let headers = buildRequestHeaders(undefined, null, token, false);
+  headers = await applyHmacHeaders(headers, 'POST', requestUrl, '');
+
+  const uploadUri = fileUri.startsWith('file://') ? fileUri : `file://${fileUri}`;
+
+  const result = await FileSystem.uploadAsync(requestUrl, uploadUri, {
+    httpMethod: 'POST',
+    uploadType: FileSystem.FileSystemUploadType.MULTIPART,
+    fieldName,
+    mimeType: options.mimeType ?? 'image/jpeg',
+    parameters: options.parameters,
+    headers,
+  });
+
+  const status = result.status ?? 0;
+  const rawBody = result.body ?? '';
+
+  if (status < 200 || status >= 300) {
+    const payload = parseUploadErrorBody(rawBody);
+    throw new HttpError(`Request failed with status ${status}`, {
+      response: { status, data: payload },
+    });
+  }
+
+  registerNetworkSuccess();
+  return { data: parseUploadResponseBody<T>(rawBody) };
+}
+
 export const api = {
   baseURL: FALLBACK_API_URL,
   get<T>(url: string, config?: ApiRequestConfig): Promise<{ data: T }> {
@@ -611,6 +683,9 @@ export const api = {
 export function apiErrorMessage(err: unknown, fallback = 'Ошибка'): string {
   if (isHttpError(err)) {
     if (err.response?.data?.error) return err.response.data.error;
+    if (err.response?.status === 400) {
+      return 'Сервер отклонил загрузку файла. Проверьте интернет и попробуйте снова.';
+    }
     if (err.response?.status === 404) {
       const serverError = err.response?.data?.error?.toLowerCase() ?? '';
       if (serverError.includes('file not found') || serverError.includes('не найден')) {

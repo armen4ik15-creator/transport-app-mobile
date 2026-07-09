@@ -1,4 +1,4 @@
-import { api } from './client';
+import { api, uploadMultipartFile } from './client';
 import type { TripRecord, TripStage, TripStatus } from '../types';
 import { prepareImageUpload } from '../utils/prepareImageUpload';
 
@@ -48,20 +48,17 @@ export async function createTrip(payload: {
     return data;
   }
 
-  const formData = new FormData();
-  formData.append('order_id', String(payload.order_id));
-  formData.append('action', payload.action);
-  if (payload.ttn_number) formData.append('ttn_number', payload.ttn_number);
-  if (payload.volume != null) formData.append('volume', String(payload.volume));
-  if (payload.note) formData.append('note', payload.note);
   const image = await prepareImageUpload(payload.photoUri);
-  formData.append('photo', {
-    uri: image.uri,
-    name: image.name,
-    type: image.type,
-  } as unknown as Blob);
-
-  const { data } = await api.post<TripRecord>('/trips', formData, {
+  const { data } = await uploadMultipartFile<TripRecord>('/trips', image.uri, {
+    fieldName: 'photo',
+    mimeType: image.type,
+    parameters: {
+      order_id: String(payload.order_id),
+      action: payload.action,
+      ...(payload.ttn_number ? { ttn_number: payload.ttn_number } : {}),
+      ...(payload.volume != null ? { volume: String(payload.volume) } : {}),
+      ...(payload.note ? { note: payload.note } : {}),
+    },
     timeout: 60000,
   });
   return data;
@@ -107,15 +104,10 @@ export function needsTripPhotoAttach(trip: TripRecord): boolean {
 }
 
 export async function uploadTripPhoto(tripId: number, photoUri: string): Promise<TripRecord> {
-  const formData = new FormData();
   const image = await prepareImageUpload(photoUri);
-  formData.append('photo', {
-    uri: image.uri,
-    name: image.name,
-    type: image.type,
-  } as unknown as Blob);
-
-  const { data } = await api.post<TripRecord>(`/trips/${tripId}/photo`, formData, {
+  const { data } = await uploadMultipartFile<TripRecord>(`/trips/${tripId}/photo`, image.uri, {
+    fieldName: 'photo',
+    mimeType: image.type,
     timeout: 60000,
   });
   return data;
