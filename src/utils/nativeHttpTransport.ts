@@ -287,6 +287,57 @@ export async function nativeDeleteJson<T = void>(
   return requestWithRetry<T>('DELETE', url, { Accept: 'application/json', ...headers }, timeoutMs);
 }
 
+function xhrFormData<T>(
+  method: 'POST' | 'PUT' | 'PATCH',
+  url: string,
+  headers: Record<string, string>,
+  timeoutMs: number,
+  formData: FormData,
+): Promise<NativeHttpResult<T>> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open(method, url);
+    xhr.timeout = timeoutMs;
+    xhr.responseType = 'text';
+
+    for (const [key, value] of Object.entries(headers)) {
+      if (key.toLowerCase() === 'content-type') continue;
+      try {
+        xhr.setRequestHeader(key, value);
+      } catch {
+        // ignore duplicate or forbidden headers
+      }
+    }
+
+    xhr.onload = () => {
+      const raw = xhr.responseText ?? '';
+      if (xhr.status < 200 || xhr.status >= 300) {
+        reject(
+          new HttpError(`Request failed with status ${xhr.status}`, {
+            response: { status: xhr.status, data: parseErrorData(raw) },
+          }),
+        );
+        return;
+      }
+      resolve({ status: xhr.status, data: parseJsonBody<T>(raw) });
+    };
+
+    xhr.onerror = () => {
+      reject(new HttpError('Network request failed', { code: 'ERR_NETWORK' }));
+    };
+
+    xhr.ontimeout = () => {
+      reject(new HttpError('timeout', { code: 'ECONNABORTED' }));
+    };
+
+    xhr.onabort = () => {
+      reject(new HttpError('timeout', { code: 'ECONNABORTED' }));
+    };
+
+    xhr.send(formData);
+  });
+}
+
 export async function nativeSendFormData<T>(
   method: 'POST' | 'PUT' | 'PATCH',
   url: string,
@@ -294,20 +345,26 @@ export async function nativeSendFormData<T>(
   headers: Record<string, string> = {},
   timeoutMs = 20_000,
 ): Promise<NativeHttpResult<T>> {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const response = await fetch(url, {
-      method,
-      headers: { Accept: 'application/json', ...headers },
-      body: formData,
-      signal: controller.signal,
-    });
-    const raw = await response.text();
-    if (!response.ok) throwHttpError(response.status, raw);
-    return { status: response.status, data: parseJsonBody<T>(raw) };
-  } finally {
-    clearTimeout(timer);
+    return await xhrFormData<T>(method, url, { Accept: 'application/json', ...headers }, timeoutMs, formData);
+  } catch (err) {
+    if (err instanceof HttpError && err.response) throw err;
+
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      const response = await fetch(url, {
+        method,
+        headers: { Accept: 'application/json', ...headers },
+        body: formData,
+        signal: controller.signal,
+      });
+      const raw = await response.text();
+      if (!response.ok) throwHttpError(response.status, raw);
+      return { status: response.status, data: parseJsonBody<T>(raw) };
+    } finally {
+      clearTimeout(timer);
+    }
   }
 }
 

@@ -1,5 +1,6 @@
 import { api } from './client';
 import type { TripRecord, TripStage, TripStatus } from '../types';
+import { prepareImageUpload } from '../utils/prepareImageUpload';
 
 export type TripAction = 'loading' | 'unloading';
 
@@ -53,14 +54,14 @@ export async function createTrip(payload: {
   if (payload.ttn_number) formData.append('ttn_number', payload.ttn_number);
   if (payload.volume != null) formData.append('volume', String(payload.volume));
   if (payload.note) formData.append('note', payload.note);
+  const image = await prepareImageUpload(payload.photoUri);
   formData.append('photo', {
-    uri: payload.photoUri,
-    name: `trip_${Date.now()}.jpg`,
-    type: 'image/jpeg',
+    uri: image.uri,
+    name: image.name,
+    type: image.type,
   } as unknown as Blob);
 
   const { data } = await api.post<TripRecord>('/trips', formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
     timeout: 60000,
   });
   return data;
@@ -107,14 +108,14 @@ export function needsTripPhotoAttach(trip: TripRecord): boolean {
 
 export async function uploadTripPhoto(tripId: number, photoUri: string): Promise<TripRecord> {
   const formData = new FormData();
+  const image = await prepareImageUpload(photoUri);
   formData.append('photo', {
-    uri: photoUri,
-    name: `trip_${Date.now()}.jpg`,
-    type: 'image/jpeg',
+    uri: image.uri,
+    name: image.name,
+    type: image.type,
   } as unknown as Blob);
 
   const { data } = await api.post<TripRecord>(`/trips/${tripId}/photo`, formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
     timeout: 60000,
   });
   return data;
