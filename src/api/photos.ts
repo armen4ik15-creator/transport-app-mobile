@@ -14,3 +14,13 @@ export async function getAllPhotos(params?: GetAllPhotosParams): Promise<TtnPhot
   const { data } = await api.get<TtnPhotoRecord[]>('/photos', { params });
   return data;
 }
+
+export function dedupePhotoRecords(items: TtnPhotoRecord[]): TtnPhotoRecord[] {
+  const seen = new Set<string>();
+  return items.filter((photo) => {
+    const key = `${photo.source}:${photo.trip_id ?? photo.id}:${photo.file_path}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}

@@ -17,7 +17,7 @@ import { ErrorText, Field, LoadingScreen, MenuButton } from '../components/ui';
 
 import { apiErrorMessage } from '../api/client';
 
-import { createTrip, deleteTrip, canManageTripPhoto, getTripPhotoButtonLabel, hasTripPhoto, isTripCompleted, isTripInProgress, isTripPhotoMissingOnServer, listTrips, uploadTripPhoto } from '../api/trips';
+import { createTrip, deleteTrip, deleteTripPhoto, canManageTripPhoto, getTripPhotoButtonLabel, hasTripPhoto, isTripCompleted, isTripInProgress, isTripPhotoMissingOnServer, listTrips, uploadTripPhoto } from '../api/trips';
 import { useAuth } from '../auth/AuthContext';
 
 import { screenUi } from '../styles/screenUi';
@@ -234,6 +234,34 @@ export function TripCreateScreen({ route }: Props) {
     } finally {
       setSaving(false);
     }
+  };
+
+  const removeTripPhoto = (tripId: number) => {
+    Alert.alert(
+      'Удалить фото?',
+      'Рейс останется зачтённым в зарплате. Будет удалено только фото ТТН.',
+      [
+        { text: 'Отмена', style: 'cancel' },
+        {
+          text: 'Удалить',
+          style: 'destructive',
+          onPress: () => {
+            void (async () => {
+              setSaving(true);
+              try {
+                await deleteTripPhoto(tripId);
+                await load();
+                Alert.alert('Готово', 'Фото удалено');
+              } catch (e) {
+                Alert.alert('Ошибка', apiErrorMessage(e, 'Не удалось удалить фото'));
+              } finally {
+                setSaving(false);
+              }
+            })();
+          },
+        },
+      ],
+    );
   };
 
   const showMissingPhotoAlert = (tripId: number) => {
@@ -605,7 +633,7 @@ export function TripCreateScreen({ route }: Props) {
             </Text>
 
             {canManageTripPhoto(item) ? (
-              <View style={{ marginTop: 10 }}>
+              <View style={{ marginTop: 10, gap: 8 }}>
                 <MenuButton
                   label={getTripPhotoButtonLabel(item)}
                   onPress={() => void attachPhotoToTrip(item.id)}
@@ -613,6 +641,14 @@ export function TripCreateScreen({ route }: Props) {
                     isTripPhotoMissingOnServer(item) || !hasTripPhoto(item) ? 'secondary' : 'default'
                   }
                 />
+                {(hasTripPhoto(item) || isTripPhotoMissingOnServer(item)) &&
+                (user?.role === 'admin' || user?.role === 'driver') ? (
+                  <MenuButton
+                    label="🗑 Удалить фото ТТН"
+                    onPress={() => removeTripPhoto(item.id)}
+                    variant="secondary"
+                  />
+                ) : null}
               </View>
             ) : null}
 

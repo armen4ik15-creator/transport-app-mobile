@@ -85,6 +85,9 @@ export interface TtnPhotoRecord {
   material: string | null;
   driver_id: number | null;
   source: TtnPhotoSource;
+  trip_id: number | null;
+  ttn_number: string | null;
+  photo_available?: boolean;
 }
 
 export interface OrderWithPhotos extends Order {

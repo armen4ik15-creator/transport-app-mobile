@@ -113,5 +113,9 @@ export async function uploadTripPhoto(tripId: number, photoUri: string): Promise
   return data;
 }
 
+export async function deleteTripPhoto(tripId: number): Promise<void> {
+  await api.delete(`/trips/${tripId}/photo`);
+}
+
 /** @deprecated use TripAction */
 export type { TripStage };

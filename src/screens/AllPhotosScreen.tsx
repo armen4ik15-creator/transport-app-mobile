@@ -20,10 +20,12 @@ import { FilterChipRow } from '../components/FilterChipRow';
 import { RemoteImage } from '../components/RemoteImage';
 import { ScreenHeader } from '../components/ScreenHeader';
 import { ErrorText, LoadingScreen, MenuButton } from '../components/ui';
-import { getAllPhotos, type GetAllPhotosParams } from '../api/photos';
+import { getAllPhotos, dedupePhotoRecords, type GetAllPhotosParams } from '../api/photos';
 import { apiErrorMessage } from '../api/client';
+import { deleteTripPhoto } from '../api/trips';
 import { listDrivers } from '../api/drivers';
 import { listOrders } from '../api/orders';
+import { useAuth } from '../auth/AuthContext';
 import type { RootStackParamList } from '../navigation/types';
 import { screenUi } from '../styles/screenUi';
 import { colors } from '../theme';
@@ -46,11 +48,24 @@ function formatPhotoDate(value: string | null): string {
 }
 
 function photoKey(photo: TtnPhotoRecord): string {
-  return `${photo.source}-${photo.id}`;
+  return `${photo.source}-${photo.trip_id ?? photo.id}-${photo.file_path}`;
+}
+
+function canDeletePhoto(
+  photo: TtnPhotoRecord,
+  isAdmin: boolean,
+  currentDriverId: number | null,
+): boolean {
+  if (photo.source !== 'trip' || photo.trip_id == null) return isAdmin;
+  if (isAdmin) return true;
+  return currentDriverId != null && photo.driver_id === currentDriverId;
 }
 
 export function AllPhotosScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const { user, driver } = useAuth();
+  const isAdmin = user?.role === 'admin';
+  const currentDriverId = driver?.id ?? null;
   const initialBounds = yearBounds();
   const [photos, setPhotos] = useState<TtnPhotoRecord[]>([]);
   const [drivers, setDrivers] = useState<Driver[]>([]);
@@ -69,6 +84,7 @@ export function AllPhotosScreen() {
   const [previewUri, setPreviewUri] = useState<string | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [savingPhoto, setSavingPhoto] = useState(false);
+  const [deletingPhoto, setDeletingPhoto] = useState(false);
 
   const itemWidth = useMemo(() => {
     const screenWidth = Dimensions.get('window').width;
@@ -92,7 +108,9 @@ export function AllPhotosScreen() {
         limit: PAGE_SIZE,
         offset,
       });
-      setPhotos((prev) => (append ? [...prev, ...batch] : batch));
+      setPhotos((prev) =>
+        append ? dedupePhotoRecords([...prev, ...batch]) : dedupePhotoRecords(batch),
+      );
       setHasMore(batch.length === PAGE_SIZE);
     } catch (e) {
       const message = apiErrorMessage(e, 'Не удалось загрузить фотографии');
@@ -139,6 +157,39 @@ export function AllPhotosScreen() {
       cancelled = true;
     };
   }, [previewPhoto]);
+
+  const onDeletePhoto = () => {
+    if (!previewPhoto || previewPhoto.source !== 'trip' || previewPhoto.trip_id == null) {
+      Alert.alert('Удаление', 'Удаление доступно только для фото рейсов.');
+      return;
+    }
+    if (!canDeletePhoto(previewPhoto, isAdmin, currentDriverId)) {
+      Alert.alert('Удаление', 'Недостаточно прав для удаления этого фото.');
+      return;
+    }
+    Alert.alert('Удалить фото?', 'Рейс останется зачтённым в зарплате. Будет удалено только фото.', [
+      { text: 'Отмена', style: 'cancel' },
+      {
+        text: 'Удалить',
+        style: 'destructive',
+        onPress: () => {
+          void (async () => {
+            setDeletingPhoto(true);
+            try {
+              await deleteTripPhoto(previewPhoto.trip_id as number);
+              setPreviewPhoto(null);
+              setHasMore(true);
+              await fetchPhotos(appliedFilters, 0, false);
+            } catch (e) {
+              Alert.alert('Ошибка', apiErrorMessage(e, 'Не удалось удалить фото'));
+            } finally {
+              setDeletingPhoto(false);
+            }
+          })();
+        },
+      },
+    ]);
+  };
 
   const onSharePhoto = async () => {
     if (!previewPhoto) return;
@@ -320,8 +371,12 @@ export function AllPhotosScreen() {
                 {item.driver_name ?? '—'}
               </Text>
               <Text numberOfLines={1} style={{ fontSize: 11, color: colors.textMuted, marginTop: 2 }}>
-                Заказ #{item.order_id}
+                {item.trip_id != null ? `Рейс #${item.trip_id}` : `Заказ #${item.order_id}`}
+                {item.ttn_number ? ` · ТТН ${item.ttn_number}` : ''}
               </Text>
+              {item.photo_available === false ? (
+                <Text style={{ fontSize: 10, color: '#d97706', marginTop: 2 }}>⚠️ Файл на сервере отсутствует</Text>
+              ) : null}
             </View>
           </Pressable>
         )}
@@ -369,20 +424,34 @@ export function AllPhotosScreen() {
               )}
               <View style={{ padding: 20 }}>
                 <Text style={{ color: colors.text, fontSize: 16, fontWeight: '600' }}>
-                  Заказ #{previewPhoto.order_id}
+                  {previewPhoto.trip_id != null
+                    ? `Рейс #${previewPhoto.trip_id}`
+                    : `Заказ #${previewPhoto.order_id}`}
                 </Text>
                 <Text style={{ color: colors.textMuted, marginTop: 4 }}>
                   {previewPhoto.driver_name ?? '—'} · {formatPhotoDate(previewPhoto.uploaded_at)}
+                  {previewPhoto.ttn_number ? ` · ТТН ${previewPhoto.ttn_number}` : ''}
                 </Text>
                 <Pressable
                   onPress={() => void onSharePhoto()}
-                  disabled={savingPhoto}
-                  style={[screenUi.saveBtn, { marginTop: 16 }, savingPhoto && { opacity: 0.7 }]}
+                  disabled={savingPhoto || previewPhoto.photo_available === false}
+                  style={[screenUi.saveBtn, { marginTop: 16 }, (savingPhoto || previewPhoto.photo_available === false) && { opacity: 0.7 }]}
                 >
                   <Text style={screenUi.saveBtnText}>
                     {savingPhoto ? 'Сохранение…' : '📤 Сохранить / Поделиться'}
                   </Text>
                 </Pressable>
+                {canDeletePhoto(previewPhoto, isAdmin, currentDriverId) ? (
+                  <Pressable
+                    onPress={onDeletePhoto}
+                    disabled={deletingPhoto}
+                    style={[screenUi.saveBtn, { marginTop: 10, backgroundColor: '#7f1d1d' }, deletingPhoto && { opacity: 0.7 }]}
+                  >
+                    <Text style={screenUi.saveBtnText}>
+                      {deletingPhoto ? 'Удаление…' : '🗑 Удалить фото'}
+                    </Text>
+                  </Pressable>
+                ) : null}
               </View>
             </>
           ) : null}

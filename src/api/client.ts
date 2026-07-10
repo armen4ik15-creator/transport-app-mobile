@@ -684,11 +684,7 @@ export function apiErrorMessage(err: unknown, fallback = 'Ошибка'): string
   if (isHttpError(err)) {
     if (err.response?.data?.error) return err.response.data.error;
     if (err.response?.status === 400) {
-      const raw = typeof err.response.data === 'string' ? err.response.data : '';
-      if (raw && !err.response.data?.error) {
-        return `Ошибка загрузки (400): ${raw.slice(0, 120)}`;
-      }
-      return err.response.data?.error ?? 'Сервер отклонил загрузку файла. Обновите приложение до последней версии.';
+      return err.response.data?.error ?? 'Сервер отклонил загрузку. Обновите приложение до последней версии.';
     }
     if (err.response?.status === 404) {
       const serverError = err.response?.data?.error?.toLowerCase() ?? '';

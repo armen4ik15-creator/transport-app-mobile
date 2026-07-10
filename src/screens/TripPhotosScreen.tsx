@@ -8,7 +8,7 @@ import { RemoteImage } from '../components/RemoteImage';
 import { ScreenHeader } from '../components/ScreenHeader';
 import { ErrorText, LoadingScreen, MenuButton } from '../components/ui';
 import { apiErrorMessage } from '../api/client';
-import { listTrips } from '../api/trips';
+import { listTrips, hasTripPhoto, isTripPhotoMissingOnServer } from '../api/trips';
 import { listDrivers } from '../api/drivers';
 import { screenUi } from '../styles/screenUi';
 import { colors } from '../theme';
@@ -47,7 +47,7 @@ export function TripPhotosScreen() {
         withFallback(() => listDrivers(), []),
       ]);
       setDrivers(driverData);
-      setTrips(tripData.filter((trip) => Boolean(trip.photo_path)));
+      setTrips(tripData.filter((trip) => Boolean(trip.photo_path && trip.photo_path.trim())));
     } catch (e) {
       setError(apiErrorMessage(e, 'Не удалось загрузить фото ТТН'));
     }
@@ -122,7 +122,12 @@ export function TripPhotosScreen() {
                 📄 ТТН: {item.ttn_number}
               </Text>
             ) : null}
-            {item.photo_path ? (
+            {isTripPhotoMissingOnServer(item) ? (
+              <Text style={{ fontSize: 12, color: '#d97706', marginTop: 4 }}>
+                ⚠️ Файл на сервере отсутствует — прикрепите заново в рейсе
+              </Text>
+            ) : null}
+            {hasTripPhoto(item) && item.photo_path ? (
               <RemoteImage
                 filePath={item.photo_path}
                 style={{ width: '100%', height: 220, borderRadius: 8, marginTop: 8 }}
