@@ -33,10 +33,15 @@ export async function prepareImageUpload(uri: string): Promise<PreparedImageUplo
     uploadUri = target;
   }
 
-  const fileName = uploadUri.split('/').pop() ?? `photo_${Date.now()}.jpg`;
-  return {
-    uri: uploadUri,
-    name: fileName,
-    type: resolveMimeType(fileName),
-  };
+/** Читает файл из URI в base64 для JSON-загрузки (обход multipart на Android). */
+export async function readImageAsBase64(uri: string): Promise<{ base64: string; mimeType: string }> {
+  const image = await prepareImageUpload(uri);
+  const fileUri = image.uri.startsWith('file://') ? image.uri : `file://${image.uri}`;
+  const base64 = await FileSystem.readAsStringAsync(fileUri, {
+    encoding: FileSystem.EncodingType.Base64,
+  });
+  if (!base64) {
+    throw new Error('Не удалось прочитать фото');
+  }
+  return { base64, mimeType: image.type };
 }

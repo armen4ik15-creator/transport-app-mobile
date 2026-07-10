@@ -1,6 +1,6 @@
 import { api, uploadMultipartFile } from './client';
 import type { TripRecord, TripStage, TripStatus } from '../types';
-import { prepareImageUpload } from '../utils/prepareImageUpload';
+import { prepareImageUpload, readImageAsBase64 } from '../utils/prepareImageUpload';
 
 export type TripAction = 'loading' | 'unloading';
 
@@ -104,12 +104,12 @@ export function needsTripPhotoAttach(trip: TripRecord): boolean {
 }
 
 export async function uploadTripPhoto(tripId: number, photoUri: string): Promise<TripRecord> {
-  const image = await prepareImageUpload(photoUri);
-  const { data } = await uploadMultipartFile<TripRecord>(`/trips/${tripId}/photo`, image.uri, {
-    fieldName: 'photo',
-    mimeType: image.type,
-    timeout: 60000,
-  });
+  const { base64, mimeType } = await readImageAsBase64(photoUri);
+  const { data } = await api.post<TripRecord>(
+    `/trips/${tripId}/photo-data`,
+    { image_data: base64, mime_type: mimeType },
+    { timeout: 90000 },
+  );
   return data;
 }
 
