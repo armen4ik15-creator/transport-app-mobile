@@ -55,7 +55,10 @@ export async function checkAndApplyUpdate(manual = false): Promise<void> {
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Не удалось проверить обновление';
     if (manual) {
-      Alert.alert('Ошибка OTA', `${message}\n\n${buildUpdateDiagnostics()}`);
+      Alert.alert(
+        'Ошибка OTA',
+        `${message}\n\n${buildUpdateDiagnostics()}\n\nExpo/Google часто недоступны из РФ. Скачайте APK:\nЕщё → О приложении → «Скачать APK с сервера»\nили откройте в браузере /downloads/reestrpro.apk на вашем API-сервере.`
+      );
     }
   }
 }

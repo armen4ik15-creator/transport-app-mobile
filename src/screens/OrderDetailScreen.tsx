@@ -100,6 +100,9 @@ export function OrderDetailScreen({ route, navigation }: Props) {
       <View style={[screenUi.container, screenUi.content]}>
         <ScreenHeader title="📦 Заказ" />
         <ErrorText message={error ?? 'Заказ не найден'} />
+        {error ? (
+          <PrimaryButton label="Повторить" onPress={() => void load()} loading={busy} disabled={busy} />
+        ) : null}
       </View>
     );
   }

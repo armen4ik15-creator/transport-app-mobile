@@ -15,7 +15,7 @@ import {
   rub,
   type DonutSlice,
 } from '../components/kit';
-import { ErrorText } from '../components/ui';
+import { ErrorText, PrimaryButton } from '../components/ui';
 import { useAuth } from '../auth/AuthContext';
 import type { RootStackParamList } from '../navigation/types';
 import type { Order } from '../types';
@@ -28,7 +28,7 @@ import { getContractorDebtSummary } from '../api/contractorPayments';
 import { listNotifications } from '../api/notifications';
 import { apiErrorMessage } from '../api/client';
 import { ALL_EXPENSE_TYPES } from '../constants/expenseTypes';
-import { fetchCached, invalidateCache } from '../utils/apiCache';
+import { fetchCachedResilient, invalidateCache } from '../utils/apiCache';
 import { initialsFromName, trendPercent } from '../utils/format';
 import { screenUi } from '../styles/screenUi';
 import { colors, radii, spacing } from '../theme';
@@ -37,7 +37,7 @@ const DASHBOARD_CACHE_KEY = 'dashboard:stats';
 const REPORT_CACHE_KEY = 'dashboard:report-daily';
 const EXPENSES_CACHE_KEY = 'dashboard:expenses-month';
 const DASHBOARD_TTL_MS = 45_000;
-const REQUEST_TIMEOUT_MS = 12_000;
+const REQUEST_TIMEOUT_MS = 30_000;
 const CHART_COLORS = [colors.primary, colors.profit, colors.warning, colors.loss, colors.accent];
 
 const expenseLabel = new Map(ALL_EXPENSE_TYPES.map((t) => [t.value, t.label]));
@@ -118,11 +118,11 @@ export function AdminHomeScreen() {
         const from = monthStartIso();
         const to = todayIso();
         const [stats, report, expenses] = await Promise.all([
-          fetchCached(DASHBOARD_CACHE_KEY, DASHBOARD_TTL_MS, loadDashboardStats),
-          fetchCached(REPORT_CACHE_KEY, DASHBOARD_TTL_MS, () =>
+          fetchCachedResilient(DASHBOARD_CACHE_KEY, DASHBOARD_TTL_MS, loadDashboardStats),
+          fetchCachedResilient(REPORT_CACHE_KEY, DASHBOARD_TTL_MS, () =>
             withTimeout(getReportDaily({ from, to }), REQUEST_TIMEOUT_MS)
           ).catch(() => null),
-          fetchCached(EXPENSES_CACHE_KEY, DASHBOARD_TTL_MS, () =>
+          fetchCachedResilient(EXPENSES_CACHE_KEY, DASHBOARD_TTL_MS, () =>
             withTimeout(listExpenses({ from, to }), REQUEST_TIMEOUT_MS)
           ).catch(() => []),
         ]);
@@ -223,6 +223,14 @@ export function AdminHomeScreen() {
       />
 
       <ErrorText message={error} />
+      {error ? (
+        <PrimaryButton
+          label="Повторить"
+          onPress={() => void loadDashboard(true)}
+          loading={refreshing}
+          disabled={refreshing}
+        />
+      ) : null}
       <OptiSyncBanner />
 
       <View style={{ flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md }}>

@@ -41,7 +41,7 @@ export { TOKEN_KEY };
 
 export const SERVER_URL_KEY = 'SERVER_URL';
 const FALLBACK_API_URL = DEFAULT_PRODUCTION_API_URL;
-const DEFAULT_TIMEOUT_MS = 20_000;
+const DEFAULT_TIMEOUT_MS = 30_000;
 
 let unauthorizedHandler: (() => Promise<void> | void) | null = null;
 let serverIssueHandler: (() => Promise<void> | void) | null = null;
@@ -697,10 +697,14 @@ export function apiErrorMessage(err: unknown, fallback = 'Ошибка'): string
       return 'Сервер временно недоступен (502). Подождите минуту и нажмите «Повторить».';
     }
     if (err.response?.status === 503 || err.response?.status === 504) {
-      return 'Сервер перегружен или недоступен. Попробуйте позже.';
+      const serverError = err.response?.data?.error ?? '';
+      if (serverError.includes('баз') || serverError.includes('database')) {
+        return 'Сервер подключается к базе данных. Подождите 30 секунд и нажмите «Повторить».';
+      }
+      return 'Сервер перегружен или недоступен. Подождите минуту и нажмите «Повторить».';
     }
     if (err.code === 'ECONNABORTED' || err.message.includes('timeout')) {
-      return 'Сервер не ответил вовремя. Возможно, backend завис — перезапустите ReestrPro Backend на Timeweb и попробуйте снова.';
+      return 'Сервер не ответил вовремя. Проверьте интернет и нажмите «Повторить». Если ошибка повторяется — перезапустите ReestrPro Backend на Timeweb.';
     }
     if (
       err.message.includes('Unable to resolve host') ||
