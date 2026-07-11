@@ -360,6 +360,7 @@ export function AllPhotosScreen() {
           >
             <RemoteImage
               filePath={item.file_path}
+              missingOnServer={item.photo_available === false}
               style={{ width: '100%', height: itemWidth * 0.75 }}
               resizeMode="cover"
             />

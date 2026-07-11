@@ -7,10 +7,16 @@ interface RemoteImageProps {
   filePath: string;
   style?: StyleProp<ImageStyle>;
   resizeMode?: 'cover' | 'contain' | 'stretch' | 'center';
+  missingOnServer?: boolean;
 }
 
 /** Загружает фото ТТН через API (с токеном) — для превью в списках. */
-export function RemoteImage({ filePath, style, resizeMode = 'cover' }: RemoteImageProps) {
+export function RemoteImage({
+  filePath,
+  style,
+  resizeMode = 'cover',
+  missingOnServer = false,
+}: RemoteImageProps) {
   const [localUri, setLocalUri] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
 
@@ -32,7 +38,7 @@ export function RemoteImage({ filePath, style, resizeMode = 'cover' }: RemoteIma
     };
   }, [filePath]);
 
-  if (failed) {
+  if (failed || missingOnServer) {
     return (
       <View
         style={[
@@ -41,10 +47,13 @@ export function RemoteImage({ filePath, style, resizeMode = 'cover' }: RemoteIma
             backgroundColor: colors.surfaceElevated,
             alignItems: 'center',
             justifyContent: 'center',
+            paddingHorizontal: 6,
           },
         ]}
       >
-        <Text style={{ fontSize: 11, color: colors.textMuted }}>Нет превью</Text>
+        <Text style={{ fontSize: 10, color: '#d97706', textAlign: 'center' }}>
+          ⚠️ Файл на сервере отсутствует
+        </Text>
       </View>
     );
   }
