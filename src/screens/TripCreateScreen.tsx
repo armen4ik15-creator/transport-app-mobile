@@ -228,7 +228,7 @@ export function TripCreateScreen({ route }: Props) {
     try {
       const updatedTrip = await uploadTripPhoto(tripId, uri);
       setTrips((prev) => prev.map((trip) => (trip.id === tripId ? updatedTrip : trip)));
-      Alert.alert('Готово', 'Фото ТТН сохранено.');
+      Alert.alert('Готово', 'Фото ТТН сохранено в облаке и не пропадёт при перезапуске сервера.');
     } catch (e) {
       Alert.alert('Ошибка', apiErrorMessage(e, 'Не удалось прикрепить фото'));
     } finally {

@@ -77,9 +77,7 @@ export function isTripInProgress(trip: TripRecord): boolean {
 }
 
 export function hasTripPhoto(trip: TripRecord): boolean {
-  if (trip.photo_available === false) return false;
-  if (trip.photo_available === true) return true;
-  return Boolean(trip.photo_path && trip.photo_path.trim());
+  return trip.photo_available === true;
 }
 
 export function isTripPhotoMissingOnServer(trip: TripRecord): boolean {
