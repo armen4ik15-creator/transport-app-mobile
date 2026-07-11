@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert, Image, ScrollView, Text, View } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -28,6 +28,7 @@ export function OrderDetailScreen({ route, navigation }: Props) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fileHost, setFileHost] = useState('http://localhost:3000');
+  const hasLoadedOnceRef = useRef(false);
 
   useEffect(() => {
     getServerHost().then(setFileHost).catch(() => setFileHost('http://localhost:3000'));
@@ -36,7 +37,9 @@ export function OrderDetailScreen({ route, navigation }: Props) {
   const load = useCallback(async () => {
     try {
       setError(null);
-      setOrder(await getOrder(id));
+      const nextOrder = await getOrder(id);
+      setOrder(nextOrder);
+      hasLoadedOnceRef.current = true;
     } catch (e) {
       setError(apiErrorMessage(e));
     }
@@ -44,7 +47,9 @@ export function OrderDetailScreen({ route, navigation }: Props) {
 
   useFocusEffect(
     useCallback(() => {
-      setLoading(true);
+      if (!hasLoadedOnceRef.current) {
+        setLoading(true);
+      }
       load().finally(() => setLoading(false));
     }, [load])
   );
@@ -94,7 +99,7 @@ export function OrderDetailScreen({ route, navigation }: Props) {
     }
   };
 
-  if (loading) return <LoadingScreen label="Загрузка заказа…" />;
+  if (loading && !order) return <LoadingScreen label="Загрузка заказа…" />;
   if (!order) {
     return (
       <View style={[screenUi.container, screenUi.content]}>
