@@ -8,11 +8,12 @@ import { ScreenHeader } from '../components/ScreenHeader';
 import { ScreenHero } from '../components/ScreenHero';
 import { StatusBadge } from '../components/StatusBadge';
 import { ErrorText, Field, LoadingScreen, MenuButton } from '../components/ui';
-import { apiErrorMessage, getServerHost } from '../api/client';
+import { apiErrorMessage } from '../api/client';
 import { deleteDocument, listDocuments, uploadDocument } from '../api/documents';
 import { listOrders } from '../api/orders';
 import { screenUi } from '../styles/screenUi';
 import { formatDateTimeRu } from '../utils/datePeriods';
+import { resolvePhotoLocalUri } from '../utils/photoUrl';
 import { withFallback } from '../utils/safeRequest';
 import { useAuth } from '../auth/AuthContext';
 import type { DocumentRecord, DocumentType, Order } from '../types';
@@ -49,13 +50,6 @@ export function DocumentsScreen() {
   const [form, setForm] = useState(initialForm);
   const [orders, setOrders] = useState<Order[]>([]);
   const [docFilter, setDocFilter] = useState<DocFilter>('all');
-  const [fileHost, setFileHost] = useState('http://localhost:3000');
-
-  useFocusEffect(
-    useCallback(() => {
-      getServerHost().then(setFileHost).catch(() => setFileHost('http://localhost:3000'));
-    }, [])
-  );
 
   const load = useCallback(async () => {
     try {
@@ -131,13 +125,20 @@ export function DocumentsScreen() {
   };
 
   const onOpen = async (item: DocumentRecord) => {
-    const url = `${fileHost}${item.file_path}`;
-    const canOpen = await Linking.canOpenURL(url);
-    if (!canOpen) {
-      Alert.alert('Файл', url);
-      return;
+    try {
+      const uri = await resolvePhotoLocalUri(item.file_path);
+      const canOpen = await Linking.canOpenURL(uri);
+      if (!canOpen) {
+        Alert.alert('Файл', 'Не удалось открыть документ на этом устройстве');
+        return;
+      }
+      await Linking.openURL(uri);
+    } catch {
+      Alert.alert(
+        'Файл недоступен',
+        'Документ не найден на сервере. Возможно, он был потерян при пересборке — загрузите заново.'
+      );
     }
-    await Linking.openURL(url);
   };
 
   const onDelete = (item: DocumentRecord) => {

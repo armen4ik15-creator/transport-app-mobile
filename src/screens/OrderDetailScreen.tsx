@@ -1,13 +1,14 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { Alert, Image, ScrollView, Text, View } from 'react-native';
+import { useCallback, useRef, useState } from 'react';
+import { Alert, ScrollView, Text, View } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
 import { ScreenHeader } from '../components/ScreenHeader';
 import { DriverTripActionCard } from '../components/DriverTripActionCard';
+import { RemoteImage } from '../components/RemoteImage';
 import { ErrorText, LoadingScreen, MenuButton, PrimaryButton } from '../components/ui';
 import { getOrder, deleteOrder, updateOrderStatus, uploadOrderPhoto } from '../api/orders';
-import { apiErrorMessage, getServerHost } from '../api/client';
+import { apiErrorMessage } from '../api/client';
 import { STATUS_LABEL, TRIP_STAGE_LABEL, type OrderStatus, type OrderWithPhotos } from '../types';
 import type { RootStackParamList } from '../navigation/RootNavigator';
 import { useAuth } from '../auth/AuthContext';
@@ -27,12 +28,7 @@ export function OrderDetailScreen({ route, navigation }: Props) {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [fileHost, setFileHost] = useState('http://localhost:3000');
   const hasLoadedOnceRef = useRef(false);
-
-  useEffect(() => {
-    getServerHost().then(setFileHost).catch(() => setFileHost('http://localhost:3000'));
-  }, []);
 
   const load = useCallback(async () => {
     try {
@@ -240,8 +236,9 @@ export function OrderDetailScreen({ route, navigation }: Props) {
                   <Text style={{ fontSize: 13, color: '#4b5563', marginTop: 2 }}>⚖️ {trip.volume}</Text>
                 ) : null}
                 {trip.photo_path ? (
-                  <Image
-                    source={{ uri: `${fileHost}${trip.photo_path}` }}
+                  <RemoteImage
+                    filePath={trip.photo_path}
+                    missingOnServer={trip.photo_available === false}
                     style={{ width: '100%', height: 180, borderRadius: 8, marginTop: 8 }}
                     resizeMode="cover"
                   />
@@ -270,8 +267,8 @@ export function OrderDetailScreen({ route, navigation }: Props) {
             {order.photos.map((p) => (
               <View key={p.id} style={screenUi.card}>
                 <Text style={{ fontSize: 12, color: '#6b7280' }}>{p.uploaded_at}</Text>
-                <Image
-                  source={{ uri: `${fileHost}${p.file_path}` }}
+                <RemoteImage
+                  filePath={p.file_path}
                   style={{ width: '100%', height: 220, borderRadius: 8, marginTop: 8 }}
                   resizeMode="cover"
                 />
