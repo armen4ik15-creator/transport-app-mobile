@@ -3,6 +3,7 @@ import { nativeGetJson } from './nativeHttpTransport';
 
 interface HealthLiveResponse {
   status?: string;
+  db_connected?: boolean;
 }
 
 function isHealthyStatus(data: HealthLiveResponse): boolean {
@@ -28,8 +29,18 @@ async function probeHealthPath(
 }
 
 export async function probeServerHealth(apiUrl: string, timeoutMs = 25000): Promise<boolean> {
-  const primaryOk = await probeHealthPath(apiUrl, '/health', timeoutMs);
-  if (primaryOk) return true;
+  const healthUrl = `${apiUrl.replace(/\/$/, '')}/health`;
+  try {
+    const { data } = await nativeGetJson<HealthLiveResponse>(
+      healthUrl,
+      { Accept: 'application/json' },
+      Math.min(timeoutMs, 12000),
+    );
+    if (data.db_connected === true) return true;
+    if (data.status === 'ok' && data.db_connected !== false) return true;
+  } catch {
+    // fall through to live probe
+  }
   return probeHealthPath(apiUrl, '/health/live', timeoutMs);
 }
 

@@ -58,7 +58,7 @@ export function LoginScreen({ navigation }: Props) {
       if (!ok) {
         throw new Error('health failed');
       }
-      Alert.alert('Сервер доступен', `${url.replace(/\/api\/?$/, '')}\n\nМожно входить в аккаунт.`);
+      Alert.alert('Сервер доступен', `${url.replace(/\/api\/?$/, '')}\n\nБаза данных отвечает — можно входить в аккаунт.`);
     } catch {
       Alert.alert(
         'Сервер недоступен',

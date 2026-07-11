@@ -9,7 +9,7 @@ const JSON_HEADERS = {
 async function postPublicAuth<T>(path: string, body: unknown): Promise<T> {
   resetAuthTokenCache();
   const { data } = await api.post<T>(path, body, {
-    timeout: 20000,
+    timeout: 35000,
     headers: JSON_HEADERS,
   });
   return data;
