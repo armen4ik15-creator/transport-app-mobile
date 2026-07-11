@@ -12,7 +12,7 @@ import {
   View,
 } from 'react-native';
 import * as Sharing from 'expo-sharing';
-import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { CollapsiblePanel } from '../components/CollapsiblePanel';
 import { DateRangePicker } from '../components/DateRangePicker';
@@ -135,6 +135,13 @@ export function AllPhotosScreen() {
       cancelled = true;
     };
   }, [fetchPhotos, loadMeta]);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (loading) return;
+      void fetchPhotos(appliedFilters, 0, false);
+    }, [appliedFilters, fetchPhotos, loading]),
+  );
 
   useEffect(() => {
     if (!previewPhoto) {

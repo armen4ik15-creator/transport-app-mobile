@@ -106,8 +106,18 @@ export async function uploadTripPhoto(tripId: number, photoUri: string): Promise
   const { data } = await api.post<TripRecord>(
     `/trips/${tripId}/photo-data`,
     { image_data: base64, mime_type: mimeType },
-    { timeout: 90000 },
+    { timeout: 90_000 },
   );
+
+  if (!data?.photo_path?.trim()) {
+    throw new Error('Сервер не вернул путь к фото. Попробуйте ещё раз.');
+  }
+  if (data.photo_available !== true) {
+    throw new Error(
+      'Фото не подтверждено в постоянном хранилище S3. Повторите загрузку через минуту.',
+    );
+  }
+
   return data;
 }
 

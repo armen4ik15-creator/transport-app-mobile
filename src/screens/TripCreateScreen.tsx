@@ -228,9 +228,16 @@ export function TripCreateScreen({ route }: Props) {
     try {
       const updatedTrip = await uploadTripPhoto(tripId, uri);
       setTrips((prev) => prev.map((trip) => (trip.id === tripId ? updatedTrip : trip)));
-      Alert.alert('Готово', 'Фото ТТН сохранено в облаке и не пропадёт при перезапуске сервера.');
+      await load();
+      Alert.alert('Готово', 'Фото ТТН сохранено в S3 и не пропадёт при перезапуске сервера.');
     } catch (e) {
-      Alert.alert('Ошибка', apiErrorMessage(e, 'Не удалось прикрепить фото'));
+      const message = apiErrorMessage(e, 'Не удалось прикрепить фото');
+      Alert.alert(
+        'Ошибка загрузки',
+        message.includes('timeout') || message.includes('Таймаут')
+          ? 'Таймаут загрузки. Попробуйте ещё раз при стабильном интернете.'
+          : message,
+      );
     } finally {
       setSaving(false);
     }
