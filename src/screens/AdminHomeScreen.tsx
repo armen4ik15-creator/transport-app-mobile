@@ -15,17 +15,13 @@ import {
   rub,
   type DonutSlice,
 } from '../components/kit';
-import { ErrorText, PrimaryButton } from '../components/ui';
+import { ErrorText, LoadingScreen, PrimaryButton } from '../components/ui';
 import { useAuth } from '../auth/AuthContext';
 import type { RootStackParamList } from '../navigation/types';
 import type { Order } from '../types';
 import { getDashboardStats } from '../api/dashboard';
 import { listExpenses } from '../api/expenses';
 import { getReportDaily } from '../api/reports';
-import { listDrivers } from '../api/drivers';
-import { listOrders } from '../api/orders';
-import { getContractorDebtSummary } from '../api/contractorPayments';
-import { listNotifications } from '../api/notifications';
 import { apiErrorMessage } from '../api/client';
 import { ALL_EXPENSE_TYPES } from '../constants/expenseTypes';
 import { fetchCachedResilient, invalidateCache } from '../utils/apiCache';
@@ -58,26 +54,7 @@ function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
 }
 
 async function loadDashboardStats() {
-  try {
-    return await withTimeout(getDashboardStats(), REQUEST_TIMEOUT_MS);
-  } catch {
-    const [orders, drivers, debts, notifications] = await withTimeout(
-      Promise.all([
-        listOrders({ limit: 100 }),
-        listDrivers(),
-        getContractorDebtSummary(),
-        listNotifications(),
-      ]),
-      REQUEST_TIMEOUT_MS
-    );
-    return {
-      active_orders: orders.filter((o) => Boolean(o.is_active)).length,
-      drivers_online: drivers.filter((d) => Boolean(d.is_active)).length,
-      unread_notifications: notifications.filter((item) => !item.read).length,
-      total_debt: debts.reduce((sum, item) => sum + item.debt, 0),
-      recent_orders: orders.slice(0, 5),
-    };
-  }
+  return withTimeout(getDashboardStats(), REQUEST_TIMEOUT_MS);
 }
 
 function monthStartIso() {
@@ -108,6 +85,7 @@ export function AdminHomeScreen() {
   const [donutSlices, setDonutSlices] = useState<DonutSlice[]>([]);
   const [expenseTotal, setExpenseTotal] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const loadDashboard = useCallback(
@@ -175,6 +153,8 @@ export function AdminHomeScreen() {
         clearNetworkIssue();
       } catch (e) {
         setError(apiErrorMessage(e, 'Не удалось загрузить дашборд'));
+      } finally {
+        setLoading(false);
       }
     },
     [clearNetworkIssue]
@@ -186,6 +166,7 @@ export function AdminHomeScreen() {
 
   const onRefresh = async () => {
     setRefreshing(true);
+    setLoading(true);
     await loadDashboard(true);
     setRefreshing(false);
   };
@@ -206,6 +187,10 @@ export function AdminHomeScreen() {
     { icon: '🏢', title: 'Контраг.', color: colors.textMuted, onPress: () => navigation.navigate('Contractors') },
     { icon: 'ℹ️', title: 'О приложении', color: colors.textMuted, onPress: () => navigation.navigate('About') },
   ];
+
+  if (loading && activeOrders === 0 && recentOrders.length === 0 && !error) {
+    return <LoadingScreen label="Загрузка дашборда…" />;
+  }
 
   return (
     <ScrollView
